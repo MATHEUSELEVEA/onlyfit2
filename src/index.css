@@ -1,0 +1,68 @@
+@import './theme/themes.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-background font-sans text-body text-on-background antialiased;
+    overscroll-behavior-y: none;
+  }
+}
+
+@layer utilities {
+  /* Esconde a scrollbar no feed vertical (estilo TikTok/Reels) */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@layer utilities {
+  /* Slideshow de login: leve zoom/pan (Ken Burns) na imagem ativa e
+   * subida suave do conteúdo ao montar a tela. */
+  @keyframes kenburns {
+    0% {
+      transform: scale(1.06) translate3d(0, 0, 0);
+    }
+    100% {
+      transform: scale(1.16) translate3d(-2%, -2.5%, 0);
+    }
+  }
+
+  .animate-kenburns {
+    animation: kenburns 9s ease-out forwards;
+  }
+
+  @keyframes login-rise {
+    0% {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-login-rise {
+    animation: login-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-kenburns,
+    .animate-login-rise {
+      animation: none;
+    }
+  }
+}

@@ -1,0 +1,268 @@
+<!DOCTYPE html><html class="light" lang="pt-BR"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>OnlyFit - Explorar</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:ital,wght@0,400..700;1,400..700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#f7f9fd",
+                        "outline-variant": "#c8c4d7",
+                        "primary-container": "#6c5ce7",
+                        "on-background": "#191c1f",
+                        "on-surface": "#191c1f",
+                        "tertiary-container": "#00825c",
+                        "error-container": "#ffdad6",
+                        "surface-container": "#eceef2",
+                        "secondary-container": "#d8dff9",
+                        "inverse-on-surface": "#eff1f5",
+                        "surface-container-highest": "#e0e3e6",
+                        "tertiary-fixed-dim": "#3fdfa5",
+                        "on-tertiary-fixed": "#002114",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-primary": "#c6bfff",
+                        "on-secondary-container": "#5a6278",
+                        "surface-variant": "#e0e3e6",
+                        "primary-fixed": "#e4dfff",
+                        "surface-dim": "#d8dade",
+                        "surface-tint": "#5847d2",
+                        "primary-fixed-dim": "#c6bfff",
+                        "error": "#ba1a1a",
+                        "on-error": "#ffffff",
+                        "on-primary-container": "#faf6ff",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed": "#160066",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-fixed": "#63fcc0",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "inverse-surface": "#2d3134",
+                        "primary": "#5341cd",
+                        "surface-container-high": "#e6e8ec",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "on-surface-variant": "#474554",
+                        "on-primary-fixed-variant": "#4029ba",
+                        "on-secondary-fixed": "#131b2e",
+                        "tertiary": "#006647",
+                        "surface-container-low": "#f2f4f8",
+                        "surface-bright": "#f7f9fd",
+                        "on-tertiary-container": "#e1ffed",
+                        "background": "#f7f9fd",
+                        "outline": "#787586",
+                        "secondary-fixed": "#dae2fc",
+                        "on-tertiary-fixed-variant": "#005138",
+                        "on-secondary-fixed-variant": "#3f465b",
+                        "secondary": "#565e74"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xs": "8px",
+                        "gutter": "20px",
+                        "base": "4px",
+                        "sm": "16px",
+                        "md": "24px",
+                        "margin": "24px",
+                        "lg": "40px",
+                        "xl": "64px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Archivo Narrow"],
+                        "headline-lg-mobile": ["Archivo Narrow"],
+                        "headline-xl": ["Archivo Narrow"],
+                        "headline-lg": ["Archivo Narrow"],
+                        "body-md": ["Archivo Narrow"],
+                        "label-xs": ["Archivo Narrow"],
+                        "headline-md": ["Archivo Narrow"],
+                        "body-lg": ["Archivo Narrow"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["14px", { "lineHeight": "1.4", "letterSpacing": "0.02em", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "1.2", "fontWeight": "600" }],
+                        "headline-xl": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "label-xs": ["12px", { "lineHeight": "1", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for horizontal lists */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-24 md:pb-0 md:pt-24">
+<!-- Desktop TopAppBar -->
+<header class="hidden md:flex justify-between items-center w-full px-margin py-base z-50 fixed top-0 bg-surface/80 backdrop-blur-md">
+<div class="flex items-center gap-sm">
+<span class="font-headline-md text-headline-md font-bold text-primary dark:text-primary-fixed">OnlyFit</span>
+</div>
+<nav class="flex items-center gap-md">
+<a class="text-on-surface-variant hover:opacity-80 transition-opacity font-label-sm text-label-sm flex flex-col items-center" href="#">
+<span class="material-symbols-outlined mb-1">home</span>
+                Início
+            </a>
+<a class="text-primary hover:opacity-80 transition-opacity font-label-sm text-label-sm flex flex-col items-center" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">explore</span>
+                Explorar
+            </a>
+<a class="text-on-surface-variant hover:opacity-80 transition-opacity font-label-sm text-label-sm flex flex-col items-center" href="#">
+<span class="material-symbols-outlined mb-1">fitness_center</span>
+                Treino
+            </a>
+<a class="text-on-surface-variant hover:opacity-80 transition-opacity font-label-sm text-label-sm flex flex-col items-center" href="#">
+<span class="material-symbols-outlined mb-1">shopping_bag</span>
+                Produtos
+            </a>
+<a class="text-on-surface-variant hover:opacity-80 transition-opacity font-label-sm text-label-sm flex flex-col items-center" href="#">
+<span class="material-symbols-outlined mb-1">chat_bubble</span>
+                Inbox
+            </a>
+</nav>
+<div class="flex items-center gap-sm">
+<button class="text-on-surface-variant hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container-high border border-on-secondary-fixed/10">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A close up portrait of an athlete in a high tech gym setting, cool lighting, clear focus, professional photography, corporate modern style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuComjEb2gYF8x0YCpgYngnnF9dfBv0gpwYKW71Ps2sehj3TFit1GrOcFL7pTRKsvzgN937UDlY_Z_SO9XYPg1BWceHGnaKfBOQP3b9Dz3JSuaf8niGm3tk6ywmr25kL8KjXLIbvJBmBRP_1h5jTShE4jwkGhBAXqlxcAm-bN_a8-u47gRiGQkpBHbyrEovAR3QyL_T1Jh0fJvCsDUQaF3PuF13J-Hyo6_KlHebbGnIRxWZkEoxYd2yW">
+</div>
+</div>
+</header>
+<main class="max-w-[1440px] mx-auto px-margin md:px-lg mt-sm md:mt-0 pb-sm">
+<!-- Search Section -->
+<section class="mb-md">
+<div class="relative w-full max-w-2xl mx-auto md:mx-0">
+<span class="material-symbols-outlined absolute left-sm top-1/2 transform -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="w-full bg-surface-container-lowest border border-on-secondary-fixed/20 rounded-xl py-sm pl-xl pr-sm text-body-md font-body-md focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all shadow-sm" placeholder="Buscar atletas, treinos, produtos..." type="text">
+</div>
+</section>
+<!-- Filter Chips -->
+<section class="mb-lg overflow-x-auto hide-scrollbar -mx-margin px-margin md:mx-0 md:px-0">
+<div class="flex gap-sm w-max">
+<button class="bg-primary text-on-primary px-sm py-xs rounded-full font-label-sm text-label-sm whitespace-nowrap transition-transform hover:scale-95">Tudo</button>
+<button class="bg-surface-container-lowest border border-on-secondary-fixed/10 text-on-surface px-sm py-xs rounded-full font-label-sm text-label-sm whitespace-nowrap hover:bg-surface-container-high transition-colors">Pessoas</button>
+<button class="bg-surface-container-lowest border border-on-secondary-fixed/10 text-on-surface px-sm py-xs rounded-full font-label-sm text-label-sm whitespace-nowrap hover:bg-surface-container-high transition-colors">Conteúdo</button>
+<button class="bg-surface-container-lowest border border-on-secondary-fixed/10 text-on-surface px-sm py-xs rounded-full font-label-sm text-label-sm whitespace-nowrap hover:bg-surface-container-high transition-colors">Produtos</button>
+<button class="bg-surface-container-lowest border border-on-secondary-fixed/10 text-on-surface px-sm py-xs rounded-full font-label-sm text-label-sm whitespace-nowrap hover:bg-surface-container-high transition-colors">Comunidades</button>
+<button class="bg-surface-container-lowest border border-on-secondary-fixed/10 text-on-surface px-sm py-xs rounded-full font-label-sm text-label-sm whitespace-nowrap hover:bg-surface-container-high transition-colors">Desafios</button>
+</div>
+</section>
+<!-- Bento Grid / Instagram Style Mix -->
+<section class="grid grid-cols-2 md:grid-cols-4 gap-xs md:gap-sm mb-xl">
+<!-- Large Item (Spans 2x2 on Desktop, 2x1 on Mobile) -->
+<div class="col-span-2 row-span-2 relative group overflow-hidden rounded-xl border border-on-secondary-fixed/5 bg-surface-container-lowest aspect-square md:aspect-auto h-full min-h-[300px]">
+<img alt="Treino" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A dynamic action shot of a crossfit athlete lifting weights in a clinical, bright, cool tech gym environment. Ice white lighting, sharp focus, energetic but clean aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUnsLj61Brfhqfymd8kF6F2w5LYGeLKZxv9S-S27rEFUnyWI3m_dmzSzLFGefItzu750poBZKSvncsxcqKOQoWgOPQsyvbji57yUVjabW7bwM5zgqUGW-0gAj7dd3iOPv2ncXAcnWVE_mOazAlNfISrJQmkgPUZX4B9P_FUCTUuGnPw_3533VRdmrttqaVjFIvs4bOmHaItJdUh6QqsexTlb6f7R8j9jRJIilzYwSTH9YwaZua7Jkp">
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+<div class="absolute bottom-0 left-0 p-sm text-white">
+<span class="bg-tertiary-container/90 text-on-tertiary-container text-label-xs font-label-xs px-2 py-1 rounded-full uppercase tracking-wider mb-xs inline-block">Destaque</span>
+<h3 class="font-headline-md text-headline-md font-semibold">Técnica de LPO Avançada</h3>
+<p class="font-body-md text-body-md opacity-80 flex items-center gap-1 mt-1"><span class="material-symbols-outlined text-[16px]">person</span> João Silva</p>
+</div>
+</div>
+<!-- Standard Grid Items -->
+<div class="relative group overflow-hidden rounded-xl border border-on-secondary-fixed/5 bg-surface-container-lowest aspect-square">
+<img alt="Produto" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A close up of a modern, sleek smart watch displaying fitness metrics on an ice white background. High contrast, minimalist product photography, cool tech style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCOssabntZPutSBYXwki2Nghs-j8h5D9AM2jTHRPsfPg00Psdql9g7JVeRoGFcYKhW5gHWhTRVOriDmSRAih7dgb0c4Hn-5z4RkiZde8HD_fxLaN1A_yjnkavQceoritk9y5iI8HJg3XL54HD0Hc80Pi-5r7fv6OEDTfNGua0KJ8gvP-bdEl6_pDr91tEdKIZzzFi160mydZXw22nVWdQmIkFzOWeYjwOxiJMkncJTX2YJ0ctSttFtJ">
+<div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="absolute top-xs right-xs bg-white/90 backdrop-blur-sm p-1 rounded-full">
+<span class="material-symbols-outlined text-primary text-[18px]">shopping_bag</span>
+</div>
+</div>
+<div class="relative group overflow-hidden rounded-xl border border-on-secondary-fixed/5 bg-surface-container-lowest aspect-square">
+<img alt="Nutrição" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A top-down view of a colorful, healthy meal prep bowl on a clean, light surface. Corporate modern aesthetic, crisp lighting, focus on nutritional precision." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEcDf4g5LJHnYRNFJtfu0Yym_B26Ld6HwL6DFi2k8pKzH4UAff3ElbefmqSLjaTZ_lyLIq9b12b-HZ_W9nki-vQ0LO993YISHv3ZJnpjO_HVCl6vyCJoBJjvXRhbPK7sG9NJe17pLG9eM6xUsYKNOowA8i2040AS3GAuqXwjS4F0ltbxyBVKajlNyjHeVf5dDAqFOwd5yAa-Qm9AIxFI1SJrdW_gr_g7yc6U_CRmJ-fFQtClAIzpw5">
+<div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+</div>
+<div class="col-span-2 md:col-span-1 relative group overflow-hidden rounded-xl border border-on-secondary-fixed/5 bg-primary aspect-[2/1] md:aspect-square flex flex-col items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[48px] mb-xs">workspace_premium</span>
+<h4 class="font-headline-sm text-headline-sm font-bold">Desafio 30 Dias</h4>
+<p class="font-label-sm text-label-sm opacity-80">Junte-se a 5k atletas</p>
+<div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+</div>
+<div class="relative group overflow-hidden rounded-xl border border-on-secondary-fixed/5 bg-surface-container-lowest aspect-square">
+<img alt="Comunidade" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" data-alt="A portrait of a female runner stretching on an outdoor track during early morning, cool crisp lighting, data-driven athletic vibe." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDSVZKLa9Q3Of-LmDRNdXOjdnK13FLYdjW-nFxYi878hw40bg_lGBpHv7wTOPl1VNDbbWLo1NCypKa1FfUjnbojnfOIHXaOXqbXTlzKp24xFMIs4eJ4lTobr-VCIguTQwqE_Q4-SHBNGFnmotlw-1dA47sVonNHD-Nuluk93IMEMP9C2vlWKY1NNq3W4yBqXHXv4lxh3BXCy1_AfUvh6eqeBGbhkG4_lcFZuwsPEaFquzA0eEBPqwmV">
+<div class="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+</div>
+</section>
+<!-- Categories / Interests -->
+<section class="mb-lg">
+<h2 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg font-bold text-on-surface mb-sm">Categorias</h2>
+<div class="flex overflow-x-auto hide-scrollbar gap-sm -mx-margin px-margin md:mx-0 md:px-0">
+<div class="min-w-[160px] bg-surface-container-lowest border border-on-secondary-fixed/10 rounded-xl p-sm flex flex-col items-center justify-center gap-xs hover:shadow-md transition-shadow cursor-pointer">
+<div class="w-12 h-12 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined">fitness_center</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface">Força</span>
+</div>
+<div class="min-w-[160px] bg-surface-container-lowest border border-on-secondary-fixed/10 rounded-xl p-sm flex flex-col items-center justify-center gap-xs hover:shadow-md transition-shadow cursor-pointer">
+<div class="w-12 h-12 rounded-full bg-error-container text-on-error-container flex items-center justify-center">
+<span class="material-symbols-outlined">monitor_heart</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface">Cardio</span>
+</div>
+<div class="min-w-[160px] bg-surface-container-lowest border border-on-secondary-fixed/10 rounded-xl p-sm flex flex-col items-center justify-center gap-xs hover:shadow-md transition-shadow cursor-pointer">
+<div class="w-12 h-12 rounded-full bg-tertiary-container/20 text-tertiary flex items-center justify-center">
+<span class="material-symbols-outlined">restaurant</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface">Nutrição</span>
+</div>
+<div class="min-w-[160px] bg-surface-container-lowest border border-on-secondary-fixed/10 rounded-xl p-sm flex flex-col items-center justify-center gap-xs hover:shadow-md transition-shadow cursor-pointer">
+<div class="w-12 h-12 rounded-full bg-primary-container/20 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined">self_improvement</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface">Mobilidade</span>
+</div>
+</div>
+</section>
+</main>
+<!-- Mobile BottomNavBar -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-xs pb-safe bg-surface/90 backdrop-blur-md pt-xs border-t border-on-secondary-fixed/5">
+<a class="flex flex-col items-center justify-center text-on-surface-variant font-label-xs text-label-xs hover:bg-primary-container/10 transition-colors p-2 rounded-lg" href="#">
+<span class="material-symbols-outlined mb-1 text-[24px]">home</span>
+            Início
+        </a>
+<a class="flex flex-col items-center justify-center text-primary font-bold font-label-xs text-label-xs scale-90 transition-transform p-2" href="#">
+<span class="material-symbols-outlined mb-1 text-[24px]" style="font-variation-settings: 'FILL' 1;">explore</span>
+            Explorar
+        </a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant font-label-xs text-label-xs hover:bg-primary-container/10 transition-colors p-2 rounded-lg" href="#">
+<span class="material-symbols-outlined mb-1 text-[24px]">fitness_center</span>
+            Treino
+        </a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant font-label-xs text-label-xs hover:bg-primary-container/10 transition-colors p-2 rounded-lg" href="#"><div class="w-6 h-6 rounded-full overflow-hidden border border-on-secondary-fixed/10 mb-1"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuCK82w-ce2OjtS-uK0Jjf27KFfHy2ed1deP4_jXAupn4fETGfK_DCX2bK-q6revv-J__RzZPupGFfzZFFKJNB-EaACf7GH1dgbqcksHv-H6h4sCpqfKt-9JO3gZNYjyGXhiN7Ug9EE4SbDm7KKw_X0g1_jKcuchYnqLztMU9RW6XEUuJJMRto6MW4MDLoq52-BopXKnWWrXwloaXDRn9nR-EPkym6K7GmuyKmvnSukBOgqTe1XFdNASibLvVOu_j7seSQ" alt="Profile" class="w-full h-full object-cover"></div>
+
+            Produtos
+        </a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant font-label-xs text-label-xs hover:bg-primary-container/10 transition-colors p-2 rounded-lg" href="#">
+<span class="material-symbols-outlined mb-1 text-[24px]">chat_bubble</span>
+            Inbox
+        </a>
+</nav>
+
+
+</body></html>

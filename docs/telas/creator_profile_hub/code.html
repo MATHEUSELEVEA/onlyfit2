@@ -1,0 +1,269 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Perfil do Influenciador - OnlyFit</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#f7f9fd",
+                        "outline-variant": "#c8c4d7",
+                        "primary-container": "#6c5ce7",
+                        "on-background": "#191c1f",
+                        "on-surface": "#191c1f",
+                        "tertiary-container": "#00825c",
+                        "error-container": "#ffdad6",
+                        "surface-container": "#eceef2",
+                        "secondary-container": "#d8dff9",
+                        "inverse-on-surface": "#eff1f5",
+                        "surface-container-highest": "#e0e3e6",
+                        "tertiary-fixed-dim": "#3fdfa5",
+                        "on-tertiary-fixed": "#002114",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-primary": "#c6bfff",
+                        "on-secondary-container": "#5a6278",
+                        "surface-variant": "#e0e3e6",
+                        "primary-fixed": "#e4dfff",
+                        "surface-dim": "#d8dade",
+                        "surface-tint": "#5847d2",
+                        "primary-fixed-dim": "#c6bfff",
+                        "error": "#ba1a1a",
+                        "on-error": "#ffffff",
+                        "on-primary-container": "#faf6ff",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed": "#160066",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-fixed": "#63fcc0",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "inverse-surface": "#2d3134",
+                        "primary": "#5341cd",
+                        "surface-container-high": "#e6e8ec",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "on-surface-variant": "#474554",
+                        "on-primary-fixed-variant": "#4029ba",
+                        "on-secondary-fixed": "#131b2e",
+                        "tertiary": "#006647",
+                        "surface-container-low": "#f2f4f8",
+                        "surface-bright": "#f7f9fd",
+                        "on-tertiary-container": "#e1ffed",
+                        "background": "#f7f9fd",
+                        "outline": "#787586",
+                        "secondary-fixed": "#dae2fc",
+                        "on-tertiary-fixed-variant": "#005138",
+                        "on-secondary-fixed-variant": "#3f465b",
+                        "secondary": "#565e74"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xs": "8px",
+                        "gutter": "20px",
+                        "base": "4px",
+                        "sm": "16px",
+                        "md": "24px",
+                        "margin": "24px",
+                        "lg": "40px",
+                        "xl": "64px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Archivo Narrow"],
+                        "headline-lg-mobile": ["Archivo Narrow"],
+                        "headline-xl": ["Archivo Narrow"],
+                        "headline-lg": ["Archivo Narrow"],
+                        "body-md": ["Archivo Narrow"],
+                        "label-xs": ["Archivo Narrow"],
+                        "headline-md": ["Archivo Narrow"],
+                        "body-lg": ["Archivo Narrow"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["14px", { "lineHeight": "1.4", "letterSpacing": "0.02em", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "1.2", "fontWeight": "600" }],
+                        "headline-xl": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "label-xs": ["12px", { "lineHeight": "1", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen pb-[80px] md:pb-0 pt-[72px]">
+<!-- TopAppBar -->
+<header class="bg-surface/80 backdrop-blur-md text-primary font-headline-md text-headline-md flex justify-between items-center w-full px-margin py-base z-50 fixed full-width top-0">
+<div class="flex items-center gap-sm">
+<button class="hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined text-primary">arrow_back</span>
+</button>
+<span class="font-bold text-primary">OnlyFit</span>
+</div>
+<button class="hover:opacity-80 transition-opacity text-on-surface-variant">
+<span class="material-symbols-outlined">share</span>
+</button>
+</header>
+<main class="max-w-[1440px] mx-auto grid grid-cols-4 md:grid-cols-12 gap-gutter px-gutter md:px-margin mt-lg">
+<!-- Profile Header Section -->
+<section class="col-span-4 md:col-span-12 flex flex-col items-center text-center space-y-md mb-xl">
+<div class="relative w-32 h-32 rounded-full overflow-hidden border-2 border-primary/20">
+<img class="w-full h-full object-cover" data-alt="A highly detailed close-up portrait of a fit, athletic male fitness influencer with a confident expression. The lighting is bright and modern, creating a clinical yet energetic mood. The background is a crisp, minimalist white studio. The color palette emphasizes high contrast with deep blacks, pristine ice whites, and subtle electric violet accents, perfectly matching the Cool Tech aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAMkLGNwJLjgGcMLTgyELsRyS9P7_bb2CUag5GaaujnKO_xGTkmzZTHkgONH_IaDETKiIpIr5WV89sC12uXIPvQKqcxuJZOa7Yi6NSM2qf33aIn36ilHybOENqr5W3oYgA7Bky64J_-rXsJqq4vD7IgVa0s2501ItgiIbbT-u7JP8M-am0P-tdBcSuVSAsQ7HSJASnQDDzxLlXgQ80Qymk7tkt36I6gYsLqzVx_P73W6ma2BNS2fJJ-">
+</div>
+<div class="space-y-xs">
+<h1 class="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-secondary-fixed flex items-center justify-center gap-xs">
+                    Marcus Vance
+                    <span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">verified</span>
+</h1>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-md mx-auto">
+                    Hyrox World Champion | Elite Performance Coach | Data-driven strength &amp; conditioning. Let's engineer your peak output.
+                </p>
+<div class="flex justify-center gap-sm pt-xs">
+<span class="bg-[#131b2e] text-on-primary rounded-full px-sm py-xs font-label-xs text-label-xs uppercase">Hyrox</span>
+<span class="bg-primary text-on-primary rounded-full px-sm py-xs font-label-xs text-label-xs uppercase">Performance</span>
+</div>
+</div>
+<!-- Stats -->
+<div class="flex gap-lg border-t border-b border-[#131B2E]/10 py-sm w-full md:w-auto md:px-xl">
+<div class="flex flex-col items-center">
+<span class="font-headline-md text-headline-md text-tertiary">2.4M</span>
+<span class="font-label-xs text-label-xs text-on-surface-variant uppercase">Followers</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="font-headline-md text-headline-md text-tertiary">150</span>
+<span class="font-label-xs text-label-xs text-on-surface-variant uppercase">Workouts</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="font-headline-md text-headline-md text-tertiary">12</span>
+<span class="font-label-xs text-label-xs text-on-surface-variant uppercase">Programs</span>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex flex-wrap justify-center gap-sm w-full">
+<button class="bg-primary text-white font-label-sm text-label-sm px-md py-sm rounded flex-1 md:flex-none hover:bg-primary/90 transition-colors">
+                    Subscribe
+                </button>
+<button class="bg-transparent text-[#131B2E] border border-[#131B2E] font-label-sm text-label-sm px-md py-sm rounded flex-1 md:flex-none hover:bg-surface-container-high transition-colors">
+                    Follow
+                </button>
+<button class="bg-transparent text-[#131B2E] border border-[#131B2E] p-sm rounded hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined">mail</span>
+</button>
+</div>
+</section>
+<!-- Subscription Card -->
+<section class="col-span-4 md:col-span-8 md:col-start-3 mb-xl">
+<div class="bg-white rounded-lg border border-[#131B2E]/5 p-md flex flex-col md:flex-row items-center gap-md hover:shadow-[0_4px_20px_rgba(19,27,46,0.04)] transition-shadow">
+<div class="flex-1 space-y-xs text-center md:text-left">
+<h3 class="font-headline-md text-headline-md text-[#131b2e]">Hyrox Pro Access</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">Unlock all exclusive training programs, technical breakdown videos, and direct Q&amp;A access.</p>
+</div>
+<div class="flex flex-col items-center gap-xs">
+<span class="font-headline-lg text-headline-lg text-primary">$19.99<span class="font-label-sm text-label-sm text-on-surface-variant">/mo</span></span>
+<button class="bg-tertiary text-on-tertiary font-label-sm text-label-sm px-md py-sm rounded hover:bg-tertiary/90 transition-colors w-full">
+                        Join Now
+                    </button>
+</div>
+</div>
+</section>
+<!-- Navigation Tabs -->
+<section class="col-span-4 md:col-span-12 mb-lg border-b border-[#131B2E]/10">
+<div class="flex overflow-x-auto no-scrollbar gap-md pb-xs">
+<button class="font-label-sm text-label-sm text-primary border-b-2 border-primary pb-xs whitespace-nowrap">Free Content</button>
+<button class="font-label-sm text-label-sm text-on-surface-variant pb-xs whitespace-nowrap hover:text-[#131B2E] transition-colors">Exclusive</button>
+<button class="font-label-sm text-label-sm text-on-surface-variant pb-xs whitespace-nowrap hover:text-[#131B2E] transition-colors">Products</button>
+<button class="font-label-sm text-label-sm text-on-surface-variant pb-xs whitespace-nowrap hover:text-[#131B2E] transition-colors">Challenges</button>
+<button class="font-label-sm text-label-sm text-on-surface-variant pb-xs whitespace-nowrap hover:text-[#131B2E] transition-colors">Communities</button>
+</div>
+</section>
+<!-- Content Grid (Free Content Placeholder) -->
+<section class="col-span-4 md:col-span-12 grid grid-cols-2 md:grid-cols-4 gap-sm md:gap-md">
+<!-- Video Item 1 -->
+<div class="bg-white rounded-lg border border-[#131B2E]/5 overflow-hidden group cursor-pointer hover:shadow-[0_4px_20px_rgba(19,27,46,0.04)] transition-shadow">
+<div class="relative aspect-video">
+<img class="w-full h-full object-cover" data-alt="A dynamic, high-quality still from a fitness video showing an athlete performing a kettlebell swing in a modern, stark white gym environment. The lighting is clinical and bright, emphasizing the Cool Tech aesthetic. Accents of electric violet and mint green are visible on the gym equipment. The mood is focused and intense." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCxvcobQ7xR1gBZWOaAJTnQy63yZAMfzj5DIDNrXlPisGlZrMoONITUQAChoAcUCNLvl5rhc8Ra3_j5LWD5vfgTOcueoVfgoBrxjdu-yDP5vU18JFCf9mCIriALVctzG3S-r__Jp6-WKz-B2nkopviWc4rCPWnD-9Q8ZqLNaUAxJ81jVlFPp1BMZOp0KQY-znLV1xjNFiCl7jXVJcg0WV3-Ot-p2UK0yPg29AA_ymR0flc3z4kZtnYd">
+<div class="absolute inset-0 bg-[#131B2E]/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white text-[48px]">play_circle</span>
+</div>
+</div>
+<div class="p-sm">
+<h4 class="font-label-sm text-label-sm text-[#131b2e] truncate">Kettlebell Efficiency</h4>
+</div>
+</div>
+<!-- Video Item 2 -->
+<div class="bg-white rounded-lg border border-[#131B2E]/5 overflow-hidden group cursor-pointer hover:shadow-[0_4px_20px_rgba(19,27,46,0.04)] transition-shadow">
+<div class="relative aspect-video">
+<img class="w-full h-full object-cover" data-alt="A highly detailed close-up shot of an athlete's hands gripping a barbell with white chalk dust. The setting is a minimalist, high-end laboratory-style gym. The lighting is bright and analytical, with deep navy and pristine white tones dominating the composition. The style is strictly Cool Tech, conveying precision." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCamVw5gB8GxkyKd9QQCh9SkcFk2tRjsDfnSEUOmc7gO2m1Yk2qX3GSSH98oLi0hhJzjq-MSx075NyFZ0syfRQOUpAmh7TMoYB2c54u-aAVuqNGgBEGbYw9jTxWMAqc20Ik2krSG2UqRZH9NQjZ0bwusXsEqCCoDRqXkyeYzWsloTL89BF6TIAdX4sIIoSa1xpNZMQ2yXSdTWj8GmqA8PDAOP85PKIP_CLSEgGomtNJF_B2dqqtq2ZY">
+<div class="absolute inset-0 bg-[#131B2E]/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white text-[48px]">play_circle</span>
+</div>
+</div>
+<div class="p-sm">
+<h4 class="font-label-sm text-label-sm text-[#131b2e] truncate">Grip Strength Protocol</h4>
+</div>
+</div>
+<!-- Video Item 3 -->
+<div class="bg-white rounded-lg border border-[#131B2E]/5 overflow-hidden group cursor-pointer hover:shadow-[0_4px_20px_rgba(19,27,46,0.04)] transition-shadow">
+<div class="relative aspect-video">
+<img class="w-full h-full object-cover" data-alt="A wide shot of a futuristic indoor running track with neon mint green lane lines on a pristine white surface. An athlete is sprinting, captured in sharp focus. The lighting is high-key and technical, creating a clinical, quantified-self aesthetic. The overarching color palette relies on ice whites, deep navy shadows, and electric violet accents." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBIOnb9fvjhbLIArmdryptFlk88QkRdW-4ZCRgu_60jruU6EejRxP7hWb6RSTl5Tv7EXMxnt19AG-jvPKoPQias7kKvJHz5YFXnt5ZAojEnVKO1ZTx0BPwvOTLJddjSebHxZFzBJUg4b9-2tQZmVR8QTLSVInJCRbPuIR8-UB87QUnwvhJUCkP7D8U0pevSvQezeUizVEEgZDKntVCMmzGNLU2hb6h0HTOEs58XufEx9X4CXr63o1n">
+<div class="absolute inset-0 bg-[#131B2E]/20 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white text-[48px]">play_circle</span>
+</div>
+</div>
+<div class="p-sm">
+<h4 class="font-label-sm text-label-sm text-[#131b2e] truncate">Sprint Mechanics</h4>
+</div>
+</div>
+<!-- Video Item 4 -->
+<div class="bg-white rounded-lg border border-[#131B2E]/5 overflow-hidden group cursor-pointer hover:shadow-[0_4px_20px_rgba(19,27,46,0.04)] transition-shadow">
+<div class="relative aspect-video bg-surface-container-high flex items-center justify-center">
+<span class="font-label-sm text-label-sm text-on-surface-variant">View All</span>
+</div>
+<div class="p-sm">
+<h4 class="font-label-sm text-label-sm text-[#131b2e] truncate">More Content</h4>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="md:hidden bg-surface/90 backdrop-blur-md fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-xs pb-safe py-sm">
+<a class="flex flex-col items-center justify-center text-on-surface-variant font-label-xs text-label-xs hover:bg-primary-container/10 transition-colors p-xs rounded" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="">Início</span>
+</a>
+<a class="flex flex-col items-center justify-center text-primary font-bold font-label-xs text-label-xs hover:bg-primary-container/10 transition-colors p-xs rounded scale-90 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">explore</span>
+<span class="">Explorar</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant font-label-xs text-label-xs hover:bg-primary-container/10 transition-colors p-xs rounded" href="#">
+<span class="material-symbols-outlined">fitness_center</span>
+<span class="">Treino</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant font-label-xs text-label-xs hover:bg-primary-container/10 transition-colors p-xs rounded" href="#"><div class="flex flex-col items-center justify-center relative"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuB7K08a1_DvywQNlLS7EEffe8pFHnP6IgpncE-cDWaDtHloZScPlJ4LV-23_kqfU3NGWhnFBMQJi0QqKG5sDY-FI2DyYoSdHdN93ayo1fI0s8dQEypPoUyOQSRX9111AccdT6AG8BjZojIrkwDLLf0VnaD82uspRFXFN0fzPOC7yL-NAXylt1hOW_FDCOkKzKJd-sRPotGM2M9DYymzBAhWrOBYIJzbdE5gj9CLFOGMlOsa455sSeIdYxiG96pMzoOK_Q" class="w-6 h-6 rounded-full object-cover mb-1" alt="Profile"><span class="material-symbols-outlined hidden">shopping_bag</span><span class="">Produtos</span></div></a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant font-label-xs text-label-xs hover:bg-primary-container/10 transition-colors p-xs rounded" href="#">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="">Inbox</span>
+</a>
+</nav>
+
+
+</body></html>

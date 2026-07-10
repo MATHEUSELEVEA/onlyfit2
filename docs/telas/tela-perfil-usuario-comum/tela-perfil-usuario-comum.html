@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>OnlyFit - User Profile</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container": "#eceef2",
+                      "secondary-container": "#d8dff9",
+                      "on-error": "#ffffff",
+                      "on-surface-variant": "#474554",
+                      "tertiary-fixed-dim": "#3fdfa5",
+                      "secondary-fixed": "#dae2fc",
+                      "tertiary": "#006647",
+                      "surface-tint": "#5847d2",
+                      "on-tertiary": "#ffffff",
+                      "primary": "#5341cd",
+                      "surface-container-highest": "#e0e3e6",
+                      "on-tertiary-container": "#e1ffed",
+                      "secondary": "#565e74",
+                      "outline": "#787586",
+                      "tertiary-fixed": "#63fcc0",
+                      "tertiary-container": "#00825c",
+                      "primary-container": "#6c5ce7",
+                      "outline-variant": "#c8c4d7",
+                      "error": "#ba1a1a",
+                      "surface-container-low": "#f2f4f8",
+                      "on-secondary": "#ffffff",
+                      "on-primary": "#ffffff",
+                      "surface-container-high": "#e6e8ec",
+                      "primary-fixed-dim": "#c6bfff",
+                      "on-secondary-container": "#5a6278",
+                      "on-error-container": "#93000a",
+                      "on-tertiary-fixed": "#002114",
+                      "on-background": "#191c1f",
+                      "on-tertiary-fixed-variant": "#005138",
+                      "on-primary-fixed": "#160066",
+                      "background": "#f7f9fd",
+                      "on-surface": "#191c1f",
+                      "surface-dim": "#d8dade",
+                      "inverse-on-surface": "#eff1f5",
+                      "on-secondary-fixed-variant": "#3f465b",
+                      "inverse-surface": "#2d3134",
+                      "error-container": "#ffdad6",
+                      "surface-bright": "#f7f9fd",
+                      "primary-fixed": "#e4dfff",
+                      "on-primary-container": "#faf6ff",
+                      "surface": "#f7f9fd",
+                      "surface-variant": "#e0e3e6",
+                      "inverse-primary": "#c6bfff",
+                      "on-secondary-fixed": "#131b2e",
+                      "surface-container-lowest": "#ffffff",
+                      "secondary-fixed-dim": "#bec6e0",
+                      "on-primary-fixed-variant": "#4029ba"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "margin": "24px",
+                      "xs": "8px",
+                      "sm": "16px",
+                      "md": "24px",
+                      "base": "4px",
+                      "lg": "40px",
+                      "xl": "64px",
+                      "gutter": "20px"
+              },
+              "fontFamily": {
+                      "headline-lg-mobile": [
+                              "Archivo Narrow"
+                      ],
+                      "headline-lg": [
+                              "Archivo Narrow"
+                      ],
+                      "headline-xl": [
+                              "Archivo Narrow"
+                      ],
+                      "headline-md": [
+                              "Archivo Narrow"
+                      ],
+                      "body-md": [
+                              "Archivo Narrow"
+                      ],
+                      "body-lg": [
+                              "Archivo Narrow"
+                      ],
+                      "label-sm": [
+                              "Archivo Narrow"
+                      ],
+                      "label-xs": [
+                              "Archivo Narrow"
+                      ]
+              },
+              "fontSize": {
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-xl": [
+                              "48px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "letterSpacing": "0.02em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "label-xs": [
+                              "12px",
+                              {
+                                      "lineHeight": "1",
+                                      "fontWeight": "700"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        body {
+            background-color: #F4F6FA; /* Ice White base */
+        }
+        .tech-border {
+            border: 1px solid rgba(19, 27, 46, 0.1); /* Deep Navy 10% */
+        }
+        .tech-shadow:hover {
+            box-shadow: 0 4px 20px rgba(19, 27, 46, 0.04);
+        }
+        /* Mobile specific bottom padding to account for nav bar */
+        @media (max-width: 767px) {
+            .pb-safe {
+                padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+            }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background antialiased font-body-md min-h-screen flex flex-col">
+<!-- Top Navigation (Desktop) -->
+<header class="hidden md:flex justify-between items-center h-16 px-margin w-full bg-surface border-b border-outline-variant/10 fixed top-0 z-50 transition-colors duration-200 ease-in-out">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary cursor-pointer hover:bg-surface-container-high p-2 rounded-full transition-colors">menu</span>
+<span class="font-headline-md text-headline-md font-bold tracking-tighter text-primary">ONLYFIT</span>
+</div>
+<nav class="flex gap-8">
+<a class="text-on-surface-variant font-label-sm text-label-sm hover:text-primary transition-colors" href="#">Discovery</a>
+<a class="text-on-surface-variant font-label-sm text-label-sm hover:text-primary transition-colors" href="#">Training</a>
+<a class="text-primary font-label-sm text-label-sm font-semibold border-b-2 border-primary pb-1" href="#">Profile</a>
+</nav>
+<span class="material-symbols-outlined text-primary cursor-pointer hover:bg-surface-container-high p-2 rounded-full transition-colors">notifications</span>
+</header>
+<!-- Main Content -->
+<main class="flex-grow pt-0 md:pt-16 pb-safe md:pb-8 flex justify-center w-full">
+<div class="w-full max-w-[1440px] md:px-margin md:grid md:grid-cols-12 md:gap-gutter">
+<!-- Profile Container (Centered on desktop, full width mobile) -->
+<div class="md:col-span-8 md:col-start-3 lg:col-span-6 lg:col-start-4">
+<!-- Immersive Hero -->
+<div class="relative w-full h-80 md:h-96 md:rounded-t-xl overflow-hidden tech-border border-b-0">
+<img alt="User Profile Image" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBH9hOHoaZdkXDQi8k4_PIGINphl4dsqCV69o5VeIFhfTlpNZtztHV2r2uKNJr5jxitdogJUqGpKVz_zI_YEhk4MrqPOHuNE4g0_GoJ7x8mdJgwTqvi1O3NjVqhxckxSlmQTTI5YE8ltQKDfnA1HrBl77KZBIztPgN58Eg6_K_SZKA_mH0ePct7a9rtzoEZmXPthNEZghmNUqwIlssl7fC_Kth9xtNpHdObu2r5GtS8E0P6EmS8FIoq"/>
+<!-- Floating Actions -->
+<div class="absolute top-4 left-4 md:hidden">
+<button class="bg-surface/80 backdrop-blur-md p-2 rounded-full text-on-surface hover:bg-surface transition-colors shadow-sm">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+</div>
+<div class="absolute top-4 right-4 flex gap-2">
+<button class="bg-surface/80 backdrop-blur-md p-2 rounded-full text-on-surface hover:bg-surface transition-colors shadow-sm md:hidden">
+<span class="material-symbols-outlined">share</span>
+</button>
+</div>
+</div>
+<!-- Profile Info Section -->
+<div class="bg-surface px-margin py-md tech-border md:rounded-b-xl mb-lg relative">
+<div class="flex justify-between items-start mb-6">
+<div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-surface mb-1">Alex Silva</h1>
+<span class="inline-block bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full font-label-xs text-label-xs uppercase tracking-wider">Membro Pro</span>
+</div>
+<button class="bg-primary text-on-primary px-6 py-3 rounded flex items-center gap-2 hover:bg-primary-fixed-variant transition-colors shadow-sm"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">inbox</span><span class="font-label-sm text-label-sm font-semibold">Mensagens</span></button>
+</div>
+<!-- Key Stats Bento -->
+<div class="grid grid-cols-2 gap-sm"><div class="bg-surface-container-low p-4 rounded-lg tech-border tech-shadow transition-shadow"><div class="font-label-xs text-label-xs text-secondary uppercase mb-1">Sequência Atual</div><div class="font-headline-md text-headline-md text-tertiary-container flex items-center gap-1"><span class="material-symbols-outlined text-tertiary-container">local_fire_department</span>12 Semanas</div></div><div class="bg-surface-container-low p-4 rounded-lg tech-border tech-shadow transition-shadow"><div class="font-label-xs text-label-xs text-secondary uppercase mb-1">Comunidade</div><div class="font-headline-md text-headline-md text-on-surface flex items-center gap-1"><span class="material-symbols-outlined text-on-surface-variant">group</span>1.2k Seguindo</div></div></div>
+</div>
+<!-- Settings Hub -->
+<div class="px-margin md:px-0 space-y-md"><h2 class="font-headline-md text-headline-md text-on-surface mb-sm">Central de Configurações</h2><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="bg-surface rounded-xl p-4 tech-border tech-shadow flex items-center justify-between"><div><div class="font-label-xs text-secondary uppercase mb-1">Tema</div><div class="flex gap-2"><button class="w-6 h-6 rounded-full bg-on-background border border-outline-variant/20"></button><button class="w-6 h-6 rounded-full bg-primary border border-outline-variant/20"></button><button class="w-6 h-6 rounded-full bg-[#f97316] border border-outline-variant/20"></button></div></div><div class="text-right"><div class="font-label-xs text-secondary uppercase mb-1">Idioma</div><div class="flex gap-1"><button class="px-2 py-1 rounded bg-primary-container text-on-primary-container text-label-xs">PT</button><button class="px-2 py-1 rounded bg-surface-container-low text-on-surface-variant text-label-xs">EN</button></div></div></div><div class="bg-surface rounded-xl p-4 tech-border tech-shadow"><div class="font-label-xs text-secondary uppercase mb-2">Escala de Texto</div><div class="flex items-center gap-3"><span class="text-label-xs">A</span><input class="flex-grow h-1 bg-surface-container-high rounded-lg appearance-none accent-primary" max="3" min="1" type="range" value="2"/><span class="text-headline-md">A</span></div></div></div><div class="bg-surface rounded-xl tech-border overflow-hidden tech-shadow"><a class="flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors border-b border-outline-variant/10" href="#"><div class="flex items-center gap-3"><span class="material-symbols-outlined text-secondary">person_edit</span><div><div class="font-body-md text-on-surface">Editar Perfil</div><div class="text-label-xs text-on-surface-variant">Dados pessoais, endereços e contatos</div></div></div><span class="material-symbols-outlined text-outline">chevron_right</span></a><a class="flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors border-b border-outline-variant/10" href="#"><div class="flex items-center gap-3"><span class="material-symbols-outlined text-secondary">payment</span><div><div class="font-body-md text-on-surface">Formas de Pagamento</div><div class="text-label-xs text-on-surface-variant">Cartões, PIX e endereços de cobrança</div></div></div><span class="material-symbols-outlined text-outline">chevron_right</span></a><a class="flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors border-b border-outline-variant/10" href="#"><div class="flex items-center gap-3"><span class="material-symbols-outlined text-secondary">medical_services</span><div><div class="font-body-md text-on-surface">Perfil de Saúde</div><div class="text-label-xs text-on-surface-variant">Declarações, registros clínicos e exames</div></div></div><span class="material-symbols-outlined text-outline">chevron_right</span></a><a class="flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors border-b border-outline-variant/10" href="#"><div class="flex items-center gap-3"><span class="material-symbols-outlined text-secondary">database</span><div><div class="font-body-md text-on-surface">Privacidade de Dados (LGPD)</div><div class="text-label-xs text-on-surface-variant">Gerenciar memória, ver por data e apagar</div></div></div><span class="material-symbols-outlined text-outline">chevron_right</span></a><div class="flex items-center justify-between p-4 border-b border-outline-variant/10"><div class="flex items-center gap-3"><span class="material-symbols-outlined text-secondary">construction</span><div><div class="font-body-md text-on-surface">Ferramentas Profissionais</div><div class="text-label-xs text-on-surface-variant">Habilitar recursos avançados</div></div></div><div class="relative inline-block w-10 h-6 bg-surface-container-highest rounded-full"><div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform"></div></div></div><a class="flex items-center justify-between p-4 hover:bg-surface-container-low transition-colors" href="#"><div class="flex items-center gap-3"><span class="material-symbols-outlined text-secondary">gavel</span><div><div class="font-body-md text-on-surface">Privacidade e Termos</div><div class="text-label-xs text-on-surface-variant">Consentimento LGPD e termos de uso</div></div></div><span class="material-symbols-outlined text-outline">chevron_right</span></a></div><div class="h-8"></div></div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation (Mobile) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 border-t border-outline-variant/10 bg-surface flex justify-around items-center h-20 pb-safe px-xs">
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-1 hover:text-primary transition-transform duration-150 active:scale-95" href="#">
+<span class="material-symbols-outlined mb-1">explore</span>
+<span class="font-label-xs text-label-xs">Discovery</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-5 py-1 hover:text-primary transition-transform duration-150 active:scale-95" href="#">
+<span class="material-symbols-outlined mb-1">fitness_center</span>
+<span class="font-label-xs text-label-xs">Training</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-5 py-1 transition-transform duration-150 active:scale-95" href="#">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="font-label-xs text-label-xs">Profile</span>
+</a>
+</nav>
+</body></html>

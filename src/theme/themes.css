@@ -1,0 +1,118 @@
+/* GERADO a partir de onlyfit2/temas/DESIGN {PRETO,AZUL,LARANJA}.md
+ * Variáveis em triplas RGB para suportar modificadores de opacidade do Tailwind
+ * (ex.: bg-surface/80 -> rgb(var(--color-surface) / 0.8)).
+ * Tema padrão: preto (Premium Performance).
+ */
+:root, [data-theme="preto"] {
+  --color-surface: 19 19 19;
+  --color-surface-dim: 19 19 19;
+  --color-surface-bright: 58 57 57;
+  --color-surface-container-lowest: 14 14 14;
+  --color-surface-container-low: 28 27 27;
+  --color-surface-container: 32 31 31;
+  --color-surface-container-high: 42 42 42;
+  --color-surface-container-highest: 53 53 52;
+  --color-on-surface: 229 226 225;
+  --color-on-surface-variant: 197 201 172;
+  --color-inverse-surface: 229 226 225;
+  --color-inverse-on-surface: 49 48 48;
+  --color-outline: 143 147 120;
+  --color-outline-variant: 68 73 50;
+  --color-surface-tint: 176 213 0;
+  --color-primary: 202 243 0;
+  --color-on-primary: 42 52 0;
+  --color-primary-container: 202 243 0;
+  --color-on-primary-container: 89 108 0;
+  --color-inverse-primary: 83 102 0;
+  --color-secondary: 255 181 158;
+  --color-on-secondary: 94 23 0;
+  --color-secondary-container: 255 87 26;
+  --color-on-secondary-container: 82 19 0;
+  --color-tertiary: 255 255 255;
+  --color-on-tertiary: 27 52 61;
+  --color-tertiary-container: 205 231 243;
+  --color-on-tertiary-container: 80 104 115;
+  --color-error: 255 180 171;
+  --color-on-error: 105 0 5;
+  --color-error-container: 147 0 10;
+  --color-on-error-container: 255 218 214;
+  --color-background: 19 19 19;
+  --color-on-background: 229 226 225;
+  --color-surface-variant: 53 53 52;
+}
+
+[data-theme="azul"] {
+  --color-surface: 247 249 253;
+  --color-surface-dim: 216 218 222;
+  --color-surface-bright: 247 249 253;
+  --color-surface-container-lowest: 255 255 255;
+  --color-surface-container-low: 242 244 248;
+  --color-surface-container: 236 238 242;
+  --color-surface-container-high: 230 232 236;
+  --color-surface-container-highest: 224 227 230;
+  --color-on-surface: 25 28 31;
+  --color-on-surface-variant: 71 69 84;
+  --color-inverse-surface: 45 49 52;
+  --color-inverse-on-surface: 239 241 245;
+  --color-outline: 120 117 134;
+  --color-outline-variant: 200 196 215;
+  --color-surface-tint: 88 71 210;
+  --color-primary: 83 65 205;
+  --color-on-primary: 255 255 255;
+  --color-primary-container: 108 92 231;
+  --color-on-primary-container: 250 246 255;
+  --color-inverse-primary: 198 191 255;
+  --color-secondary: 86 94 116;
+  --color-on-secondary: 255 255 255;
+  --color-secondary-container: 216 223 249;
+  --color-on-secondary-container: 90 98 120;
+  --color-tertiary: 0 102 71;
+  --color-on-tertiary: 255 255 255;
+  --color-tertiary-container: 0 130 92;
+  --color-on-tertiary-container: 225 255 237;
+  --color-error: 186 26 26;
+  --color-on-error: 255 255 255;
+  --color-error-container: 255 218 214;
+  --color-on-error-container: 147 0 10;
+  --color-background: 247 249 253;
+  --color-on-background: 25 28 31;
+  --color-surface-variant: 224 227 230;
+}
+
+[data-theme="laranja"] {
+  --color-surface: 252 249 240;
+  --color-surface-dim: 221 218 209;
+  --color-surface-bright: 252 249 240;
+  --color-surface-container-lowest: 255 255 255;
+  --color-surface-container-low: 247 243 234;
+  --color-surface-container: 241 238 229;
+  --color-surface-container-high: 235 232 223;
+  --color-surface-container-highest: 229 226 218;
+  --color-on-surface: 28 28 23;
+  --color-on-surface-variant: 91 65 56;
+  --color-inverse-surface: 49 49 43;
+  --color-inverse-on-surface: 244 241 232;
+  --color-outline: 143 112 102;
+  --color-outline-variant: 227 190 179;
+  --color-surface-tint: 170 54 0;
+  --color-primary: 170 54 0;
+  --color-on-primary: 255 255 255;
+  --color-primary-container: 255 94 26;
+  --color-on-primary-container: 85 23 0;
+  --color-inverse-primary: 255 181 156;
+  --color-secondary: 20 108 67;
+  --color-on-secondary: 255 255 255;
+  --color-secondary-container: 159 241 189;
+  --color-on-secondary-container: 27 112 71;
+  --color-tertiary: 120 88 47;
+  --color-on-tertiary: 255 255 255;
+  --color-tertiary-container: 178 141 95;
+  --color-on-tertiary-container: 64 39 3;
+  --color-error: 186 26 26;
+  --color-on-error: 255 255 255;
+  --color-error-container: 255 218 214;
+  --color-on-error-container: 147 0 10;
+  --color-background: 252 249 240;
+  --color-on-background: 28 28 23;
+  --color-surface-variant: 229 226 218;
+}

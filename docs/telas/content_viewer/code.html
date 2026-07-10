@@ -1,0 +1,332 @@
+<!DOCTYPE html><html lang="pt-BR"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>OnlyFit - Visualizador de Conteúdo</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:ital,wght@0,400..700;1,400..700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface": "#f7f9fd",
+                        "outline-variant": "#c8c4d7",
+                        "primary-container": "#6c5ce7",
+                        "on-background": "#191c1f",
+                        "on-surface": "#191c1f",
+                        "tertiary-container": "#00825c",
+                        "error-container": "#ffdad6",
+                        "surface-container": "#eceef2",
+                        "secondary-container": "#d8dff9",
+                        "inverse-on-surface": "#eff1f5",
+                        "surface-container-highest": "#e0e3e6",
+                        "tertiary-fixed-dim": "#3fdfa5",
+                        "on-tertiary-fixed": "#002114",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-primary": "#c6bfff",
+                        "on-secondary-container": "#5a6278",
+                        "surface-variant": "#e0e3e6",
+                        "primary-fixed": "#e4dfff",
+                        "surface-dim": "#d8dade",
+                        "surface-tint": "#5847d2",
+                        "primary-fixed-dim": "#c6bfff",
+                        "error": "#ba1a1a",
+                        "on-error": "#ffffff",
+                        "on-primary-container": "#faf6ff",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed": "#160066",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-fixed": "#63fcc0",
+                        "on-secondary": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "inverse-surface": "#2d3134",
+                        "primary": "#5341cd",
+                        "surface-container-high": "#e6e8ec",
+                        "secondary-fixed-dim": "#bec6e0",
+                        "on-surface-variant": "#474554",
+                        "on-primary-fixed-variant": "#4029ba",
+                        "on-secondary-fixed": "#131b2e",
+                        "tertiary": "#006647",
+                        "surface-container-low": "#f2f4f8",
+                        "surface-bright": "#f7f9fd",
+                        "on-tertiary-container": "#e1ffed",
+                        "background": "#f7f9fd",
+                        "outline": "#787586",
+                        "secondary-fixed": "#dae2fc",
+                        "on-tertiary-fixed-variant": "#005138",
+                        "on-secondary-fixed-variant": "#3f465b",
+                        "secondary": "#565e74"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "xs": "8px",
+                        "gutter": "20px",
+                        "base": "4px",
+                        "sm": "16px",
+                        "md": "24px",
+                        "margin": "24px",
+                        "lg": "40px",
+                        "xl": "64px"
+                    },
+                    "fontFamily": {
+                        "label-sm": ["Archivo Narrow"],
+                        "headline-lg-mobile": ["Archivo Narrow"],
+                        "headline-xl": ["Archivo Narrow"],
+                        "headline-lg": ["Archivo Narrow"],
+                        "body-md": ["Archivo Narrow"],
+                        "label-xs": ["Archivo Narrow"],
+                        "headline-md": ["Archivo Narrow"],
+                        "body-lg": ["Archivo Narrow"]
+                    },
+                    "fontSize": {
+                        "label-sm": ["14px", { "lineHeight": "1.4", "letterSpacing": "0.02em", "fontWeight": "500" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "1.2", "fontWeight": "600" }],
+                        "headline-xl": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "label-xs": ["12px", { "lineHeight": "1", "fontWeight": "700" }],
+                        "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Hide scrollbar for clean full-screen view */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        * {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Snap scrolling for vertical feed */
+        .snap-container {
+            scroll-snap-type: y mandatory;
+            overflow-y: scroll;
+            height: 100vh;
+        }
+        .snap-item {
+            scroll-snap-align: start;
+            height: 100vh;
+        }
+        
+        /* Slide up animation for comments */
+        .comments-slide-up {
+            transition: transform 0.3s ease-in-out;
+            transform: translateY(100%);
+        }
+        .comments-slide-up.active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface antialiased w-full h-full m-0 overflow-hidden">
+<!-- Vertical Swipe Container -->
+<main class="snap-container relative w-full max-w-[500px] mx-auto bg-surface-container-lowest h-full md:border-x md:border-outline-variant/30">
+<!-- Top Navigation Overlay (Matches "Explore" context) -->
+<div class="absolute top-0 left-0 w-full z-10 px-sm py-sm flex justify-between items-center bg-gradient-to-b from-surface-container-lowest/80 to-transparent backdrop-blur-sm">
+<button class="w-10 h-10 rounded-full bg-surface-container-lowest/90 border border-outline-variant/20 flex items-center justify-center text-on-surface hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-[20px]">arrow_back</span>
+</button>
+<div class="font-headline-md text-headline-md font-bold text-primary">OnlyFit</div>
+<button class="w-10 h-10 rounded-full bg-surface-container-lowest/90 border border-outline-variant/20 flex items-center justify-center text-on-surface hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+<!-- Post 1 (Active) -->
+<article class="snap-item relative w-full h-full overflow-hidden flex flex-col justify-end">
+<!-- Full Screen Media -->
+<div class="absolute inset-0 w-full h-full z-0">
+<img class="w-full h-full object-cover" data-alt="A dynamic full-body shot of an elite athlete performing a perfect deadlift in a clinical, high-tech training facility. The lighting is bright and modern 'Ice White', emphasizing the athlete's muscular definition and focus. The environment is minimalist with subtle grid lines on the floor, conveying a 'Quantified Self' aesthetic. High contrast, sharp focus, professional fitness photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUHaMOxP8VMcBkNUhswtFmjBinGlpkAdqUx8KJYcwycXK-oUmt7sW913sM5uA160b-XmJSwDSn-NXFlBDDwAd48GNooX9dtwjBiAHGMKyqUK3TkoAdfEIOdcfS3GEXz8GVWEdyI329JE7MIVNM4Mq483N_6_5H_BXO5wJPKTMkgQzvPFwLwjW0_KvKWTFp3c0iWu5Ec_rAP_RVl00EkTYGioohzM6UEECL3MOifdOuqnF0SwWxaEL_">
+<!-- Gradient overlay for text legibility -->
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-surface-container-lowest/40 to-transparent"></div>
+</div>
+<!-- Content Overlay (Bottom) -->
+<div class="relative z-10 p-sm pb-md flex flex-col gap-sm">
+<!-- Author & CTA -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-xs">
+<div class="w-12 h-12 rounded-full border-2 border-primary overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A close-up headshot of a professional fitness trainer looking intensely at the camera. The background is a stark, bright white laboratory setting. The trainer wears a sleek, dark navy performance shirt. The lighting is crisp and clinical, fitting the 'Cool Tech' brand aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA6E6vhpQE85Gwp1lXvNbpKOjUp3hgMuPfSoIyqlYRj0lgkvTWRWcVPwEyn0ktvaKpi3wHW2PrUTMECR9rrC3NcKCp4Jv-tGtB_mVkX4YE_8FoFAFflHJM938WdtYzHOh30Udql7R2bAIqnURMk6grjxTSDO7H3jIArJX_ataAPXkkzhfPVNd0KNbRBNsT0S3SwbspfSQntpGxnPT-w12v9CJUU-cm9G7RW48tecC6DaPp1h9DUE40M">
+</div>
+<div class="flex flex-col">
+<span class="font-body-lg text-body-lg font-semibold text-on-surface">@marcus_lift</span>
+<span class="font-label-xs text-label-xs text-on-surface-variant flex items-center gap-base">
+<span class="material-symbols-outlined text-[14px]">verified</span> Pro Athlete
+                            </span>
+</div>
+</div>
+<button class="px-sm py-xs bg-primary text-on-primary rounded font-label-sm text-label-sm hover:opacity-90 transition-opacity">
+                        Seguir
+                    </button>
+</div>
+<!-- Description -->
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface mb-base">Forma Perfeita: Deadlift</h2>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">
+                        A chave para um deadlift pesado não está apenas na força bruta, mas na tensão inicial e biomecânica. Mantenha o core ativado e a barra colada nas canelas. #Treino #Força #Biomecânica
+                    </p>
+<button class="font-label-sm text-label-sm text-primary mt-base font-semibold">Ler mais</button>
+</div>
+<!-- Interaction Bar -->
+<div class="flex items-center justify-between pt-base border-t border-outline-variant/20 mt-xs">
+<div class="flex items-center gap-md">
+<button class="flex flex-col items-center gap-base text-on-surface hover:text-primary transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">favorite</span>
+<span class="font-label-xs text-label-xs">12.4k</span>
+</button>
+<button class="flex flex-col items-center gap-base text-on-surface hover:text-primary transition-colors" id="btn-comments">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="font-label-xs text-label-xs">842</span>
+</button>
+<button class="flex flex-col items-center gap-base text-on-surface hover:text-primary transition-colors">
+<span class="material-symbols-outlined">share</span>
+<span class="font-label-xs text-label-xs">Share</span>
+</button>
+</div>
+<!-- Shop Button -->
+<button class="flex items-center gap-xs px-sm py-xs bg-surface border border-outline-variant rounded-full font-label-sm text-label-sm text-on-surface hover:bg-surface-container-high transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[16px]">shopping_bag</span>
+                        Equipamento
+                    </button>
+</div>
+</div>
+</article>
+<!-- Post 2 (Scroll down to see) -->
+<article class="snap-item relative w-full h-full overflow-hidden flex flex-col justify-end bg-surface-container">
+<!-- Full Screen Media -->
+<div class="absolute inset-0 w-full h-full z-0">
+<img class="w-full h-full object-cover" data-alt="A runner sprinting on a high-tech treadmill in a futuristic, bright white room. The runner wears neon green shoes and a dark navy athletic outfit. The image captures motion blur on the legs, emphasizing speed and performance. The overall aesthetic is clean, minimal, and driven by data, fitting the 'Cool Tech' style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuADBHO0B_ADTql0ob9_z-oZzaY_t-zOS36PaxC3b52E6GXsN85o_I2G6BgLcLjNlE85nGqvpoOt_PgG4PZ4ooUxzjta8xWVdprzPhFnXUgDH012dRWLrY3_80HJNEkiOoL2MXoncQWOY1sQQsu2_cJtjpTMoHxStpCQG8gvx1OPQvDeWoPnj19kiaiArwOhxZfP5wQC32ZMHrN9nZ2C0LYwgPz18w8-MUVQR0S5cow-ZuzeAFzi2wGp">
+<!-- Gradient overlay for text legibility -->
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-surface-container-lowest/40 to-transparent"></div>
+</div>
+<!-- Content Overlay (Bottom) -->
+<div class="relative z-10 p-sm pb-md flex flex-col gap-sm">
+<!-- Author & CTA -->
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-xs">
+<div class="w-12 h-12 rounded-full border-2 border-primary overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A headshot of a female runner with a sleek ponytail, wearing a white tech-fabric jacket. The background is a blurred high-end gym setting with cool blue and white tones. Professional sports photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCj2Bo3yMtNlmc48FdzGurloPlSbf117MeQVFJRZPPlZS-2MNjGeaO-DkEzkt1i8EWxhAVAjV2V6YJoUMwmYq1jSLllpZEhkJfEg10ayyKnrS5-eePRTC0j2Wsa4qDb-qxEn_WIkEU19RH92IbjifBywK8qkxDPJ6tb59-yuuNqWxj1AMofJDPGHRQYC5n_UaRsG_VlG689hWTchGVkxr-hM3TdPajMj55NoeS88gfs70rCED1ETOm2">
+</div>
+<div class="flex flex-col">
+<span class="font-body-lg text-body-lg font-semibold text-on-surface">@sarah_run</span>
+<span class="font-label-xs text-label-xs text-on-surface-variant flex items-center gap-base">
+<span class="material-symbols-outlined text-[14px]">speed</span> Endurance
+                            </span>
+</div>
+</div>
+<button class="px-sm py-xs bg-primary text-on-primary rounded font-label-sm text-label-sm hover:opacity-90 transition-opacity">
+                        Seguir
+                    </button>
+</div>
+<!-- Description -->
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface mb-base">HIIT: Zonas de Frequência</h2>
+<p class="font-body-md text-body-md text-on-surface-variant line-clamp-2">
+                        Otimizando o VO2 Max hoje. Trabalhando na Zona 5 por intervalos curtos. Acompanhe os dados de recuperação. #Cardio #HIIT #Performance
+                    </p>
+</div>
+<!-- Interaction Bar -->
+<div class="flex items-center justify-between pt-base border-t border-outline-variant/20 mt-xs">
+<div class="flex items-center gap-md">
+<button class="flex flex-col items-center gap-base text-on-surface hover:text-primary transition-colors">
+<span class="material-symbols-outlined">favorite</span>
+<span class="font-label-xs text-label-xs">8.1k</span>
+</button>
+<button class="flex flex-col items-center gap-base text-on-surface hover:text-primary transition-colors">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="font-label-xs text-label-xs">312</span>
+</button>
+</div>
+</div>
+</div>
+</article>
+<!-- Slide-up Comments Section -->
+<div class="comments-slide-up absolute inset-x-0 bottom-0 h-[60vh] bg-surface-container-lowest rounded-t-xl shadow-[0_-4px_20px_rgba(19,27,46,0.1)] z-30 flex flex-col border-t border-outline-variant/20" id="comments-sheet">
+<!-- Drag Handle -->
+<div class="w-full flex justify-center pt-xs pb-sm cursor-pointer" id="close-comments">
+<div class="w-12 h-1 bg-outline-variant rounded-full"></div>
+</div>
+<div class="px-sm pb-sm border-b border-outline-variant/20 flex justify-between items-center">
+<h3 class="font-headline-md text-headline-md text-on-surface">Comentários (842)</h3>
+<button class="text-on-surface-variant hover:text-on-surface" id="close-comments-btn">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Comments List -->
+<div class="flex-1 overflow-y-auto p-sm flex flex-col gap-md">
+<!-- Comment 1 -->
+<div class="flex gap-xs">
+<div class="w-8 h-8 rounded-full bg-surface-container-high shrink-0 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A small avatar showing a user in a gym, well lit." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC21RPTCsKZ5cujYctAAVix0eY9JTCDTqzuz4Ae-gXB69ZqMLd1PhFV2Q-Yed5wqcaKY9Jfaio_iuaqqEbf6DA7cwbZaAz06kIp8KZop-pmnevMM65eK1U6WzY3P6CF5wcb6ItOPji0lD5j3cZL9xkWBbu23obiZsNOTi1Em3G8yZk9RGPJ0JkQJwEyMcwvsOfz_Hd4cQ5c0voDrZMngxACzL-HmZ107zIwgY-lI2TdUUhCL4mT1nh3">
+</div>
+<div>
+<div class="flex items-baseline gap-xs">
+<span class="font-label-sm text-label-sm text-on-surface font-semibold">user_123</span>
+<span class="font-label-xs text-label-xs text-on-surface-variant">2h</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface mt-base">A postura está incrível. Qual cinto você recomenda para quem está começando a pegar mais pesado?</p>
+<button class="font-label-xs text-label-xs text-on-surface-variant mt-xs">Responder</button>
+</div>
+</div>
+<!-- Comment 2 -->
+<div class="flex gap-xs">
+<div class="w-8 h-8 rounded-full bg-surface-container-high shrink-0 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A small avatar of a person running outdoors." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBNVl_fI2T1XauSNsiqkrR2yj-Mstf69rRoPuyuoE2qF63fKR-RkoKLX_pWFkUi4nEd6noWoeeOxjjrDdv5Rh90nV_UNVb8geyBSbE9XIPEe9PMxqJMQmjGHooeZyVk0fbgNU0UevRqvFsFQwWLbA6LmKEmeC_7SUJc2WtV46sxr_R090pUkMysHzq87nmz1p8WHvR38RoboGcabAaY04EvUclaVc21xawyY6Ey7VPnl6hTtW8b4zM6">
+</div>
+<div>
+<div class="flex items-baseline gap-xs">
+<span class="font-label-sm text-label-sm text-on-surface font-semibold">fit_life_br</span>
+<span class="font-label-xs text-label-xs text-on-surface-variant">4h</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface mt-base">Monstro! Inspiração pura para o treino de perna de hoje. 🔥</p>
+<button class="font-label-xs text-label-xs text-on-surface-variant mt-xs">Responder</button>
+</div>
+</div>
+</div>
+<!-- Comment Input -->
+<div class="p-sm border-t border-outline-variant/20 bg-surface flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full bg-primary-container shrink-0 overflow-hidden flex items-center justify-center text-on-primary-container font-label-sm text-label-sm">
+                    Me
+                </div>
+<input class="flex-1 bg-surface-container-lowest border border-outline-variant/20 rounded-full px-sm py-xs font-body-md text-body-md focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20" placeholder="Adicionar comentário..." type="text">
+<button class="text-primary hover:text-primary-container">
+<span class="material-symbols-outlined">send</span>
+</button>
+</div>
+</div>
+</main>
+<!-- Semantic Shell Suppression -->
+<!-- As per the rules, this is a full-screen focused journey/viewer, implying a temporary departure from the main flow. 
+         Therefore, TopAppBar and BottomNavBar are structurally suppressed in the main flow, 
+         though an overlay header was provided for context. -->
+<script>
+        // Simple slide-up interaction for comments
+        const btnComments = document.getElementById('btn-comments');
+        const commentsSheet = document.getElementById('comments-sheet');
+        const closeComments = document.getElementById('close-comments');
+        const closeCommentsBtn = document.getElementById('close-comments-btn');
+
+        btnComments.addEventListener('click', () => {
+            commentsSheet.classList.add('active');
+        });
+
+        const closeHandler = () => {
+            commentsSheet.classList.remove('active');
+        };
+
+        closeComments.addEventListener('click', closeHandler);
+        closeCommentsBtn.addEventListener('click', closeHandler);
+    </script>
+</body></html>
