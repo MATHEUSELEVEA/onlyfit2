@@ -21,8 +21,18 @@ interface PostRow {
     username: string | null;
     full_name: string | null;
     avatar_url: string | null;
-    is_creator: boolean | null;
+    creator_profiles:
+      | { verified: boolean | null }
+      | { verified: boolean | null }[]
+      | null;
   } | null;
+}
+
+function isVerifiedCreator(profile: PostRow['profiles']): boolean {
+  const creatorProfile = Array.isArray(profile?.creator_profiles)
+    ? profile.creator_profiles[0]
+    : profile?.creator_profiles;
+  return creatorProfile?.verified === true;
 }
 
 function toFeedPost(row: PostRow, likedPostIds: Set<string>): FeedPost {
@@ -33,7 +43,7 @@ function toFeedPost(row: PostRow, likedPostIds: Set<string>): FeedPost {
       username: row.profiles?.username ?? 'creator',
       displayName: row.profiles?.full_name ?? null,
       avatarUrl: row.profiles?.avatar_url ?? null,
-      verified: Boolean(row.profiles?.is_creator),
+      verified: isVerifiedCreator(row.profiles),
     },
     caption: row.description ?? row.title ?? '',
     mediaUrl: row.video_url ?? row.thumbnail_url,
@@ -74,7 +84,10 @@ async function fetchFeedPosts(userId: string, sports: string[]): Promise<FeedPos
     .select(
       `id, creator_id, title, description, is_premium, thumbnail_url, video_url,
        likes, comments, published_at,
-       profiles:creator_id!inner (username, full_name, avatar_url, is_creator)`,
+       profiles:creator_id!inner (
+         username, full_name, avatar_url,
+         creator_profiles (verified)
+       )`,
     )
     .in('id', ids);
   if (error) throw error;
@@ -87,6 +100,26 @@ async function fetchFeedPosts(userId: string, sports: string[]): Promise<FeedPos
   const likedPostIds = await fetchLikedPostIds(userId, rows.map((row) => row.id));
 
   return rows.map((row) => toFeedPost(row, likedPostIds));
+}
+
+async function fetchAvailableFeedSports(): Promise<string[]> {
+  const { data, error } = await supabase.rpc('feed_home_available_sports');
+  if (error) throw error;
+  return ((data ?? []) as { sport: string }[]).map((row) => row.sport);
+}
+
+export function useAvailableFeedSports() {
+  const { session } = useAuth();
+  const userId = session?.user.id;
+
+  return useQuery({
+    queryKey: ['feed-available-sports', userId],
+    queryFn: fetchAvailableFeedSports,
+    enabled: Boolean(userId),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 }
 
 export function useFeed(sports: string[]) {

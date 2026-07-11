@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useFeed } from './useFeed';
+import { useAvailableFeedSports, useFeed } from './useFeed';
 import { PostCard } from './PostCard';
 import { FeedSportsBar } from './FeedSportsBar';
 
@@ -17,7 +17,10 @@ function FeedSkeleton() {
 }
 
 export function FeedPage() {
-  const [selectedSport, setSelectedSport] = useState<string | null>(null);
+  const [sportSelection, setSportSelection] = useState<string | null>(null);
+  const { data: availableSports = [] } = useAvailableFeedSports();
+  const selectedSport =
+    sportSelection && availableSports.includes(sportSelection) ? sportSelection : null;
   const sports = useMemo(() => (selectedSport ? [selectedSport] : []), [selectedSport]);
   const { data: posts, isLoading, isError, refetch } = useFeed(sports);
 
@@ -26,7 +29,11 @@ export function FeedPage() {
       {/* Topo: barra de grupos de afinidade (rolagem lateral, estilo TikTok) */}
       <header className="absolute left-0 top-0 z-20 w-full pb-2 pt-safe-top">
         <div className="mt-2">
-          <FeedSportsBar selected={selectedSport} onSelect={setSelectedSport} />
+          <FeedSportsBar
+            selected={selectedSport}
+            availableSports={availableSports}
+            onSelect={setSportSelection}
+          />
         </div>
       </header>
 

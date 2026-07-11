@@ -3,23 +3,24 @@ import { FEED_SPORTS } from '@/lib/sports';
 
 interface FeedSportsBarProps {
   selected: string | null;
+  availableSports: string[];
   onSelect: (key: string | null) => void;
 }
 
-// "Tudo" (key null = sem filtro) + os esportes, em ordem fixa.
-const TABS: { key: string | null; label: string }[] = [
-  { key: null, label: 'Tudo' },
-  ...FEED_SPORTS,
-];
+export function FeedSportsBar({ selected, availableSports, onSelect }: FeedSportsBarProps) {
+  const available = new Set(availableSports);
+  const tabs: { key: string | null; label: string }[] = [
+    { key: null, label: 'Tudo' },
+    ...FEED_SPORTS.filter(({ key }) => available.has(key)),
+  ];
 
-export function FeedSportsBar({ selected, onSelect }: FeedSportsBarProps) {
   return (
     <div
       className="no-scrollbar flex gap-5 overflow-x-auto px-4"
       role="tablist"
       aria-label="Grupos de afinidade"
     >
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const active = selected === tab.key;
         return (
           <button

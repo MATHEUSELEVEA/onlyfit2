@@ -22,6 +22,7 @@ O backend é o **Supabase de produção compartilhado com o OnlyFit v1** (mesmo 
 Leitura:
 
 - RPC `feed_home_posts_page(p_limit, p_offset, p_sports)` → ids ordenados do feed.
+- RPC `feed_home_available_sports()` → grupos com ao menos um post elegível no feed do usuário.
 - `posts` (+ join `profiles` via `creator_id`) → conteúdo do post; posts públicos de creators alimentam o Explorar.
 - `profiles` + `creator_profiles` → identidade, bio, esportes e contadores de creators.
 - `creator_memberships` + `subscriptions` (legada) → estado "Assinado" (**somente leitura** — ver abaixo).

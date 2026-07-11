@@ -43,7 +43,7 @@ export function useCreatorInfo(username: string | undefined) {
       const { data, error } = await supabase
         .from('profiles')
         .select(
-          `id, username, full_name, avatar_url, is_creator,
+          `id, username, full_name, avatar_url,
            creator_profiles ( bio, category, subscription_price, follower_count, subscriber_count, verified )`,
         )
         .eq('username', username!)
@@ -57,7 +57,7 @@ export function useCreatorInfo(username: string | undefined) {
         username: data.username ?? username!,
         displayName: data.full_name ?? null,
         avatarUrl: data.avatar_url ?? null,
-        verified: Boolean(cp?.verified ?? data.is_creator),
+        verified: cp?.verified === true,
         bio: cp?.bio ?? null,
         category: cp?.category ?? null,
         subscriptionPrice: cp?.subscription_price ?? 0,
