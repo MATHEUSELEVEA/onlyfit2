@@ -6,7 +6,7 @@ const items = [
   { to: '/feed', label: 'Início', icon: Home },
   { to: '/explorar', label: 'Explorar', icon: Compass },
   { to: '/treino', label: 'Treino', icon: Dumbbell },
-  { to: '/produtos', label: 'Produtos', icon: ShoppingBag },
+  { to: '/produtos', label: 'Biblioteca', icon: ShoppingBag },
   { to: '/perfil', label: 'Perfil', icon: CircleUserRound },
 ];
 
