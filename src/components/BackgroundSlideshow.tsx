@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 
-// Carrega todas as imagens de onlyfit2/imagens como URLs (Vite resolve/otimiza).
+// Carrega todas as imagens de docs/imagens como URLs (Vite resolve/otimiza).
 // Ordenadas pelo nome do arquivo para um encadeamento estável.
-const imageModules = import.meta.glob('../../imagens/*.{png,jpg,jpeg,webp}', {
+const imageModules = import.meta.glob('../../docs/imagens/*.{png,jpg,jpeg,webp}', {
   eager: true,
   import: 'default',
   query: '?url',
