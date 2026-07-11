@@ -4,41 +4,44 @@
  * Tema padrão: preto (Premium Performance).
  */
 :root, [data-theme="preto"] {
-  --color-surface: 19 19 19;
-  --color-surface-dim: 19 19 19;
-  --color-surface-bright: 58 57 57;
-  --color-surface-container-lowest: 14 14 14;
-  --color-surface-container-low: 28 27 27;
-  --color-surface-container: 32 31 31;
-  --color-surface-container-high: 42 42 42;
-  --color-surface-container-highest: 53 53 52;
-  --color-on-surface: 229 226 225;
-  --color-on-surface-variant: 197 201 172;
-  --color-inverse-surface: 229 226 225;
-  --color-inverse-on-surface: 49 48 48;
-  --color-outline: 143 147 120;
-  --color-outline-variant: 68 73 50;
-  --color-surface-tint: 176 213 0;
+  /* Neutros frios e des-tingidos: o Material derivou o cinza do lime e deixou
+   * tudo cáqui/oliva sobre o preto. Ramp neutro (levíssimo azulado) melhora a
+   * leitura e faz o lime brilhar como único acento quente. */
+  --color-surface: 18 19 21;
+  --color-surface-dim: 18 19 21;
+  --color-surface-bright: 58 59 63;
+  --color-surface-container-lowest: 13 14 16;
+  --color-surface-container-low: 26 27 30;
+  --color-surface-container: 31 32 35;
+  --color-surface-container-high: 41 42 46;
+  --color-surface-container-highest: 51 52 56;
+  --color-on-surface: 230 231 234;
+  --color-on-surface-variant: 179 183 192;
+  --color-inverse-surface: 230 231 234;
+  --color-inverse-on-surface: 43 44 48;
+  --color-outline: 128 131 140;
+  --color-outline-variant: 58 61 67;
+  --color-surface-tint: 202 243 0;
   --color-primary: 202 243 0;
-  --color-on-primary: 42 52 0;
+  --color-on-primary: 30 38 0;
   --color-primary-container: 202 243 0;
   --color-on-primary-container: 89 108 0;
   --color-inverse-primary: 83 102 0;
-  --color-secondary: 255 181 158;
+  --color-secondary: 255 183 156;
   --color-on-secondary: 94 23 0;
-  --color-secondary-container: 255 87 26;
-  --color-on-secondary-container: 82 19 0;
-  --color-tertiary: 255 255 255;
+  --color-secondary-container: 74 39 28;
+  --color-on-secondary-container: 255 205 188;
+  --color-tertiary: 178 202 215;
   --color-on-tertiary: 27 52 61;
-  --color-tertiary-container: 205 231 243;
-  --color-on-tertiary-container: 80 104 115;
+  --color-tertiary-container: 41 54 61;
+  --color-on-tertiary-container: 190 220 233;
   --color-error: 255 180 171;
   --color-on-error: 105 0 5;
   --color-error-container: 147 0 10;
   --color-on-error-container: 255 218 214;
-  --color-background: 19 19 19;
-  --color-on-background: 229 226 225;
-  --color-surface-variant: 53 53 52;
+  --color-background: 18 19 21;
+  --color-on-background: 230 231 234;
+  --color-surface-variant: 46 47 51;
 }
 
 [data-theme="azul"] {

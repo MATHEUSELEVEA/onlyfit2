@@ -23,6 +23,7 @@ import {
 import { clsx } from 'clsx';
 import type { LucideIcon } from 'lucide-react';
 import { formatCount, formatPrice } from '@/lib/format';
+import { ShareSheet } from '@/components/ui/ShareSheet';
 import type { FeedAuthor } from '@/features/feed/types';
 import { useCreatorFollowState, useToggleCreatorFollow } from './useCreatorFollow';
 import { useCreatorSubscription } from './useCreatorSubscription';
@@ -66,23 +67,23 @@ function productMeta(type: string) {
   return PRODUCT_TYPE[type.toLowerCase()] ?? { label: 'Produto', icon: ShoppingBag };
 }
 
-function PriceBadge({ price, verb }: { price: number; verb?: string }) {
+function PriceBadge({ price }: { price: number }) {
   const free = !price || price <= 0;
   return (
     <span
       className={clsx(
         'inline-flex items-center rounded-full px-2.5 py-1 font-sans text-counter',
-        free ? 'bg-tertiary-container/60 text-on-tertiary-container' : 'bg-primary text-on-primary',
+        free ? 'bg-tertiary-container text-on-tertiary-container' : 'bg-primary text-on-primary',
       )}
     >
-      {free ? 'Grátis' : `${verb ? `${verb} ` : ''}${formatPrice(price)}`}
+      {free ? 'Grátis' : formatPrice(price)}
     </span>
   );
 }
 
 function EmptyState({ children }: { children: React.ReactNode }) {
   return (
-    <p className="col-span-full px-2 py-10 text-center font-sans text-body text-on-surface-variant">
+    <p className="col-span-full px-2 py-12 text-center font-sans text-body text-on-surface-variant">
       {children}
     </p>
   );
@@ -93,8 +94,8 @@ function Thumb({ url, label, icon: Icon }: { url: string | null; label: string; 
     return <img src={url} alt={label} className="h-full w-full object-cover" />;
   }
   return (
-    <div className="flex h-full w-full items-center justify-center bg-surface-container-high text-on-surface-variant">
-      <Icon size={28} aria-hidden />
+    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-surface-container-high to-surface-container text-on-surface-variant">
+      <Icon size={30} aria-hidden />
     </div>
   );
 }
@@ -106,6 +107,7 @@ export function CreatorProfilePage() {
   const seed = (location.state as { author?: FeedAuthor } | null)?.author;
   const [tab, setTab] = useState<TabKey>('free');
   const [subscribeNotice, setSubscribeNotice] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const { data } = useCreatorInfo(username);
 
@@ -122,6 +124,7 @@ export function CreatorProfilePage() {
     subscriberCount: 0,
   };
   const creatorId = creator.id || null;
+  const initial = creator.username.slice(0, 1).toUpperCase() || '?';
 
   const { data: following = false } = useCreatorFollowState(creatorId);
   const { data: subscribed = false } = useCreatorSubscription(creatorId);
@@ -134,60 +137,75 @@ export function CreatorProfilePage() {
   }
 
   const subPrice = creator.subscriptionPrice;
+  const shareUrl = `${window.location.origin}/creator/${encodeURIComponent(creator.username)}`;
+  const shareText = `Veja o perfil de ${creator.displayName ?? `@${creator.username}`} no OnlyFit`;
 
   return (
     <div className="h-full overflow-y-auto bg-background pb-8">
-      <header className="sticky top-0 z-10 flex items-center justify-between gap-3 bg-background/90 px-2 pb-2 pt-safe-top backdrop-blur-md">
-        <div className="flex items-center gap-1">
+      {/* ---------- Herói: foto preenchendo o topo (igual ao perfil próprio) ---------- */}
+      <div className="relative h-[42vh] max-h-[400px] min-h-[280px] w-full overflow-hidden">
+        {creator.avatarUrl ? (
+          <img
+            src={creator.avatarUrl}
+            alt={`Foto de ${creator.displayName ?? creator.username}`}
+            className="h-full w-full object-cover object-top"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary to-surface-tint">
+            <span className="font-sans text-display text-on-primary">{initial}</span>
+          </div>
+        )}
+
+        {/* Escurece o topo para os controles e faz fade para o fundo embaixo */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/55 to-transparent"
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent"
+        />
+
+        {/* Controles flutuando sobre a imagem */}
+        <div className="absolute inset-x-0 top-0 flex items-center justify-between px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <button
             type="button"
             onClick={() => navigate(-1)}
             aria-label="Voltar"
-            className="mt-2 flex h-11 w-11 items-center justify-center rounded-full text-on-surface active:bg-surface-container"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white ring-1 ring-white/20 backdrop-blur-md transition-transform active:scale-95"
           >
-            <ArrowLeft size={24} aria-hidden />
+            <ArrowLeft size={22} aria-hidden />
           </button>
-          <span className="mt-2 truncate font-sans text-title text-on-surface">@{creator.username}</span>
+          <button
+            type="button"
+            onClick={() => setShareOpen(true)}
+            aria-label="Compartilhar perfil"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white ring-1 ring-white/20 backdrop-blur-md transition-transform active:scale-95"
+          >
+            <Share2 size={20} aria-hidden />
+          </button>
         </div>
-        <button
-          type="button"
-          aria-label="Compartilhar perfil"
-          className="mt-2 flex h-11 w-11 items-center justify-center rounded-full text-on-surface-variant active:bg-surface-container"
-        >
-          <Share2 size={20} aria-hidden />
-        </button>
-      </header>
+      </div>
 
-      <div className="flex flex-col items-center px-5 pt-2 text-center">
-        {creator.avatarUrl ? (
-          <img
-            src={creator.avatarUrl}
-            alt={`Avatar de @${creator.username}`}
-            className="h-24 w-24 rounded-full border-2 border-primary object-cover"
-          />
-        ) : (
-          <div className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-primary bg-surface-container-high font-sans text-title-lg text-on-surface">
-            {creator.username.slice(0, 1).toUpperCase()}
-          </div>
-        )}
-
+      {/* Identidade, abaixo da imagem */}
+      <div className="flex flex-col items-center px-5 text-center">
+        <h1 className="flex items-center gap-1.5 text-balance break-words font-sans text-title-lg text-on-surface">
+          {creator.displayName ?? `@${creator.username}`}
+          {creator.verified && (
+            <BadgeCheck size={18} className="shrink-0 text-primary" aria-label="Verificado" />
+          )}
+        </h1>
         {creator.displayName && (
-          <h1 className="mt-3 flex items-center gap-1.5 font-sans text-title-lg text-on-surface">
-            {creator.displayName}
-            {creator.verified && (
-              <BadgeCheck size={18} className="text-primary" aria-label="Verificado" />
-            )}
-          </h1>
+          <span className="mt-0.5 font-sans text-body text-on-surface-variant">@{creator.username}</span>
         )}
-        <span className="mt-0.5 font-sans text-body text-on-surface-variant">@{creator.username}</span>
 
-        {creator.bio && (
-          <p className="mt-3 max-w-md font-sans text-body text-on-surface">{creator.bio}</p>
-        )}
         {creator.category && (
-          <span className="mt-3 inline-flex rounded-full bg-secondary-container px-3 py-1 font-sans text-counter uppercase text-on-secondary-container">
+          <span className="mt-3 inline-flex rounded-full bg-primary/10 px-3 py-1 font-sans text-eyebrow uppercase text-primary">
             {creator.category}
           </span>
+        )}
+        {creator.bio && (
+          <p className="mt-3 max-w-md font-sans text-body text-on-surface">{creator.bio}</p>
         )}
 
         {/* Stats */}
@@ -262,7 +280,7 @@ export function CreatorProfilePage() {
       </div>
 
       {/* Abas */}
-      <div className="sticky top-[calc(env(safe-area-inset-top)+48px)] z-10 mt-6 border-b border-outline-variant/40 bg-background/90 backdrop-blur-md">
+      <div className="sticky top-0 z-20 mt-6 border-b border-outline-variant/40 bg-background/95 backdrop-blur-md">
         <div className="no-scrollbar flex gap-1 overflow-x-auto px-3">
           {TABS.map(({ key, label, icon: Icon }) => (
             <button
@@ -271,7 +289,7 @@ export function CreatorProfilePage() {
               onClick={() => setTab(key)}
               aria-pressed={tab === key}
               className={clsx(
-                'flex min-h-[44px] shrink-0 items-center gap-1.5 border-b-2 px-3 font-sans text-label transition-colors',
+                'flex min-h-[46px] shrink-0 items-center gap-1.5 border-b-2 px-3 font-sans text-label transition-colors',
                 tab === key
                   ? 'border-primary text-primary'
                   : 'border-transparent text-on-surface-variant',
@@ -284,9 +302,11 @@ export function CreatorProfilePage() {
         </div>
       </div>
 
-      <div className="px-4 pt-4">
+      <div className="px-4 pt-5">
         <TabPanel tab={tab} creatorId={creatorId} subscribed={subscribed} onSubscribe={handleSubscribeClick} />
       </div>
+
+      <ShareSheet open={shareOpen} onClose={() => setShareOpen(false)} url={shareUrl} text={shareText} />
     </div>
   );
 }
@@ -334,7 +354,7 @@ function ContentGrid({
 
   if (locked) {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-2xl border border-outline-variant/40 bg-surface-container-low px-6 py-12 text-center">
+      <div className="flex flex-col items-center gap-3 rounded-3xl border border-outline-variant/40 bg-surface-container-low px-6 py-14 text-center">
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
           <Lock size={26} aria-hidden />
         </div>
@@ -357,7 +377,11 @@ function ContentGrid({
 
   if (isLoading) return <GridSkeleton />;
   if (items.length === 0) {
-    return <EmptyState>{premium ? 'Sem conteúdo exclusivo por aqui ainda.' : 'Sem conteúdo gratuito por aqui ainda.'}</EmptyState>;
+    return (
+      <EmptyState>
+        {premium ? 'Sem conteúdo exclusivo por aqui ainda.' : 'Sem conteúdo gratuito por aqui ainda.'}
+      </EmptyState>
+    );
   }
 
   return (
@@ -410,34 +434,75 @@ function ProductsGrid({ creatorId }: { creatorId: string | null }) {
   );
 }
 
+// Card largo com capa, título e descrição — padrão do content_viewer, com
+// respiro maior. Serve para desafios e comunidades.
+function MediaCard({
+  cover,
+  icon,
+  title,
+  description,
+  meta,
+  action,
+}: {
+  cover: string | null;
+  icon: LucideIcon;
+  title: string;
+  description: string | null;
+  meta: React.ReactNode;
+  action: React.ReactNode;
+}) {
+  return (
+    <div className="overflow-hidden rounded-3xl border border-outline-variant/40 bg-surface-container-low">
+      <div className="relative aspect-[16/9]">
+        <Thumb url={cover} label={title} icon={icon} />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"
+        />
+      </div>
+      <div className="flex flex-col gap-3 p-4">
+        <div className="flex flex-col gap-1.5">
+          <h3 className="font-sans text-title text-on-surface">{title}</h3>
+          {description && (
+            <p className="line-clamp-2 font-sans text-body text-on-surface-variant">{description}</p>
+          )}
+        </div>
+        <div className="flex items-center justify-between gap-3 pt-1">
+          <span className="font-sans text-body-sm text-on-surface-variant">{meta}</span>
+          {action}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ChallengesList({ creatorId }: { creatorId: string | null }) {
   const { data = [], isLoading } = useCreatorChallenges(creatorId);
-  if (isLoading) return <GridSkeleton />;
+  if (isLoading) return <CardSkeleton />;
   if (data.length === 0) return <EmptyState>Nenhum desafio ativo no momento.</EmptyState>;
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-5">
       {data.map((c) => (
-        <div
+        <MediaCard
           key={c.id}
-          className="flex items-center gap-3 rounded-2xl border border-outline-variant/40 bg-surface-container-low p-3"
-        >
-          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl">
-            <Thumb url={c.coverImageUrl} label={c.name} icon={Trophy} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-sans text-body text-on-surface">{c.name}</p>
-            <span className="font-sans text-counter text-on-surface-variant">
-              {formatCount(c.participantCount)} participantes
-            </span>
-          </div>
-          <div className="flex flex-col items-end gap-1.5">
-            <PriceBadge price={c.price} />
-            <span className="font-sans text-counter text-primary">
-              {c.price > 0 ? 'Participar' : 'Entrar'}
-            </span>
-          </div>
-        </div>
+          cover={c.coverImageUrl}
+          icon={Trophy}
+          title={c.name}
+          description={c.description}
+          meta={`${formatCount(c.participantCount)} participantes`}
+          action={
+            <div className="flex items-center gap-2">
+              <PriceBadge price={c.price} />
+              <button
+                type="button"
+                className="inline-flex min-h-[36px] items-center rounded-full bg-primary px-4 font-sans text-label text-on-primary active:scale-[0.98]"
+              >
+                {c.price > 0 ? 'Participar' : 'Entrar'}
+              </button>
+            </div>
+          }
+        />
       ))}
     </div>
   );
@@ -445,32 +510,28 @@ function ChallengesList({ creatorId }: { creatorId: string | null }) {
 
 function CommunitiesList({ creatorId }: { creatorId: string | null }) {
   const { data = [], isLoading } = useCreatorCommunities(creatorId);
-  if (isLoading) return <GridSkeleton />;
+  if (isLoading) return <CardSkeleton />;
   if (data.length === 0) return <EmptyState>Este criador ainda não tem comunidades.</EmptyState>;
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-5">
       {data.map((c) => (
-        <div
+        <MediaCard
           key={c.id}
-          className="flex items-center gap-3 rounded-2xl border border-outline-variant/40 bg-surface-container-low p-3"
-        >
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <UsersRound size={22} aria-hidden />
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-sans text-body text-on-surface">{c.name}</p>
-            <span className="font-sans text-counter text-on-surface-variant">
-              {formatCount(c.memberCount)} membros
-            </span>
-          </div>
-          <button
-            type="button"
-            className="inline-flex min-h-[36px] items-center rounded-full bg-primary px-4 font-sans text-label text-on-primary active:scale-[0.98]"
-          >
-            Entrar
-          </button>
-        </div>
+          cover={null}
+          icon={UsersRound}
+          title={c.name}
+          description={c.description}
+          meta={`${formatCount(c.memberCount)} membros`}
+          action={
+            <button
+              type="button"
+              className="inline-flex min-h-[36px] items-center rounded-full bg-primary px-5 font-sans text-label text-on-primary active:scale-[0.98]"
+            >
+              Entrar
+            </button>
+          }
+        />
       ))}
     </div>
   );
@@ -498,9 +559,7 @@ function FollowersList({ creatorId }: { creatorId: string | null }) {
                 <p className="truncate font-sans text-body text-on-surface">{f.displayName}</p>
               )}
               {f.username && (
-                <span className="truncate font-sans text-counter text-on-surface-variant">
-                  @{f.username}
-                </span>
+                <span className="truncate font-sans text-counter text-on-surface-variant">@{f.username}</span>
               )}
             </div>
             {f.username && <ChevronRight size={16} className="text-on-surface-variant" aria-hidden />}
@@ -523,6 +582,16 @@ function GridSkeleton() {
     <div className="grid grid-cols-3 gap-1.5">
       {Array.from({ length: 6 }).map((_, i) => (
         <div key={i} className="aspect-square animate-pulse rounded-lg bg-surface-container" />
+      ))}
+    </div>
+  );
+}
+
+function CardSkeleton() {
+  return (
+    <div className="flex flex-col gap-5">
+      {Array.from({ length: 2 }).map((_, i) => (
+        <div key={i} className="h-64 animate-pulse rounded-3xl bg-surface-container" />
       ))}
     </div>
   );

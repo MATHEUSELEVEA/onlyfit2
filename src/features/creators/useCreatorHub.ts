@@ -141,6 +141,7 @@ export function useCreatorProducts(creatorId: string | null | undefined) {
 export interface CreatorChallenge {
   id: string;
   name: string;
+  description: string | null;
   coverImageUrl: string | null;
   price: number;
   participantCount: number;
@@ -153,7 +154,7 @@ export function useCreatorChallenges(creatorId: string | null | undefined) {
     queryFn: async (): Promise<CreatorChallenge[]> => {
       const { data, error } = await supabase
         .from('challenge_runs')
-        .select('id, name, cover_image_url, entry_price, participant_count, status, created_at')
+        .select('id, name, description, cover_image_url, entry_price, participant_count, status, created_at')
         .eq('creator_id', creatorId!)
         .in('status', ['active', 'upcoming', 'published', 'open'])
         .order('created_at', { ascending: false });
@@ -161,6 +162,7 @@ export function useCreatorChallenges(creatorId: string | null | undefined) {
       return (data ?? []).map((c) => ({
         id: c.id,
         name: c.name ?? 'Desafio',
+        description: c.description ?? null,
         coverImageUrl: c.cover_image_url ?? null,
         price: c.entry_price ?? 0,
         participantCount: c.participant_count ?? 0,
