@@ -4,6 +4,9 @@ import { Check, Heart, Loader2, Play, Search } from 'lucide-react';
 import { clsx } from 'clsx';
 import { FEED_SPORTS, sportLabel } from '@/lib/sports';
 import { formatCount } from '@/lib/format';
+import { FilterChip } from '@/components/ui/FilterChip';
+import { ProductCard } from '@/features/market/ProductCard';
+import { useMarketProducts } from '@/features/market/useMarket';
 import { useToggleCreatorFollow } from '@/features/creators/useCreatorFollow';
 import {
   useExploreCreators,
@@ -12,39 +15,14 @@ import {
   type ExploreContentItem,
 } from './useExplore';
 
-type ExploreTab = 'all' | 'people' | 'content';
+type ExploreTab = 'all' | 'people' | 'content' | 'products';
 
 const TABS: { key: ExploreTab; label: string }[] = [
   { key: 'all', label: 'Tudo' },
   { key: 'people', label: 'Pessoas' },
   { key: 'content', label: 'Conteúdo' },
+  { key: 'products', label: 'Produtos' },
 ];
-
-function Chip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={clsx(
-        'min-h-[36px] shrink-0 whitespace-nowrap rounded-full px-4 font-sans text-label transition-colors',
-        active
-          ? 'bg-primary text-on-primary shadow-sm'
-          : 'border border-outline-variant/50 bg-surface text-on-surface-variant',
-      )}
-    >
-      {children}
-    </button>
-  );
-}
 
 function CreatorCard({ creator }: { creator: ExploreCreator }) {
   const toggleFollow = useToggleCreatorFollow(creator.id);
@@ -167,6 +145,7 @@ export function ExplorePage() {
 
   const creatorsQuery = useExploreCreators();
   const contentQuery = useExploreContent();
+  const productsQuery = useMarketProducts();
 
   // Esportes por creator para o filtro de conteúdo (fallback quando o post
   // não tem tag própria — paridade com o feed do v1).
@@ -209,14 +188,35 @@ export function ExplorePage() {
     return list;
   }, [contentQuery.data, sport, term, creatorSports]);
 
-  const showPeople = tab !== 'content';
-  const showContent = tab !== 'people';
+  const products = useMemo(() => {
+    let list = productsQuery.data ?? [];
+    if (sport) list = list.filter((product) => product.sports.includes(sport));
+    if (term) {
+      list = list.filter((product) =>
+        `${product.name} ${product.description ?? ''} ${product.creatorName}`
+          .toLowerCase()
+          .includes(term),
+      );
+    }
+    return list;
+  }, [productsQuery.data, sport, term]);
+
+  const showPeople = tab === 'all' || tab === 'people';
+  const showContent = tab === 'all' || tab === 'content';
+  const showProducts = tab === 'all' || tab === 'products';
   const isLoading =
-    (showPeople && creatorsQuery.isLoading) || (showContent && contentQuery.isLoading);
+    (showPeople && creatorsQuery.isLoading) ||
+    (showContent && contentQuery.isLoading) ||
+    (showProducts && productsQuery.isLoading);
   const isEmpty =
     !isLoading &&
     (!showPeople || creators.length === 0) &&
-    (!showContent || content.length === 0);
+    (!showContent || content.length === 0) &&
+    (!showProducts || products.length === 0);
+  const hasError =
+    (showPeople && creatorsQuery.isError) ||
+    (showContent && contentQuery.isError) ||
+    (showProducts && productsQuery.isError);
 
   return (
     <div className="h-full overflow-y-auto bg-background pb-8">
@@ -234,8 +234,8 @@ export function ExplorePage() {
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Buscar atletas, creators e conteúdos..."
-              aria-label="Buscar atletas, creators e conteúdos"
+              placeholder="Buscar creators, conteúdos e produtos..."
+              aria-label="Buscar creators, conteúdos e produtos"
               className="min-h-[44px] w-full rounded-xl border border-outline-variant/40 bg-surface py-2 pl-11 pr-4 font-sans text-body text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
@@ -244,9 +244,9 @@ export function ExplorePage() {
         {/* Filtros por tipo */}
         <div className="no-scrollbar mt-1 flex gap-2 overflow-x-auto px-4" role="tablist" aria-label="Tipo de resultado">
           {TABS.map(({ key, label }) => (
-            <Chip key={key} active={tab === key} onClick={() => setTab(key)}>
+            <FilterChip key={key} active={tab === key} onClick={() => setTab(key)}>
               {label}
-            </Chip>
+            </FilterChip>
           ))}
         </div>
 
@@ -261,13 +261,13 @@ export function ExplorePage() {
           role="tablist"
           aria-label="Grupos de afinidade"
         >
-          <Chip active={sport === null} onClick={() => setSport(null)}>
+          <FilterChip active={sport === null} onClick={() => setSport(null)}>
             Todos
-          </Chip>
+          </FilterChip>
           {FEED_SPORTS.map(({ key, label }) => (
-            <Chip key={key} active={sport === key} onClick={() => setSport(key)}>
+            <FilterChip key={key} active={sport === key} onClick={() => setSport(key)}>
               {label}
-            </Chip>
+            </FilterChip>
           ))}
         </div>
 
@@ -277,7 +277,7 @@ export function ExplorePage() {
           </div>
         )}
 
-        {(creatorsQuery.isError || contentQuery.isError) && !isLoading && (
+        {hasError && !isLoading && (
           <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
             <p className="font-sans text-body text-on-surface-variant">
               Não foi possível carregar o Explorar.
@@ -287,6 +287,7 @@ export function ExplorePage() {
               onClick={() => {
                 creatorsQuery.refetch();
                 contentQuery.refetch();
+                productsQuery.refetch();
               }}
               className="min-h-[44px] rounded-full bg-primary px-6 font-sans text-label text-on-primary"
             >
@@ -295,7 +296,7 @@ export function ExplorePage() {
           </div>
         )}
 
-        {isEmpty && !creatorsQuery.isError && !contentQuery.isError && (
+        {isEmpty && !hasError && (
           <div className="flex flex-col items-center gap-1 px-6 py-14 text-center">
             <p className="font-sans text-title text-on-surface">Nada encontrado</p>
             <p className="font-sans text-body-sm text-on-surface-variant">
@@ -327,6 +328,26 @@ export function ExplorePage() {
             <div className="mt-3 grid grid-cols-2 gap-2">
               {content.map((item, index) => (
                 <ContentTile key={item.id} item={item} featured={index === 0} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {showProducts && !isLoading && products.length > 0 && (
+          <section className="mt-6 px-4" aria-labelledby="explore-products-title">
+            <div className="flex items-center justify-between gap-3">
+              <h2 id="explore-products-title" className="font-sans text-title text-on-surface">
+                Produtos em destaque
+              </h2>
+              {tab === 'all' && (
+                <Link to="/mercado" className="font-sans text-label text-primary">
+                  Ver todos
+                </Link>
+              )}
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              {(tab === 'products' ? products : products.slice(0, 5)).map((product, index) => (
+                <ProductCard key={product.id} product={product} featured={index === 0} />
               ))}
             </div>
           </section>

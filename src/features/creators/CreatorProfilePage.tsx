@@ -3,17 +3,12 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   BadgeCheck,
-  BookOpen,
   Check,
   ChevronRight,
-  Dumbbell,
-  GraduationCap,
   Heart,
   Lock,
   MessageCircle,
-  Package,
   Play,
-  Salad,
   Share2,
   ShoppingBag,
   Trophy,
@@ -23,6 +18,7 @@ import {
 import { clsx } from 'clsx';
 import type { LucideIcon } from 'lucide-react';
 import { formatCount, formatPrice } from '@/lib/format';
+import { productTypeMeta } from '@/lib/products';
 import { ShareSheet } from '@/components/ui/ShareSheet';
 import type { FeedAuthor } from '@/features/feed/types';
 import { useCreatorFollowState, useToggleCreatorFollow } from './useCreatorFollow';
@@ -47,25 +43,6 @@ const TABS: { key: TabKey; label: string; icon: LucideIcon }[] = [
   { key: 'communities', label: 'Comunidades', icon: UsersRound },
   { key: 'followers', label: 'Seguidores', icon: Users },
 ];
-
-// Rótulo + ícone por tipo de produto do marketplace (ebook, aulas, treino,
-// dieta, comunidade, desafio, produto físico entregue em casa).
-const PRODUCT_TYPE: Record<string, { label: string; icon: LucideIcon }> = {
-  ebook: { label: 'Ebook', icon: BookOpen },
-  course: { label: 'Aulas', icon: GraduationCap },
-  aulas: { label: 'Aulas', icon: GraduationCap },
-  training: { label: 'Treino', icon: Dumbbell },
-  treino: { label: 'Treino', icon: Dumbbell },
-  workout: { label: 'Treino', icon: Dumbbell },
-  diet: { label: 'Dieta', icon: Salad },
-  dieta: { label: 'Dieta', icon: Salad },
-  nutrition: { label: 'Dieta', icon: Salad },
-  physical: { label: 'Produto físico', icon: Package },
-};
-
-function productMeta(type: string) {
-  return PRODUCT_TYPE[type.toLowerCase()] ?? { label: 'Produto', icon: ShoppingBag };
-}
 
 function PriceBadge({ price }: { price: number }) {
   const free = !price || price <= 0;
@@ -407,7 +384,7 @@ function ProductsGrid({ creatorId }: { creatorId: string | null }) {
   return (
     <div className="grid grid-cols-2 gap-3">
       {data.map((p) => {
-        const meta = productMeta(p.type);
+        const meta = productTypeMeta(p.type);
         return (
           <div
             key={p.id}

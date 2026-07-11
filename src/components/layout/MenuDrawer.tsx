@@ -33,7 +33,7 @@ const OPERATION_ITEMS: MenuItem[] = [
 ];
 
 const PERSONAL_ITEMS: MenuItem[] = [
-  { label: 'Market', icon: ShoppingBag, to: '/produtos' },
+  { label: 'Mercado', icon: ShoppingBag, to: '/mercado' },
   { label: 'Comunidade', icon: Users, to: null },
 ];
 
