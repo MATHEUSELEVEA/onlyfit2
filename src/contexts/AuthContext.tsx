@@ -7,7 +7,31 @@ import {
 } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
-import { buildEmailConfirmRedirectUrl, normalizeEmail } from '@/lib/auth';
+import { normalizeEmail } from '@/lib/auth';
+
+/**
+ * Extrai a mensagem de erro de uma resposta de `supabase.functions.invoke`,
+ * seja do corpo de erro HTTP (context.json) ou de um `{ error }` aninhado
+ * no próprio payload de sucesso. Compartilhado entre signUp e resetPassword.
+ */
+async function extractFunctionErrorMessage(
+  error: unknown,
+  nestedError: string | undefined,
+  fallback: string,
+): Promise<string | null> {
+  if (!error && !nestedError) return null;
+  if (error) {
+    try {
+      const bodyErr = (error as { context?: { json?: () => Promise<{ error?: string }> } })
+        ?.context?.json;
+      const parsed = bodyErr ? await bodyErr() : {};
+      return parsed?.error || (error as Error).message || fallback;
+    } catch {
+      return (error as Error).message || fallback;
+    }
+  }
+  return nestedError ?? fallback;
+}
 
 /** Metadados enviados no cadastro para o trigger de perfil (igual v1). */
 export interface SignUpMetadata {
@@ -26,7 +50,6 @@ interface AuthContextValue {
     email: string,
     password: string,
     metadata?: SignUpMetadata,
-    redirectTo?: string,
   ) => Promise<{ error: string | null; needsConfirmation: boolean }>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   updatePassword: (password: string) => Promise<{ error: string | null }>;
@@ -65,27 +88,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error ? error.message : null };
   }
 
-  async function signUp(
-    email: string,
-    password: string,
-    metadata?: SignUpMetadata,
-    redirectTo = '/feed',
-  ) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: buildEmailConfirmRedirectUrl(redirectTo),
+  /**
+   * Domínio do app enviado nas edge functions de e-mail (reset e confirmação),
+   * definido no deploy via `.env`. Vazio/ausente => cada edge function usa o
+   * seu próprio padrão (o mesmo domínio do v1). A edge valida contra a
+   * allowlist antes de usar — nunca confia cegamente na URL do cliente.
+   */
+  function appBaseUrl(): string | undefined {
+    return import.meta.env.VITE_APP_BASE_URL?.trim() || undefined;
+  }
+
+  /**
+   * Cria a conta via edge function `send-signup-confirmation` (Admin API +
+   * Resend) em vez do `supabase.auth.signUp()` nativo. Motivo: o e-mail
+   * nativo de confirmação monta o link com `{{ .SiteURL }}`, uma configuração
+   * GLOBAL do projeto Supabase (compartilhada com o v1) que nenhuma variável
+   * da aplicação alcança. Passando pela Admin API, nenhum e-mail nativo é
+   * disparado — nós montamos e enviamos o nosso, com o domínio do app.
+   */
+  async function signUp(email: string, password: string, metadata?: SignUpMetadata) {
+    const normalized = normalizeEmail(email);
+    const baseUrl = appBaseUrl();
+    const { data, error } = await supabase.functions.invoke('send-signup-confirmation', {
+      body: {
+        email: normalized,
+        password,
         // O trigger `sync_profile_contacts_from_auth_user` popula o perfil
         // a partir destes campos (username, full_name, country_code, language).
-        data: metadata,
+        metadata,
+        ...(baseUrl ? { base_url: baseUrl } : {}),
       },
     });
-    return {
-      error: error ? error.message : null,
-      // Sem sessão imediata => o projeto exige confirmação de e-mail.
-      needsConfirmation: !error && !data.session,
-    };
+
+    const nested = (data as { error?: string } | null)?.error;
+    const msg = await extractFunctionErrorMessage(error, nested, 'Não foi possível criar a conta.');
+    if (msg) return { error: msg, needsConfirmation: false };
+
+    // A conta nasce sem sessão — sempre exige confirmação por e-mail.
+    return { error: null, needsConfirmation: true };
   }
 
   /**
@@ -95,29 +135,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   async function resetPassword(email: string) {
     const normalized = normalizeEmail(email);
+    const baseUrl = appBaseUrl();
     const { data, error } = await supabase.functions.invoke('send-password-reset', {
-      body: { email: normalized },
+      body: { email: normalized, ...(baseUrl ? { base_url: baseUrl } : {}) },
     });
 
     const nested = (data as { error?: string } | null)?.error;
-    if (error || nested) {
-      let msg = 'Erro ao enviar e-mail. Tente novamente mais tarde.';
-      if (error) {
-        try {
-          const bodyErr = (error as { context?: { json?: () => Promise<{ error?: string }> } })
-            ?.context?.json;
-          const parsed = bodyErr ? await bodyErr() : {};
-          msg = parsed?.error || (error as Error).message || msg;
-        } catch {
-          msg = (error as Error).message || msg;
-        }
-      } else if (nested) {
-        msg = nested;
-      }
-      return { error: msg };
-    }
-
-    return { error: null };
+    const msg = await extractFunctionErrorMessage(error, nested, 'Erro ao enviar e-mail. Tente novamente mais tarde.');
+    return { error: msg };
   }
 
   /** Define a nova senha do usuário na sessão de recuperação ativa. */

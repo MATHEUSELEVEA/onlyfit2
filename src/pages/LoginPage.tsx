@@ -138,12 +138,8 @@ export function LoginPage() {
     });
 
     if (signUpError) {
-      const lower = signUpError.toLowerCase();
-      if (lower.includes('already') || lower.includes('exists') || lower.includes('registered')) {
-        setError('Este e-mail já possui cadastro. Faça login ou recupere o acesso.');
-      } else {
-        setError('Não foi possível criar a conta. Tente outro email.');
-      }
+      // A edge function `send-signup-confirmation` já retorna mensagens localizadas.
+      setError(signUpError);
       return;
     }
 
