@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import type { FeedMedia, FeedPost } from './types';
@@ -194,6 +194,9 @@ export function useFeed(sports: string[]) {
     queryKey: ['feed', userId, sports],
     queryFn: () => fetchFeedPosts(userId!, sports),
     enabled: Boolean(userId),
+    // Mantém o feed atual na tela enquanto o novo grupo carrega — sem isso o
+    // data volta a undefined a cada troca de filtro e o skeleton pisca.
+    placeholderData: keepPreviousData,
   });
 }
 
