@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
-import { useAvailableFeedSports, useFeed } from './useFeed';
+import { useSearchParams } from 'react-router-dom';
+import { useAvailableFeedSports, useFeed, useFeedPost } from './useFeed';
 import { PostCard } from './PostCard';
 import { FeedSportsBar } from './FeedSportsBar';
+import type { FeedPost } from './types';
 
 function FeedSkeleton() {
   return (
@@ -23,6 +25,18 @@ export function FeedPage() {
     sportSelection && availableSports.includes(sportSelection) ? sportSelection : null;
   const sports = useMemo(() => (selectedSport ? [selectedSport] : []), [selectedSport]);
   const { data: posts, isLoading, isError, refetch } = useFeed(sports);
+
+  // Post aberto a partir do Explorar (?post=<id>): entra fixado no topo do
+  // feed para tocar de cara, em vez de mandar o usuário pro perfil do creator.
+  const [searchParams] = useSearchParams();
+  const openPostId = searchParams.get('post');
+  const { data: openPost } = useFeedPost(openPostId);
+
+  const feedPosts = useMemo<FeedPost[] | undefined>(() => {
+    if (!openPost) return posts;
+    const rest = (posts ?? []).filter((post) => post.id !== openPost.id);
+    return [openPost, ...rest];
+  }, [posts, openPost]);
 
   return (
     <div className="relative h-full">
@@ -56,7 +70,7 @@ export function FeedPage() {
           </div>
         )}
 
-        {posts?.length === 0 && (
+        {feedPosts?.length === 0 && (
           <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
             <p className="font-sans text-title text-on-surface">Nada por aqui ainda</p>
             <p className="text-body-sm text-on-surface-variant">
@@ -65,7 +79,7 @@ export function FeedPage() {
           </div>
         )}
 
-        {posts?.map((post) => (
+        {feedPosts?.map((post) => (
           <div key={post.id} className="h-full snap-start snap-always">
             <PostCard post={post} />
           </div>

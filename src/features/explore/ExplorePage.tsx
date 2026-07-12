@@ -89,11 +89,9 @@ function CreatorCard({ creator }: { creator: ExploreCreator }) {
 }
 
 function ContentTile({ item, featured }: { item: ExploreContentItem; featured?: boolean }) {
-  const to = item.creatorUsername ? `/creator/${encodeURIComponent(item.creatorUsername)}` : '/explorar';
-
   return (
     <Link
-      to={to}
+      to={`/feed?post=${encodeURIComponent(item.id)}`}
       className={clsx(
         'group relative block overflow-hidden rounded-xl border border-outline-variant/20 bg-surface-container',
         featured ? 'col-span-2 aspect-[16/10]' : 'aspect-square',

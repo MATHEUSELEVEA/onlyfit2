@@ -102,6 +102,27 @@ async function fetchFeedPosts(userId: string, sports: string[]): Promise<FeedPos
   return rows.map((row) => toFeedPost(row, likedPostIds));
 }
 
+async function fetchFeedPostById(userId: string, postId: string): Promise<FeedPost | null> {
+  const { data, error } = await supabase
+    .from('posts')
+    .select(
+      `id, creator_id, title, description, is_premium, thumbnail_url, video_url,
+       likes, comments, published_at,
+       profiles:creator_id!inner (
+         username, full_name, avatar_url,
+         creator_profiles (verified)
+       )`,
+    )
+    .eq('id', postId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+
+  const row = data as unknown as PostRow;
+  const likedPostIds = await fetchLikedPostIds(userId, [row.id]);
+  return toFeedPost(row, likedPostIds);
+}
+
 async function fetchAvailableFeedSports(): Promise<string[]> {
   const { data, error } = await supabase.rpc('feed_home_available_sports');
   if (error) throw error;
@@ -130,5 +151,18 @@ export function useFeed(sports: string[]) {
     queryKey: ['feed', userId, sports],
     queryFn: () => fetchFeedPosts(userId!, sports),
     enabled: Boolean(userId),
+  });
+}
+
+// Post específico aberto a partir do Explorar — entra fixado no topo do
+// feed para o usuário assistir sem sair para o perfil do creator.
+export function useFeedPost(postId: string | null) {
+  const { session } = useAuth();
+  const userId = session?.user.id;
+
+  return useQuery({
+    queryKey: ['feed-post', userId, postId],
+    queryFn: () => fetchFeedPostById(userId!, postId!),
+    enabled: Boolean(userId && postId),
   });
 }
