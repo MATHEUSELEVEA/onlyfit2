@@ -1,1 +1,0 @@
-DROP SCHEMA IF EXISTS claude_agentics CASCADE;
