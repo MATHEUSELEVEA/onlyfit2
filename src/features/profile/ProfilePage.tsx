@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   BriefcaseBusiness,
@@ -10,7 +11,7 @@ import {
   Inbox,
   LogOut,
   Menu,
-  MessageSquare,
+  Plus,
   PencilLine,
   Share2,
   Stethoscope,
@@ -166,13 +167,13 @@ export function ProfilePage() {
               {profile?.isCreator ? 'Profissional' : 'Membro'}
             </span>
 
-            <button
-              type="button"
+            <Link
+              to="/studio"
               className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 font-sans text-label text-on-primary shadow-sm transition-transform active:scale-[0.98]"
             >
-              <MessageSquare size={19} aria-hidden />
-              <span>Mensagens</span>
-            </button>
+              <Plus size={19} aria-hidden />
+              <span>Criar post</span>
+            </Link>
           </div>
         </header>
 
