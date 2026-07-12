@@ -2,6 +2,11 @@
 
 Fluxo de branches e commits. Simples de propósito: trunk-based com branches curtas.
 
+> ## ⛔ Regra inegociável (vale para pessoas E agentes de IA)
+> **Nunca** commite nem faça push direto na `main`. **Todo** trabalho — inclusive um único arquivo, doc ou ajuste trivial — segue **branch → Pull Request → merge na `main`**, sem exceção.
+>
+> Agente de IA (Claude Code e afins): antes de qualquer `git commit`, verifique a branch atual; se for `main`, **crie uma branch primeiro** (`git checkout -b feat/<slug>`), commite lá, faça push, abra o PR (`gh pr create`) e só então mergeie (`gh pr merge --squash`). Isto é a regra 8 do `CLAUDE.md`.
+
 ## Branches
 
 - **`main`** — sempre verde (build + lint passando) e em estado deployável. Netlify publica a partir dela.

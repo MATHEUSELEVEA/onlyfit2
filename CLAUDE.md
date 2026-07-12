@@ -23,7 +23,7 @@ npm run lint
 
 `.env` tem só chaves públicas (`anon`). Login com conta real — RLS exige usuário autenticado.
 
-## As 7 regras que não se quebram
+## As 8 regras que não se quebram
 
 1. **Nunca cor hardcoded.** Sempre tokens (`bg-surface`, `text-on-surface`, `bg-primary`). O usuário troca de tema em runtime — cor hardcoded quebra isso. Ver `docs/DESIGN-SYSTEM.md`.
 2. **Nunca tamanho de fonte arbitrário** (`text-[13px]`) nem `font-bold` solto. Só tokens (`text-body`, `text-label`…). Tipografia é global e igual nos 3 temas.
@@ -32,6 +32,7 @@ npm run lint
 5. **Simples > esperto.** Não adicione dependência, abstração, camada ou "framework interno" sem necessidade real. Menos código é a meta. Ver `docs/CODING-STANDARDS.md`.
 6. **Sem lixo.** Nada de arquivo morto, `console.log` esquecido, código comentado, `TODO` órfão ou dependência não usada. Se não é usado, apague.
 7. **Cliente nunca escreve em tabela de pagamento.** O front só escreve interações do próprio usuário (`post_likes`, `post_comments`, `creator_follows`). `subscriptions`/`creator_memberships` são somente leitura — assinar é checkout no servidor. Ver `docs/DATABASE.md`.
+8. **Nunca commite direto na `main`.** TODO trabalho — inclusive um único arquivo, um doc ou um ajuste trivial — vai em **branch → Pull Request → merge na `main`**. Sem exceção. Isto vale também para agentes de IA: nenhum agente commita ou faz push em `main`; abre branch (`feat/`, `fix/`, `chore/`…), PR e mergeia. Ver `docs/GIT-FLOW.md`.
 
 ## Onde as coisas ficam
 
@@ -62,6 +63,7 @@ Padrão de dados: leitura = hook `useX` com React Query; escrita = `useMutation`
 - `npm run lint` limpo.
 - Testou o fluxo de verdade no app, não só compilou. Ver `docs/TESTING.md`.
 - Passou pelo `docs/PR-CHECKLIST.md`.
+- **Abriu branch + PR e mergeou na `main` — nunca commit direto na `main`** (regra 8). Ver `docs/GIT-FLOW.md`.
 
 ## Índice completo → `docs/DOCUMENTATION-INDEX.md`
 
