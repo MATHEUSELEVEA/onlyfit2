@@ -1,9 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import type { FeedPost } from './types';
+import type { FeedMedia, FeedPost } from './types';
 
 const PAGE_SIZE = 10;
+
+const POST_SELECT = `id, creator_id, title, description, is_premium, thumbnail_url, video_url,
+   likes, comments, published_at,
+   profiles:creator_id!inner (
+     username, full_name, avatar_url,
+     creator_profiles (verified)
+   )`;
 
 // Linha crua retornada pelo select em `posts` (mesmo modelo do onlyfit v1).
 interface PostRow {
@@ -28,6 +35,48 @@ interface PostRow {
   } | null;
 }
 
+interface PostMediaRow {
+  post_id: string;
+  position: number;
+  kind: 'image' | 'video';
+  url: string;
+  thumbnail_url: string | null;
+}
+
+// Páginas de carrossel por post (tabela post_media, migration 20260712180000).
+// Post de mídia única não tem linha aqui — cai no fallback de `singleMedia`.
+async function fetchPostMedia(postIds: string[]): Promise<Map<string, FeedMedia[]>> {
+  const byPost = new Map<string, FeedMedia[]>();
+  if (postIds.length === 0) return byPost;
+
+  const { data, error } = await supabase
+    .from('post_media')
+    .select('post_id, position, kind, url, thumbnail_url')
+    .in('post_id', postIds)
+    .order('position', { ascending: true });
+  if (error) throw error;
+
+  for (const row of (data ?? []) as PostMediaRow[]) {
+    const list = byPost.get(row.post_id) ?? [];
+    list.push({ kind: row.kind, url: row.url, thumbnailUrl: row.thumbnail_url });
+    byPost.set(row.post_id, list);
+  }
+  return byPost;
+}
+
+// Fallback para posts de mídia única (v1 e legados): monta uma página a partir
+// de video_url/thumbnail_url. Vídeo tem video_url; imagem única mora só no
+// thumbnail_url (video_url null), como o Studio do v1 grava.
+function singleMedia(row: PostRow): FeedMedia[] {
+  if (row.video_url) {
+    return [{ kind: 'video', url: row.video_url, thumbnailUrl: row.thumbnail_url }];
+  }
+  if (row.thumbnail_url) {
+    return [{ kind: 'image', url: row.thumbnail_url, thumbnailUrl: null }];
+  }
+  return [];
+}
+
 function isVerifiedCreator(profile: PostRow['profiles']): boolean {
   const creatorProfile = Array.isArray(profile?.creator_profiles)
     ? profile.creator_profiles[0]
@@ -35,7 +84,12 @@ function isVerifiedCreator(profile: PostRow['profiles']): boolean {
   return creatorProfile?.verified === true;
 }
 
-function toFeedPost(row: PostRow, likedPostIds: Set<string>): FeedPost {
+function toFeedPost(
+  row: PostRow,
+  likedPostIds: Set<string>,
+  mediaByPost: Map<string, FeedMedia[]>,
+): FeedPost {
+  const carousel = mediaByPost.get(row.id);
   return {
     id: row.id,
     author: {
@@ -46,8 +100,7 @@ function toFeedPost(row: PostRow, likedPostIds: Set<string>): FeedPost {
       verified: isVerifiedCreator(row.profiles),
     },
     caption: row.description ?? row.title ?? '',
-    mediaUrl: row.video_url ?? row.thumbnail_url,
-    mediaType: row.video_url ? 'video' : 'image',
+    media: carousel && carousel.length > 0 ? carousel : singleMedia(row),
     likeCount: row.likes ?? 0,
     commentCount: row.comments ?? 0,
     createdAt: row.published_at,
@@ -79,17 +132,7 @@ async function fetchFeedPosts(userId: string, sports: string[]): Promise<FeedPos
   const ids = ((idRows ?? []) as { post_id: string }[]).map((r) => r.post_id).filter(Boolean);
   if (ids.length === 0) return [];
 
-  const { data, error } = await supabase
-    .from('posts')
-    .select(
-      `id, creator_id, title, description, is_premium, thumbnail_url, video_url,
-       likes, comments, published_at,
-       profiles:creator_id!inner (
-         username, full_name, avatar_url,
-         creator_profiles (verified)
-       )`,
-    )
-    .in('id', ids);
+  const { data, error } = await supabase.from('posts').select(POST_SELECT).in('id', ids);
   if (error) throw error;
 
   const byId = new Map((data as unknown as PostRow[]).map((row) => [row.id, row]));
@@ -97,30 +140,30 @@ async function fetchFeedPosts(userId: string, sports: string[]): Promise<FeedPos
     .map((id) => byId.get(id))
     .filter((row): row is PostRow => Boolean(row));
 
-  const likedPostIds = await fetchLikedPostIds(userId, rows.map((row) => row.id));
+  const rowIds = rows.map((row) => row.id);
+  const [likedPostIds, mediaByPost] = await Promise.all([
+    fetchLikedPostIds(userId, rowIds),
+    fetchPostMedia(rowIds),
+  ]);
 
-  return rows.map((row) => toFeedPost(row, likedPostIds));
+  return rows.map((row) => toFeedPost(row, likedPostIds, mediaByPost));
 }
 
 async function fetchFeedPostById(userId: string, postId: string): Promise<FeedPost | null> {
   const { data, error } = await supabase
     .from('posts')
-    .select(
-      `id, creator_id, title, description, is_premium, thumbnail_url, video_url,
-       likes, comments, published_at,
-       profiles:creator_id!inner (
-         username, full_name, avatar_url,
-         creator_profiles (verified)
-       )`,
-    )
+    .select(POST_SELECT)
     .eq('id', postId)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
 
   const row = data as unknown as PostRow;
-  const likedPostIds = await fetchLikedPostIds(userId, [row.id]);
-  return toFeedPost(row, likedPostIds);
+  const [likedPostIds, mediaByPost] = await Promise.all([
+    fetchLikedPostIds(userId, [row.id]),
+    fetchPostMedia([row.id]),
+  ]);
+  return toFeedPost(row, likedPostIds, mediaByPost);
 }
 
 async function fetchAvailableFeedSports(): Promise<string[]> {

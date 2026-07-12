@@ -11,12 +11,24 @@ export interface FeedProduct {
   title: string;
 }
 
+export type FeedMediaKind = 'image' | 'video';
+
+// Uma página de mídia do post. Um post tem 1+ páginas: length 1 = mídia única
+// (vídeo ou imagem), length > 1 = carrossel. `thumbnailUrl` é o poster do vídeo
+// (ou null para imagens).
+export interface FeedMedia {
+  kind: FeedMediaKind;
+  url: string;
+  thumbnailUrl: string | null;
+}
+
 export interface FeedPost {
   id: string;
   author: FeedAuthor;
   caption: string;
-  mediaUrl: string | null;
-  mediaType: 'image' | 'video';
+  // Sempre com ao menos um item quando há mídia; vazio só se o post não tem
+  // nenhuma mídia utilizável. O carrossel é simplesmente media.length > 1.
+  media: FeedMedia[];
   likeCount: number;
   commentCount: number;
   createdAt: string;

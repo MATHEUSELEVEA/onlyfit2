@@ -12,6 +12,7 @@ import { CommunitiesPage } from './pages/CommunitiesPage';
 import { ChallengesPage } from './pages/ChallengesPage';
 import { MarketPage } from './features/market/MarketPage';
 import { MyProductsPage } from './features/market/MyProductsPage';
+import { StudioPage } from './features/studio/StudioPage';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { CreatorProfilePage } from './features/creators/CreatorProfilePage';
 import { LoginPage } from './pages/LoginPage';
@@ -50,6 +51,7 @@ function AuthenticatedApp() {
           <Route path="/feed" element={<FeedPage />} />
           <Route path="/video/:postId" element={<VideoViewPage />} />
           <Route path="/explorar" element={<ExplorePage />} />
+          <Route path="/studio" element={<StudioPage />} />
           <Route path="/treino" element={<TrainingPage />} />
           <Route path="/produtos" element={<MyProductsPage />} />
           <Route path="/mercado" element={<MarketPage />} />

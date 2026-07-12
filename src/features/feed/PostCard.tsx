@@ -13,6 +13,7 @@ import { clsx } from 'clsx';
 import { ShareSheet } from '@/components/ui/ShareSheet';
 import { formatCount } from '@/lib/format';
 import type { FeedPost } from './types';
+import { PostMedia } from './PostMedia';
 import { PostCaption } from './PostCaption';
 import { CommentsSheet } from './CommentsSheet';
 import { useToggleLike } from './useToggleLike';
@@ -86,26 +87,8 @@ export function PostCard({ post }: PostCardProps) {
 
   return (
     <article className="relative h-full w-full overflow-hidden bg-surface-container-lowest">
-      {/* Mídia de fundo (foto ou vídeo) */}
-      {post.mediaType === 'video' && post.mediaUrl ? (
-        <video
-          src={post.mediaUrl}
-          className="absolute inset-0 h-full w-full object-cover"
-          autoPlay
-          muted
-          loop
-          playsInline
-        />
-      ) : post.mediaUrl ? (
-        <img
-          src={post.mediaUrl}
-          alt={post.caption || `Post de @${post.author.username}`}
-          className="absolute inset-0 h-full w-full object-cover"
-          loading="lazy"
-        />
-      ) : (
-        <div className="absolute inset-0 bg-surface-container" />
-      )}
+      {/* Mídia de fundo: vídeo, imagem única ou carrossel (imagem e/ou vídeo) */}
+      <PostMedia media={post.media} alt={post.caption || `Post de @${post.author.username}`} />
 
       {/* Gradiente para legibilidade do texto sobre a mídia */}
       <div
