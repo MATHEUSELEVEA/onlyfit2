@@ -50,18 +50,12 @@ Leitura + escrita (sempre a linha do próprio usuário, garantida por RLS):
 3. Tabela/coluna/policy nova → alinhe como mudança de ecossistema, com RLS desde o nascimento.
 4. Documente o novo objeto aqui e a decisão em `docs/DECISIONS.md`.
 
-## Migrations (`supabase db push`)
+## Migrations e edge functions → repo `onlyfit-supabase`
 
-O banco é **compartilhado com o v1**, então o histórico remoto (`supabase_migrations.schema_migrations`) contém **todas** as migrations do v1. Por isso o repo do v2 carrega, em `supabase/migrations/`, uma cópia dos arquivos já-aplicados do v1 (histórico herdado) **além** das migrations próprias do v2. Sem isso, `supabase db push` aborta com _"Remote migration versions not found in local migrations directory"_.
+**Este repo não tem mais pasta `supabase/`.** Migrations, edge functions (inclusive `send-password-reset`, `send-signup-confirmation`, `create-r2-upload-url`) e o tooling de push vivem em [`onlyfit-supabase`](https://github.com/MATHEUSELEVEA/onlyfit-supabase), fonte única do backend compartilhado com o desktop.
 
-- **Nunca** rode `supabase migration repair --status reverted ...` para as versões do v1 (o CLI sugere isso): marcaria migrations de produção como revertidas e quebraria o push do v1.
-- Os arquivos herdados do v1 já constam do histórico remoto, então `db push` **não os reexecuta** — só aplica as migrations novas do v2.
-- Fluxo para aplicar uma migration nova do v2:
-  ```bash
-  npx supabase db push --linked --dry-run   # confere que só a(s) nova(s) será(ão) aplicada(s)
-  npx supabase db push --linked --yes
-  ```
-- Ao herdar uma migration nova do v1 (quando o v1 publicar algo que o v2 precise reconhecer), copie o arquivo correspondente para `supabase/migrations/` **somente se já estiver aplicada no remoto** (senão o push tentaria aplicá-la).
+- Mudança de schema, policy ou function → PR no `onlyfit-supabase` (checkout irmão: `../onlyfit-supabase`), seguindo o CLAUDE.md de lá.
+- Toda migration precisa ser retrocompatível com o código deployado dos **dois** apps.
 
 ## Nomenclatura
 

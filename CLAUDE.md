@@ -23,6 +23,8 @@ npm run lint
 
 `.env` tem só chaves públicas (`anon`). Login com conta real — RLS exige usuário autenticado.
 
+**Backend fica em outro repo:** migrations e edge functions vivem em [`onlyfit-supabase`](https://github.com/MATHEUSELEVEA/onlyfit-supabase) (checkout irmão `../onlyfit-supabase`) — este repo não tem pasta `supabase/`. Ver `docs/DATABASE.md`. A arquitetura da plataforma inteira está em `onlyfit-supabase/docs/ARCHITECTURE.md`.
+
 ## As 8 regras que não se quebram
 
 1. **Nunca cor hardcoded.** Sempre tokens (`bg-surface`, `text-on-surface`, `bg-primary`). O usuário troca de tema em runtime — cor hardcoded quebra isso. Ver `docs/DESIGN-SYSTEM.md`.
