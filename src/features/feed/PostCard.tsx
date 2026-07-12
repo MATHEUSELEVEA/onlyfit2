@@ -17,6 +17,7 @@ import { PostCaption } from './PostCaption';
 import { CommentsSheet } from './CommentsSheet';
 import { useToggleLike } from './useToggleLike';
 import { useSavedPost } from './useSavedPost';
+import { useCreatorFollowState, useToggleCreatorFollow } from '@/features/creators/useCreatorFollow';
 
 interface RailButtonProps {
   label: string;
@@ -33,17 +34,38 @@ function RailButton({ label, count, active, onClick, children }: RailButtonProps
       aria-label={label}
       aria-pressed={active}
       onClick={onClick}
-      className="group flex min-h-[44px] min-w-[44px] flex-col items-center gap-1 text-white"
+      className={clsx(
+        'group flex min-h-[44px] min-w-[44px] flex-col items-center gap-0.5 drop-shadow-lg transition-colors',
+        active ? 'text-primary' : 'text-white',
+      )}
     >
-      <span
-        className={clsx(
-          'flex h-11 w-11 items-center justify-center rounded-full backdrop-blur-sm transition-colors',
-          active ? 'bg-primary/90 text-on-primary' : 'bg-white/15',
-        )}
-      >
-        {children}
-      </span>
-      <span className="font-sans text-counter drop-shadow">{count ?? label}</span>
+      <span className="flex items-center justify-center">{children}</span>
+      {count && <span className="font-sans text-counter">{count}</span>}
+    </button>
+  );
+}
+
+interface FollowButtonProps {
+  creatorId: string;
+}
+
+// Botão "Seguir" no estilo do reels do Instagram: pílula translúcida sobre a
+// mídia, some quando o usuário já segue o creator. Persiste em creator_follows
+// pelos hooks compartilhados de creators.
+function FollowButton({ creatorId }: FollowButtonProps) {
+  const { data: following } = useCreatorFollowState(creatorId);
+  const toggleFollow = useToggleCreatorFollow(creatorId);
+
+  if (following) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={() => toggleFollow.mutate(true)}
+      disabled={toggleFollow.isPending}
+      className="shrink-0 rounded-full border border-white/80 px-3 py-1 font-sans text-label text-white drop-shadow transition-opacity active:opacity-70 disabled:opacity-50"
+    >
+      Seguir
     </button>
   );
 }
@@ -97,33 +119,33 @@ export function PostCard({ post }: PostCardProps) {
       />
 
       {/* Trilho de ações à direita */}
-      <div className="absolute right-3 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center gap-4">
+      <div className="absolute bottom-40 right-3 z-10 flex flex-col items-center gap-5">
         <RailButton
           label="Curtir"
           count={formatCount(post.likeCount)}
           active={post.likedByMe}
           onClick={() => toggleLike.mutate({ postId: post.id, liked: post.likedByMe })}
         >
-          <Heart size={26} fill={post.likedByMe ? 'currentColor' : 'none'} aria-hidden />
+          <Heart size={22} fill={post.likedByMe ? 'currentColor' : 'none'} aria-hidden />
         </RailButton>
         <RailButton
           label="Comentar"
           count={formatCount(post.commentCount)}
           onClick={() => setCommentsPostId(post.id)}
         >
-          <MessageCircle size={26} aria-hidden />
+          <MessageCircle size={22} aria-hidden />
         </RailButton>
         <RailButton label="Salvar" active={saved} onClick={toggleSaved}>
-          <Bookmark size={26} fill={saved ? 'currentColor' : 'none'} aria-hidden />
+          <Bookmark size={22} fill={saved ? 'currentColor' : 'none'} aria-hidden />
         </RailButton>
         <RailButton label="Compartilhar" onClick={() => setShareOpen(true)}>
-          <Share2 size={26} aria-hidden />
+          <Share2 size={22} aria-hidden />
         </RailButton>
       </div>
 
       {/* Área inferior: creator, legenda e banner de produto */}
       <div className="absolute bottom-0 left-0 z-10 flex w-full flex-col gap-3 p-4">
-        <div className="flex items-start gap-3">
+        <div className="flex items-center gap-3">
           <Link
             to={profileTo}
             state={{ author: post.author }}
@@ -134,11 +156,11 @@ export function PostCard({ post }: PostCardProps) {
               <img
                 src={post.author.avatarUrl}
                 alt={`Avatar de @${post.author.username}`}
-                className="h-12 w-12 rounded-full border-2 border-primary object-cover"
+                className="h-12 w-12 rounded-full object-cover"
               />
             ) : (
               <div
-                className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-primary bg-surface-container-high font-sans text-title-lg text-on-surface"
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-container-high font-sans text-title-lg text-on-surface"
                 aria-hidden
               >
                 {post.author.username.slice(0, 1).toUpperCase()}
@@ -146,20 +168,20 @@ export function PostCard({ post }: PostCardProps) {
             )}
           </Link>
 
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <Link
-              to={profileTo}
-              state={{ author: post.author }}
-              className="flex min-w-0 items-center gap-1.5"
-            >
-              <span className="truncate font-sans text-handle text-white drop-shadow">
-                @{post.author.username}
-              </span>
-              {post.author.verified && (
-                <BadgeCheck size={18} className="shrink-0 text-primary" aria-label="Verificado" />
-              )}
-            </Link>
-          </div>
+          <Link
+            to={profileTo}
+            state={{ author: post.author }}
+            className="flex min-w-0 items-center gap-1.5"
+          >
+            <span className="truncate font-sans text-handle text-white drop-shadow">
+              @{post.author.username}
+            </span>
+            {post.author.verified && (
+              <BadgeCheck size={18} className="shrink-0 text-primary" aria-label="Verificado" />
+            )}
+          </Link>
+
+          <FollowButton creatorId={post.author.id} />
         </div>
 
         <PostCaption text={post.caption} />
