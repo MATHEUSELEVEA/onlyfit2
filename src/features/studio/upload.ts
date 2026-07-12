@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 // (create-r2-upload-url): a função devolve uma URL PUT assinada e a URL pública
 // final. O cliente nunca vê credencial de storage.
 
-type Bucket = 'onlyfit-media' | 'onlyfit-thumbnails';
+type Bucket = 'onlyfit-media' | 'onlyfit-thumbnails' | 'onlyfit-avatar';
 
 export async function uploadAsset(
   file: Blob,

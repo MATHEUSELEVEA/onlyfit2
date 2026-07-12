@@ -63,25 +63,28 @@ export default {
         ],
       },
       fontSize: {
+        // Tokens em rem (base 16px) — o tamanho de fonte escolhido em
+        // Perfil > Tamanho da fonte muda o font-size raiz do <html>, então
+        // qualquer token em px aqui ficaria surdo a esse ajuste.
         // Wordmark / telas de entrada.
-        display: ['32px', { lineHeight: '1.15', letterSpacing: '-0.02em', fontWeight: '800' }],
+        display: ['2rem', { lineHeight: '1.15', letterSpacing: '-0.02em', fontWeight: '800' }],
         // Títulos de página (Perfil, Explorar...).
-        'title-lg': ['22px', { lineHeight: '1.25', letterSpacing: '-0.01em', fontWeight: '700' }],
+        'title-lg': ['1.375rem', { lineHeight: '1.25', letterSpacing: '-0.01em', fontWeight: '700' }],
         // Títulos de seção / app bar.
-        title: ['17px', { lineHeight: '1.3', fontWeight: '700' }],
+        title: ['1.0625rem', { lineHeight: '1.3', fontWeight: '700' }],
         // @usuario sobre a mídia do post.
-        handle: ['16px', { lineHeight: '1.25', fontWeight: '700' }],
+        handle: ['1rem', { lineHeight: '1.25', fontWeight: '700' }],
         // Corpo de texto principal (legendas, formulários).
-        body: ['14px', { lineHeight: '1.45', fontWeight: '400' }],
-        'body-sm': ['13px', { lineHeight: '1.4', fontWeight: '400' }],
+        body: ['0.875rem', { lineHeight: '1.45', fontWeight: '400' }],
+        'body-sm': ['0.8125rem', { lineHeight: '1.4', fontWeight: '400' }],
         // Botões e pills (Seguir, Assinar, Entrar, Ver perfil).
-        label: ['13px', { lineHeight: '1.2', fontWeight: '600' }],
+        label: ['0.8125rem', { lineHeight: '1.2', fontWeight: '600' }],
         // Contadores sob os ícones de ação (curtir, comentar, salvar).
-        counter: ['12px', { lineHeight: '1.2', fontWeight: '600' }],
+        counter: ['0.75rem', { lineHeight: '1.2', fontWeight: '600' }],
         // Rótulos da tab bar inferior.
-        nav: ['10px', { lineHeight: '1.15', fontWeight: '500' }],
+        nav: ['0.625rem', { lineHeight: '1.15', fontWeight: '500' }],
         // Cabeçalhos pequenos e discretos de seção (ex.: grupos em Configurações).
-        eyebrow: ['11px', { lineHeight: '1.2', letterSpacing: '0.04em', fontWeight: '600' }],
+        eyebrow: ['0.6875rem', { lineHeight: '1.2', letterSpacing: '0.04em', fontWeight: '600' }],
       },
       spacing: {
         'safe-top': 'env(safe-area-inset-top)',
