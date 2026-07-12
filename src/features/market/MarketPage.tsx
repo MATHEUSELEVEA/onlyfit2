@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2, Search, SlidersHorizontal } from 'lucide-react';
+import { clsx } from 'clsx';
 import { FEED_SPORTS } from '@/lib/sports';
 import { productTypeMeta } from '@/lib/products';
 import { FilterChip } from '@/components/ui/FilterChip';
+import { useExploreCreators, useExploreCommunities, useExploreChallenges } from '@/features/explore/useExplore';
 import { ProductCard } from './ProductCard';
 import { useMarketProducts, type MarketProduct } from './useMarket';
 
@@ -12,13 +14,24 @@ function isFeatured(index: number): boolean {
   return index % 6 === 0;
 }
 
+// Opções fixas de tipo de produto pedidas para o Mercado (mesmo padrão de
+// lista fixa usado nas abas do Explorar), em vez de derivar dinamicamente do
+// catálogo.
+const TYPE_FILTERS: { key: string; label: string }[] = [
+  { key: 'ebook', label: 'Ebook' },
+  { key: 'training', label: 'Treino' },
+  { key: 'community', label: 'Comunidades' },
+  { key: 'challenge', label: 'Desafios' },
+];
+
 function filterProducts(
   products: MarketProduct[],
-  { term, type, sport }: { term: string; type: string | null; sport: string | null },
+  { term, type, sport, freeOnly }: { term: string; type: string | null; sport: string | null; freeOnly: boolean },
 ): MarketProduct[] {
   return products.filter((product) => {
     if (type && productTypeMeta(product.type, product.marketItemType).key !== type) return false;
     if (sport && !product.sports.includes(sport)) return false;
+    if (freeOnly && product.price > 0) return false;
     if (term) {
       const haystack = `${product.name} ${product.description ?? ''} ${product.creatorName}`.toLowerCase();
       if (!haystack.includes(term)) return false;
@@ -31,87 +44,173 @@ export function MarketPage() {
   const [search, setSearch] = useState('');
   const [type, setType] = useState<string | null>(null);
   const [sport, setSport] = useState<string | null>(null);
+  const [freeOnly, setFreeOnly] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const { data, isLoading, isError, refetch } = useMarketProducts();
-  const products = useMemo(() => data ?? [], [data]);
+  const productsQuery = useMarketProducts();
+  const creatorsQuery = useExploreCreators();
+  const communitiesQuery = useExploreCommunities();
+  const challengesQuery = useExploreChallenges();
 
-  // Tipos de produto realmente presentes no catálogo viram opções de filtro.
-  const typeOptions = useMemo(() => {
-    const seen = new Map<string, string>();
-    products.forEach((product) => {
-      const meta = productTypeMeta(product.type, product.marketItemType);
-      if (!seen.has(meta.key)) seen.set(meta.key, meta.label);
-    });
-    return Array.from(seen, ([key, label]) => ({ key, label }));
-  }, [products]);
+  const isLoading =
+    productsQuery.isLoading || communitiesQuery.isLoading || challengesQuery.isLoading;
+  const isError = productsQuery.isError || communitiesQuery.isError || challengesQuery.isError;
+  const refetch = () => {
+    productsQuery.refetch();
+    communitiesQuery.refetch();
+    challengesQuery.refetch();
+  };
+
+  // Esportes por creator para herdar em comunidades e desafios, que não têm
+  // tag própria (mesma regra usada no Explorar).
+  const creatorSports = useMemo(() => {
+    const map = new Map<string, string[]>();
+    creatorsQuery.data?.forEach((creator) => map.set(creator.id, creator.sports));
+    return map;
+  }, [creatorsQuery.data]);
+
+  // Mercado reúne produtos (tabela products) com comunidades e desafios
+  // pagos (tabelas próprias), que antes só apareciam no Explorar — o filtro
+  // de tipo "Comunidades"/"Desafios" precisa de itens de verdade para valer.
+  const products = useMemo((): MarketProduct[] => {
+    const fromProducts = productsQuery.data ?? [];
+
+    const fromCommunities: MarketProduct[] = (communitiesQuery.data ?? []).map((community) => ({
+      id: community.id,
+      name: community.name,
+      description: community.description,
+      type: 'community',
+      marketItemType: 'community',
+      thumbnailUrl: null,
+      coverImageUrl: null,
+      price: 0,
+      sales: community.memberCount,
+      sports: creatorSports.get(community.creatorId) ?? [],
+      creatorId: community.creatorId,
+      creatorName: community.creatorName,
+      creatorUsername: community.creatorUsername,
+      creatorAvatarUrl: null,
+    }));
+
+    const fromChallenges: MarketProduct[] = (challengesQuery.data ?? []).map((challenge) => ({
+      id: challenge.id,
+      name: challenge.name,
+      description: challenge.description,
+      type: 'challenge',
+      marketItemType: 'challenge',
+      thumbnailUrl: null,
+      coverImageUrl: challenge.coverImageUrl,
+      price: challenge.price,
+      sales: challenge.participantCount,
+      sports: creatorSports.get(challenge.creatorId) ?? [],
+      creatorId: challenge.creatorId,
+      creatorName: challenge.creatorName,
+      creatorUsername: challenge.creatorUsername,
+      creatorAvatarUrl: null,
+    }));
+
+    return [...fromProducts, ...fromCommunities, ...fromChallenges];
+  }, [productsQuery.data, communitiesQuery.data, challengesQuery.data, creatorSports]);
 
   const term = search.trim().toLowerCase();
   const visible = useMemo(
-    () => filterProducts(products, { term, type, sport }),
-    [products, term, type, sport],
+    () => filterProducts(products, { term, type, sport, freeOnly }),
+    [products, term, type, sport, freeOnly],
   );
+  const hasActiveFilters = type !== null || sport !== null || freeOnly;
 
   return (
     <div className="h-full overflow-y-auto bg-background pb-8">
       <div className="mx-auto w-full max-w-[720px]">
-        {/* Cabeçalho: título + busca global */}
+        {/* Cabeçalho: título + busca global + atalho para os filtros */}
         <header className="sticky top-0 z-10 bg-background/95 px-4 pb-3 pt-safe-top backdrop-blur-md">
           <h1 className="mt-3 font-sans text-title-lg text-on-surface">Mercado</h1>
-          <div className="relative mt-3">
-            <Search
-              size={18}
-              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant"
-              aria-hidden
-            />
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Buscar treinos, ebooks, dietas, creators..."
-              aria-label="Buscar produtos no mercado"
-              className="min-h-[44px] w-full rounded-xl border border-outline-variant/40 bg-surface py-2 pl-11 pr-4 font-sans text-body text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
-            />
+          <div className="relative mt-3 flex items-center gap-2">
+            <div className="relative min-w-0 flex-1">
+              <Search
+                size={18}
+                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant"
+                aria-hidden
+              />
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Buscar treinos, ebooks, dietas, creators..."
+                aria-label="Buscar produtos no mercado"
+                className="min-h-[44px] w-full rounded-xl border border-outline-variant/40 bg-surface py-2 pl-11 pr-4 font-sans text-body text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((open) => !open)}
+              aria-expanded={filtersOpen}
+              aria-label="Mostrar filtros"
+              className={clsx(
+                'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-colors',
+                filtersOpen || hasActiveFilters
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-outline-variant/40 bg-surface text-on-surface-variant',
+              )}
+            >
+              <SlidersHorizontal size={18} aria-hidden />
+            </button>
           </div>
         </header>
 
-        {/* Filtro por tipo de produto */}
-        {typeOptions.length > 0 && (
-          <div
-            className="no-scrollbar mt-1 flex gap-2 overflow-x-auto px-4"
-            role="tablist"
-            aria-label="Tipo de produto"
-          >
-            <FilterChip active={type === null} onClick={() => setType(null)}>
-              Todos
-            </FilterChip>
-            {typeOptions.map(({ key, label }) => (
-              <FilterChip key={key} active={type === key} onClick={() => setType(key)}>
-                {label}
+        {filtersOpen && (
+          <>
+            {/* Filtro por tipo de produto */}
+            <div
+              className="no-scrollbar mt-1 flex gap-2 overflow-x-auto px-4"
+              role="tablist"
+              aria-label="Tipo de produto"
+            >
+              <FilterChip active={type === null} onClick={() => setType(null)}>
+                Todos
               </FilterChip>
-            ))}
-          </div>
-        )}
+              {TYPE_FILTERS.map(({ key, label }) => (
+                <FilterChip key={key} active={type === key} onClick={() => setType(key)}>
+                  {label}
+                </FilterChip>
+              ))}
+            </div>
 
-        {/* Filtro por grupo de afinidade */}
-        <div className="mt-4 px-4">
-          <h2 className="font-sans text-eyebrow uppercase text-on-surface-variant">
-            Grupos de afinidade
-          </h2>
-        </div>
-        <div
-          className="no-scrollbar mt-2 flex gap-2 overflow-x-auto px-4"
-          role="tablist"
-          aria-label="Grupos de afinidade"
-        >
-          <FilterChip active={sport === null} onClick={() => setSport(null)}>
-            Todos
-          </FilterChip>
-          {FEED_SPORTS.map(({ key, label }) => (
-            <FilterChip key={key} active={sport === key} onClick={() => setSport(key)}>
-              {label}
-            </FilterChip>
-          ))}
-        </div>
+            {/* Filtro de preço */}
+            <div className="mt-4 px-4">
+              <h2 className="font-sans text-eyebrow uppercase text-on-surface-variant">Preço</h2>
+            </div>
+            <div className="no-scrollbar mt-2 flex gap-2 overflow-x-auto px-4" role="tablist" aria-label="Preço">
+              <FilterChip active={!freeOnly} onClick={() => setFreeOnly(false)}>
+                Todos
+              </FilterChip>
+              <FilterChip active={freeOnly} onClick={() => setFreeOnly(true)}>
+                Grátis
+              </FilterChip>
+            </div>
+
+            {/* Filtro por grupo de afinidade */}
+            <div className="mt-4 px-4">
+              <h2 className="font-sans text-eyebrow uppercase text-on-surface-variant">
+                Grupos de afinidade
+              </h2>
+            </div>
+            <div
+              className="no-scrollbar mt-2 flex gap-2 overflow-x-auto px-4"
+              role="tablist"
+              aria-label="Grupos de afinidade"
+            >
+              <FilterChip active={sport === null} onClick={() => setSport(null)}>
+                Todos
+              </FilterChip>
+              {FEED_SPORTS.map(({ key, label }) => (
+                <FilterChip key={key} active={sport === key} onClick={() => setSport(key)}>
+                  {label}
+                </FilterChip>
+              ))}
+            </div>
+          </>
+        )}
 
         {isLoading && (
           <div className="flex justify-center py-16">
