@@ -86,6 +86,8 @@ export function useToggleCreatorFollow(creatorId: string | null | undefined) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['creator-follow', creatorId] });
+      queryClient.invalidateQueries({ queryKey: ['feed'] });
+      queryClient.invalidateQueries({ queryKey: ['feed-available-sports'] });
     },
   });
 }
