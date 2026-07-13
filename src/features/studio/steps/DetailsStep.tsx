@@ -11,6 +11,7 @@ interface DetailsStepProps {
   onToggleSport: (key: string) => void;
   visibility: PostVisibility;
   onVisibilityChange: (value: PostVisibility) => void;
+  canPublishToMembers: boolean;
   onPublish: () => void;
   isPublishing: boolean;
   error: string | null;
@@ -28,6 +29,7 @@ export function DetailsStep({
   onToggleSport,
   visibility,
   onVisibilityChange,
+  canPublishToMembers,
   onPublish,
   isPublishing,
   error,
@@ -62,6 +64,7 @@ export function DetailsStep({
           </div>
         </div>
 
+        {canPublishToMembers && (
         <div className="space-y-2">
           <span className="font-sans text-label text-on-surface">Quem pode ver</span>
           <div className="grid grid-cols-2 gap-2">
@@ -84,6 +87,7 @@ export function DetailsStep({
             ))}
           </div>
         </div>
+        )}
 
         {error && (
           <p role="alert" className="rounded-lg bg-error-container p-3 text-body-sm text-on-error-container">

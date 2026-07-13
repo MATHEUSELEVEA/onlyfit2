@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Briefcase,
   BriefcaseBusiness,
@@ -30,20 +30,14 @@ import { THEMES, useTheme, type ThemeId } from '@/theme/ThemeProvider';
 import { SUPPORTED_LANGUAGES, useTranslation, type LanguageCode } from '@/i18n/I18nProvider';
 import { ShareSheet } from '@/components/ui/ShareSheet';
 import { AvatarEditor } from './AvatarEditor';
+import { AffinityGroupsCard } from './AffinityGroupsCard';
+import { myProfileQueryKey, useMyProfile, type MyProfile } from './useMyProfile';
 
 const themeSwatches: Record<ThemeId, string> = {
   preto: '#131313',
   azul: '#5341cd',
   laranja: '#ff5e1a',
 };
-
-interface ProfileSummary {
-  username: string | null;
-  fullName: string | null;
-  avatarUrl: string | null;
-  isCreator: boolean;
-  professionalShellEnabled: boolean;
-}
 
 export function ProfilePage() {
   const { theme, setTheme } = useTheme();
@@ -57,30 +51,10 @@ export function ProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const userId = session?.user.id;
-  const profileQueryKey = ['my-profile-summary', userId];
-  const { data: profile } = useQuery({
-    queryKey: profileQueryKey,
-    enabled: Boolean(userId),
-    queryFn: async (): Promise<ProfileSummary | null> => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('username, full_name, avatar_url, is_creator, professional_shell_enabled')
-        .eq('id', userId!)
-        .maybeSingle();
+  const profileQueryKey = myProfileQueryKey(userId);
+  const { data: profile } = useMyProfile();
 
-      if (error) throw error;
-      if (!data) return null;
-      return {
-        username: data.username,
-        fullName: data.full_name,
-        avatarUrl: data.avatar_url,
-        isCreator: Boolean(data.is_creator),
-        professionalShellEnabled: Boolean(data.professional_shell_enabled),
-      };
-    },
-  });
-
-  const professionalToolsMutation = useMutation({
+  const becomeProfessionalMutation = useMutation({
     mutationFn: async (enabled: boolean) => {
       const { data, error } = await supabase.rpc('set_professional_tools_enabled', {
         p_enabled: enabled,
@@ -90,9 +64,9 @@ export function ProfilePage() {
     },
     onMutate: async (enabled: boolean) => {
       await queryClient.cancelQueries({ queryKey: profileQueryKey });
-      const previous = queryClient.getQueryData<ProfileSummary | null>(profileQueryKey);
-      queryClient.setQueryData<ProfileSummary | null>(profileQueryKey, (current) =>
-        current ? { ...current, professionalShellEnabled: enabled } : current,
+      const previous = queryClient.getQueryData<MyProfile | null>(profileQueryKey);
+      queryClient.setQueryData<MyProfile | null>(profileQueryKey, (current) =>
+        current ? { ...current, isProfessional: enabled } : current,
       );
       return { previous };
     },
@@ -100,11 +74,11 @@ export function ProfilePage() {
       if (context) queryClient.setQueryData(profileQueryKey, context.previous);
     },
     onSuccess: (data) => {
-      queryClient.setQueryData<ProfileSummary | null>(profileQueryKey, (current) =>
+      queryClient.setQueryData<MyProfile | null>(profileQueryKey, (current) =>
         current
           ? {
               ...current,
-              professionalShellEnabled: Boolean(data.professional_shell_enabled),
+              isProfessional: Boolean(data.professional_shell_enabled),
               isCreator: Boolean(data.is_creator),
             }
           : current,
@@ -120,7 +94,7 @@ export function ProfilePage() {
   const shareUrl = profile?.username
     ? `${window.location.origin}/creator/${encodeURIComponent(profile.username)}`
     : window.location.origin;
-  const isProfessional = profile?.isCreator || profile?.professionalShellEnabled || false;
+  const isProfessional = profile?.isProfessional ?? false;
 
   useEffect(() => {
     applyFontScale(fontScale);
@@ -147,7 +121,7 @@ export function ProfilePage() {
     setPickedFile(null);
     if (!userId) return;
     await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', userId);
-    queryClient.setQueryData<ProfileSummary | null>(profileQueryKey, (current) =>
+    queryClient.setQueryData<MyProfile | null>(profileQueryKey, (current) =>
       current ? { ...current, avatarUrl: publicUrl } : current,
     );
   }
@@ -221,7 +195,7 @@ export function ProfilePage() {
               {displayName}
             </h1>
             <span className="mt-2 inline-flex items-center rounded-full bg-secondary-container px-3 py-1 font-sans text-eyebrow uppercase text-on-secondary-container">
-              {profile?.isCreator ? t('profile.professional') : t('profile.member')}
+              {isProfessional ? t('profile.professional') : t('profile.member')}
             </span>
 
             <Link
@@ -400,19 +374,19 @@ export function ProfilePage() {
                 <IconChip icon={BriefcaseBusiness} />
                 <div className="min-w-0 flex-1">
                   <p className="font-sans text-body font-medium text-on-surface">
-                    {t('profile.professionalTools.title')}
+                    {t('profile.becomeProfessional.title')}
                   </p>
                   <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">
-                    {t('profile.professionalTools.description')}
+                    {t('profile.becomeProfessional.description')}
                   </p>
                 </div>
                 <button
                   type="button"
                   role="switch"
                   aria-checked={isProfessional}
-                  aria-label={t('profile.professionalTools.title')}
-                  disabled={professionalToolsMutation.isPending}
-                  onClick={() => professionalToolsMutation.mutate(!isProfessional)}
+                  aria-label={t('profile.becomeProfessional.title')}
+                  disabled={becomeProfessionalMutation.isPending}
+                  onClick={() => becomeProfessionalMutation.mutate(!isProfessional)}
                   className={clsx(
                     'relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-60',
                     isProfessional ? 'bg-primary' : 'bg-surface-container-highest',
@@ -442,6 +416,8 @@ export function ProfilePage() {
                 </>
               )}
             </div>
+
+            {isProfessional && <AffinityGroupsCard />}
           </div>
 
           {/* Sessão */}
