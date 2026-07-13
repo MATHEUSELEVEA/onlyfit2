@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import {
   Check,
   Heart,
@@ -247,7 +248,10 @@ export function ExplorePage() {
   const [sport, setSport] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const creatorsQuery = useExploreCreators();
+  // Busca de pessoas é server-side (cobre todos os usuários, não só a amostra
+  // pré-carregada). Debounce evita uma query por tecla.
+  const debouncedSearch = useDebouncedValue(search, 300);
+  const creatorsQuery = useExploreCreators(debouncedSearch);
   const contentQuery = useExploreContent();
   const productsQuery = useMarketProducts();
   const communitiesQuery = useExploreCommunities();
