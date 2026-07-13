@@ -59,9 +59,26 @@
     animation: login-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
+  /* Revelação do PDF ao expandir um documento na central de aceite. */
+  @keyframes doc-reveal {
+    0% {
+      opacity: 0;
+      transform: translateY(-6px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-doc-reveal {
+    animation: doc-reveal 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-kenburns,
-    .animate-login-rise {
+    .animate-login-rise,
+    .animate-doc-reveal {
       animation: none;
     }
   }
