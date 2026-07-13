@@ -380,7 +380,7 @@ export function ExplorePage() {
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Buscar creators, conteúdos e produtos..."
+                placeholder="Buscar pessoas, conteúdos e produtos..."
                 aria-label="Buscar creators, conteúdos, produtos, comunidades e desafios"
                 className="min-h-[44px] w-full rounded-xl border border-outline-variant/40 bg-surface py-2 pl-11 pr-4 font-sans text-body text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
@@ -476,7 +476,7 @@ export function ExplorePage() {
         {showPeople && !isLoading && creators.length > 0 && (
           <section className="mt-6" aria-labelledby="explore-people-title">
             <h2 id="explore-people-title" className="px-4 font-sans text-title text-on-surface">
-              Creators
+              Pessoas
             </h2>
             <ul className="mt-2 divide-y divide-outline-variant/20">
               {(tab === 'people' ? creators : creators.slice(0, 4)).map((creator) => (
