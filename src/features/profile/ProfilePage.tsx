@@ -17,8 +17,6 @@ import {
   Share2,
   ShoppingBag,
   Stethoscope,
-  Trophy,
-  Users,
   WalletCards,
   type LucideIcon,
 } from 'lucide-react';
@@ -336,6 +334,7 @@ export function ProfilePage() {
                 title={t('profile.health.title')}
                 description={t('profile.health.description')}
               />
+              <ProfileLink icon={Gavel} title={t('profile.terms.title')} description={t('profile.terms.description')} />
             </div>
           </div>
 
@@ -349,18 +348,6 @@ export function ProfilePage() {
                 title={t('profile.market.title')}
                 description={t('profile.market.description')}
                 to="/mercado"
-              />
-              <ProfileLink
-                icon={Users}
-                title={t('profile.community.title')}
-                description={t('profile.community.description')}
-                to="/comunidades"
-              />
-              <ProfileLink
-                icon={Trophy}
-                title={t('profile.challenges.title')}
-                description={t('profile.challenges.description')}
-                to="/desafios"
               />
             </div>
           </div>
@@ -425,8 +412,6 @@ export function ProfilePage() {
             <SectionEyebrow>{t('profile.section.session')}</SectionEyebrow>
 
             <div className="overflow-hidden rounded-2xl border border-outline-variant/40 bg-surface shadow-sm">
-              <ProfileLink icon={Gavel} title={t('profile.terms.title')} description={t('profile.terms.description')} />
-
               {/* Último botão da tela: sair da conta */}
               <button
                 type="button"
