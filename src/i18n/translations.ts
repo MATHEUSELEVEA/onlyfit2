@@ -43,8 +43,13 @@ const pt = {
   'profile.challenges.title': 'Desafios',
   'profile.challenges.description': 'Competições e metas',
 
-  'profile.professionalTools.title': 'Ferramentas Profissionais',
-  'profile.professionalTools.description': 'Habilitar recursos avançados',
+  'profile.becomeProfessional.title': 'Tornar-me profissional',
+  'profile.becomeProfessional.description':
+    'Ativa sua conta profissional: criar conteúdo para assinantes, vender, gerir negócios, comunidades e desafios. Desativar volta para membro sem perder nada.',
+
+  'profile.affinity.title': 'Grupos de afinidade',
+  'profile.affinity.description': 'Escolha até 3 áreas em que você atua como profissional.',
+  'profile.affinity.limit': 'Você pode escolher no máximo 3 grupos.',
 
   'profile.management.title': 'Gestão',
   'profile.management.description': 'Painel de operação profissional',
@@ -101,8 +106,13 @@ const en: Record<keyof typeof pt, string> = {
   'profile.challenges.title': 'Challenges',
   'profile.challenges.description': 'Competitions and goals',
 
-  'profile.professionalTools.title': 'Professional Tools',
-  'profile.professionalTools.description': 'Enable advanced features',
+  'profile.becomeProfessional.title': 'Become a professional',
+  'profile.becomeProfessional.description':
+    'Turns on your professional account: create subscriber content, sell, manage businesses, communities and challenges. Turning it off returns you to member without losing anything.',
+
+  'profile.affinity.title': 'Affinity groups',
+  'profile.affinity.description': 'Pick up to 3 areas you work in as a professional.',
+  'profile.affinity.limit': 'You can pick at most 3 groups.',
 
   'profile.management.title': 'Management',
   'profile.management.description': 'Professional operation dashboard',

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, X } from 'lucide-react';
 import { createDraftMedia, moveItem, type DraftMedia } from './media';
 import { useCreatePost, type PostVisibility } from './useCreatePost';
+import { useMyProfile } from '@/features/profile/useMyProfile';
 import { PickMediaStep } from './steps/PickMediaStep';
 import { DetailsStep } from './steps/DetailsStep';
 
@@ -14,6 +15,9 @@ type Step = 'pick' | 'details';
 export function StudioPage() {
   const navigate = useNavigate();
   const createPost = useCreatePost();
+  const { data: profile } = useMyProfile();
+  // Só Profissional publica para assinantes; Membro só publica conteúdo público.
+  const isProfessional = profile?.isProfessional ?? false;
 
   const [step, setStep] = useState<Step>('pick');
   const [media, setMedia] = useState<DraftMedia[]>([]);
@@ -54,7 +58,8 @@ export function StudioPage() {
 
   const publish = () => {
     createPost.mutate(
-      { media, caption, sports, visibility },
+      // Trava servidor-agnóstica: Membro nunca envia paid_members.
+      { media, caption, sports, visibility: isProfessional ? visibility : 'public' },
       {
         onSuccess: (postId) => {
           media.forEach((item) => URL.revokeObjectURL(item.previewUrl));
@@ -105,6 +110,7 @@ export function StudioPage() {
             onToggleSport={toggleSport}
             visibility={visibility}
             onVisibilityChange={setVisibility}
+            canPublishToMembers={isProfessional}
             onPublish={publish}
             isPublishing={createPost.isPending}
             error={createPost.isError ? 'Não foi possível publicar. Tente novamente.' : null}
