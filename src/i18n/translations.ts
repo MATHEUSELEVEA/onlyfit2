@@ -37,12 +37,6 @@ const pt = {
   'profile.market.title': 'Mercado',
   'profile.market.description': 'Produtos e serviços à venda',
 
-  'profile.community.title': 'Comunidade',
-  'profile.community.description': 'Grupos e discussões',
-
-  'profile.challenges.title': 'Desafios',
-  'profile.challenges.description': 'Competições e metas',
-
   'profile.becomeProfessional.title': 'Tornar-me profissional',
   'profile.becomeProfessional.description':
     'Ativa sua conta profissional: criar conteúdo para assinantes, vender, gerir negócios, comunidades e desafios. Desativar volta para membro sem perder nada.',
@@ -99,12 +93,6 @@ const en: Record<keyof typeof pt, string> = {
 
   'profile.market.title': 'Market',
   'profile.market.description': 'Products and services for sale',
-
-  'profile.community.title': 'Community',
-  'profile.community.description': 'Groups and discussions',
-
-  'profile.challenges.title': 'Challenges',
-  'profile.challenges.description': 'Competitions and goals',
 
   'profile.becomeProfessional.title': 'Become a professional',
   'profile.becomeProfessional.description':
