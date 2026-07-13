@@ -16,7 +16,10 @@ import { MyProductsPage } from './features/market/MyProductsPage';
 import { StudioPage } from './features/studio/StudioPage';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { EditProfilePage } from './features/profile/EditProfilePage';
+import { InboxPage } from './features/messages/InboxPage';
+import { ChatPage } from './features/messages/ChatPage';
 import { MyBusinessesPage } from './features/profile/MyBusinessesPage';
+import { PrivacyTermsPage } from './features/legal/PrivacyTermsPage';
 import { CreatorProfilePage } from './features/creators/CreatorProfilePage';
 import { LoginPage } from './pages/LoginPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
@@ -63,6 +66,9 @@ function AuthenticatedApp() {
           <Route path="/desafios" element={<ChallengesPage />} />
           <Route path="/perfil" element={<ProfilePage />} />
           <Route path="/perfil/editar" element={<EditProfilePage />} />
+          <Route path="/perfil/privacidade-termos" element={<PrivacyTermsPage />} />
+          <Route path="/mensagens" element={<InboxPage />} />
+          <Route path="/mensagens/:peerId" element={<ChatPage />} />
           <Route path="/negocios" element={<MyBusinessesPage />} />
           <Route path="/creator/:username" element={<CreatorProfilePage />} />
           <Route path="*" element={<Navigate to="/feed" replace />} />

@@ -231,7 +231,9 @@ export function CreatorProfilePage() {
           <button
             type="button"
             aria-label="Enviar mensagem"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-outline-variant/60 text-on-surface active:bg-surface-container"
+            disabled={!creatorId}
+            onClick={() => creatorId && navigate(`/mensagens/${creatorId}`)}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-outline-variant/60 text-on-surface active:bg-surface-container disabled:opacity-50"
           >
             <MessageCircle size={20} aria-hidden />
           </button>

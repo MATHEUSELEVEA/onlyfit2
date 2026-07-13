@@ -16,10 +16,15 @@ export function SectionEyebrow({ children }: { children: ReactNode }) {
   );
 }
 
-export function IconChip({ icon: Icon }: { icon: LucideIcon }) {
+export function IconChip({ icon: Icon, badge }: { icon: LucideIcon; badge?: number }) {
   return (
-    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+    <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
       <Icon size={19} aria-hidden />
+      {badge && badge > 0 ? (
+        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1 font-sans text-eyebrow font-bold tabular-nums text-on-error ring-2 ring-surface">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      ) : null}
     </span>
   );
 }
@@ -29,15 +34,17 @@ export function ProfileLink({
   title,
   description,
   to,
+  badge,
 }: {
   icon: LucideIcon;
   title: string;
   description: string;
   to?: string;
+  badge?: number;
 }) {
   const content = (
     <>
-      <IconChip icon={Icon} />
+      <IconChip icon={Icon} badge={badge} />
       <span className="min-w-0 flex-1">
         <span className="block font-sans text-body font-medium text-on-surface">{title}</span>
         <span className="mt-0.5 block font-sans text-body-sm text-on-surface-variant">

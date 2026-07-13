@@ -25,6 +25,8 @@ import { ShareSheet } from '@/components/ui/ShareSheet';
 import { AvatarEditor } from './AvatarEditor';
 import { myProfileQueryKey, useMyProfile, type MyProfile } from './useMyProfile';
 import { IconChip, ProfileLink, SectionEyebrow, SettingCard } from './components/SettingsPrimitives';
+import { useUnreadCount } from '@/features/messages/useUnreadCount';
+import { useRealtimeMessages } from '@/features/messages/useRealtimeMessages';
 
 // Espelha 1:1 `--color-surface` de cada tema em src/theme/themes.css.
 const themeSwatches: Record<ThemeId, string> = {
@@ -46,6 +48,9 @@ export function ProfilePage() {
   const userId = session?.user.id;
   const profileQueryKey = myProfileQueryKey(userId);
   const { data: profile } = useMyProfile();
+  // Mantém a bolinha vermelha do botão Mensagens viva mesmo parado no Perfil.
+  useRealtimeMessages();
+  const { data: unreadCount = 0 } = useUnreadCount();
 
   const metadata = session?.user.user_metadata;
   const displayName = profile?.fullName ?? metadata?.full_name ?? metadata?.name ?? 'Meu perfil';
@@ -266,7 +271,13 @@ export function ProfilePage() {
             <SectionEyebrow>{t('profile.section.account')}</SectionEyebrow>
 
             <div className="overflow-hidden rounded-2xl border border-outline-variant/40 bg-surface shadow-sm">
-              <ProfileLink icon={Inbox} title={t('profile.messages.title')} description={t('profile.messages.description')} />
+              <ProfileLink
+                icon={Inbox}
+                title={t('profile.messages.title')}
+                description={t('profile.messages.description')}
+                to="/mensagens"
+                badge={unreadCount}
+              />
               <ProfileLink
                 icon={PencilLine}
                 title={t('profile.editProfile.title')}
@@ -283,7 +294,12 @@ export function ProfilePage() {
                 title={t('profile.health.title')}
                 description={t('profile.health.description')}
               />
-              <ProfileLink icon={Gavel} title={t('profile.terms.title')} description={t('profile.terms.description')} />
+              <ProfileLink
+                icon={Gavel}
+                title={t('profile.terms.title')}
+                description={t('profile.terms.description')}
+                to="/perfil/privacidade-termos"
+              />
             </div>
           </div>
 
@@ -360,4 +376,3 @@ export function ProfilePage() {
     </div>
   );
 }
-
