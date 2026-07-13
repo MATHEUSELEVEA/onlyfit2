@@ -33,8 +33,8 @@ export function FeedSportsBar({ selected, availableSports, onSelect }: FeedSport
           >
             <span
               className={clsx(
-                'font-sans text-body drop-shadow transition-colors',
-                active ? 'font-semibold text-white' : 'text-white/60',
+                'font-sans text-handle drop-shadow transition-colors',
+                active ? 'font-semibold text-white' : 'font-normal text-white/70',
               )}
             >
               {tab.label}
