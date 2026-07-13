@@ -209,7 +209,7 @@ function HealthProfileContent({
   );
 
   return (
-    <HealthPageShell>
+    <HealthPageShell width="form">
       <HealthPageHeader
         title="Perfil de Saúde"
         description="Declarações, registros clínicos e exames"
@@ -226,9 +226,8 @@ function HealthProfileContent({
       />
       <main className="space-y-7 px-4 py-5">
         {success ? <FeedbackMessage type="success">{success}</FeedbackMessage> : null}
-        <div className="grid items-start gap-7 md:grid-cols-[minmax(0,1fr)_280px]">
-          <div className="space-y-7">
-            <section className="overflow-hidden rounded-2xl bg-surface-container-low">
+
+        <section className="overflow-hidden rounded-2xl bg-surface-container-low">
           <div className="flex items-start gap-3 px-4 py-4">
             <HealthIcon icon={ClipboardList} />
             <div className="min-w-0 flex-1">
@@ -247,16 +246,14 @@ function HealthProfileContent({
             {latestAnamnesis ? 'Responder novamente' : 'Responder anamnese'}
             <ChevronRight size={18} aria-hidden />
           </Link>
-            </section>
+        </section>
 
-            <section>
+        <section>
           <div>
-            <div>
-              <h2 className="font-sans text-title text-on-surface">Histórico de saúde</h2>
-              <p className="mt-1 font-sans text-body-sm text-on-surface-variant">
-                Somente registros confirmados aparecem aqui.
-              </p>
-            </div>
+            <h2 className="font-sans text-title text-on-surface">Histórico de saúde</h2>
+            <p className="mt-1 font-sans text-body-sm text-on-surface-variant">
+              Somente registros confirmados aparecem aqui.
+            </p>
           </div>
 
           <div className="-mx-4 mt-4 overflow-x-auto px-4 pb-1">
@@ -295,18 +292,16 @@ function HealthProfileContent({
               {isFetchingNextPage ? 'Carregando...' : 'Carregar mais'}
             </button>
           ) : null}
-            </section>
-          </div>
-          <aside className="space-y-4 md:sticky md:top-28">
-            <section className="flex items-start gap-3 rounded-xl bg-surface-container-low px-3 py-3">
-              <LockKeyhole size={18} className="mt-0.5 shrink-0 text-on-surface-variant" aria-hidden />
-              <p className="font-sans text-body-sm text-on-surface-variant">
-                Seus registros são privados nesta versão. Profissionais e analytics não recebem acesso.
-              </p>
-            </section>
-            <AiPreference enabled={aiEnabled} />
-          </aside>
-        </div>
+        </section>
+
+        <section className="flex items-start gap-3 rounded-xl bg-surface-container-low px-3 py-3">
+          <LockKeyhole size={18} className="mt-0.5 shrink-0 text-on-surface-variant" aria-hidden />
+          <p className="font-sans text-body-sm text-on-surface-variant">
+            Seus registros são privados nesta versão. Profissionais e analytics não recebem acesso.
+          </p>
+        </section>
+
+        <AiPreference enabled={aiEnabled} />
       </main>
     </HealthPageShell>
   );
