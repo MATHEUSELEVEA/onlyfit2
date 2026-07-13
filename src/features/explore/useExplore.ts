@@ -24,9 +24,12 @@ interface CreatorRow {
     | null;
 }
 
-// Creators para descoberta (mesma fonte do Discover do v1): perfis com
-// is_creator + dados públicos de creator_profiles, com follow do usuário
-// hidratado em lote. Busca/filtros são aplicados no cliente sobre esta lista.
+// Pessoas para descoberta: qualquer perfil (profissional OU usuário comum),
+// com os dados públicos de creator_profiles hidratados via join opcional
+// (nulos para quem não é profissional) e o follow do usuário em lote.
+// Sem filtro de is_creator — o Explorar mostra todos. Exclui o próprio
+// usuário para não sugerir seguir a si mesmo. Busca/filtros são aplicados
+// no cliente sobre esta lista.
 export function useExploreCreators() {
   const { session } = useAuth();
   const userId = session?.user.id;
@@ -42,7 +45,7 @@ export function useExploreCreators() {
           `id, username, full_name, avatar_url,
            creator_profiles (bio, sports, follower_count)`,
         )
-        .eq('is_creator', true)
+        .neq('id', userId!)
         .limit(50);
       if (error) throw error;
 
@@ -68,7 +71,7 @@ export function useExploreCreators() {
         return {
           id: row.id,
           username: row.username,
-          name: row.full_name || row.username || 'Creator',
+          name: row.full_name || row.username || 'Usuário',
           avatarUrl: row.avatar_url,
           bio: cp?.bio ?? '',
           sports: cp?.sports ?? [],
@@ -107,8 +110,9 @@ interface ContentRow {
     | null;
 }
 
-// Conteúdo público recente de creators, sem personalização — o objetivo é
-// descoberta (mesma regra do Discover do v1). RLS já restringe ao público.
+// Conteúdo público recente de qualquer autor (profissional ou usuário comum),
+// sem personalização — o objetivo é descoberta. Sem filtro de is_creator:
+// posts públicos de todos entram. RLS/visibility já restringem ao público.
 export function useExploreContent() {
   return useQuery({
     queryKey: ['explore-content'],
@@ -118,9 +122,8 @@ export function useExploreContent() {
         .from('posts')
         .select(
           `id, title, thumbnail_url, video_url, likes, sports, creator_id,
-           profiles:creator_id!inner (full_name, username, is_creator)`,
+           profiles:creator_id!inner (full_name, username)`,
         )
-        .eq('profiles.is_creator', true)
         .eq('visibility', 'public')
         .order('published_at', { ascending: false })
         .limit(24);
@@ -135,7 +138,7 @@ export function useExploreContent() {
           hasVideo: Boolean(row.video_url),
           likes: row.likes ?? 0,
           creatorId: row.creator_id,
-          creatorName: profile?.full_name || profile?.username || 'Creator',
+          creatorName: profile?.full_name || profile?.username || 'Usuário',
           creatorUsername: profile?.username ?? null,
           sports: row.sports ?? [],
         };
