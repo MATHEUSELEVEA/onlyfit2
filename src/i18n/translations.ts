@@ -25,6 +25,9 @@ const pt = {
 
   'profile.theme.title': 'Tema do aplicativo',
 
+  'profile.visual.title': 'Visual',
+  'profile.visual.description': 'Tamanho da fonte e tema do aplicativo',
+
   'profile.editProfile.title': 'Editar meus dados',
   'profile.editProfile.description': 'Dados pessoais, endereços e contatos',
 
@@ -36,6 +39,10 @@ const pt = {
 
   'profile.market.title': 'Mercado',
   'profile.market.description': 'Produtos e serviços à venda',
+
+  'visual.back': 'Voltar para o perfil',
+  'visual.title': 'Visual',
+  'visual.description': 'Tamanho da fonte e tema do aplicativo',
 
   'editProfile.back': 'Voltar para o perfil',
   'editProfile.title': 'Editar meus dados',
@@ -187,6 +194,9 @@ const en: Record<keyof typeof pt, string> = {
 
   'profile.theme.title': 'App theme',
 
+  'profile.visual.title': 'Appearance',
+  'profile.visual.description': 'Font size and app theme',
+
   'profile.editProfile.title': 'Edit my data',
   'profile.editProfile.description': 'Personal data, addresses and contacts',
 
@@ -198,6 +208,10 @@ const en: Record<keyof typeof pt, string> = {
 
   'profile.market.title': 'Market',
   'profile.market.description': 'Products and services for sale',
+
+  'visual.back': 'Back to profile',
+  'visual.title': 'Appearance',
+  'visual.description': 'Font size and app theme',
 
   'editProfile.back': 'Back to profile',
   'editProfile.title': 'Edit my data',

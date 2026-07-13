@@ -16,6 +16,7 @@ import { MyProductsPage } from './features/market/MyProductsPage';
 import { StudioPage } from './features/studio/StudioPage';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { EditProfilePage } from './features/profile/EditProfilePage';
+import { VisualPreferencesPage } from './features/profile/VisualPreferencesPage';
 import { InboxPage } from './features/messages/InboxPage';
 import { ChatPage } from './features/messages/ChatPage';
 import { MyBusinessesPage } from './features/profile/MyBusinessesPage';
@@ -72,6 +73,7 @@ function AuthenticatedApp() {
           <Route path="/desafios" element={<ChallengesPage />} />
           <Route path="/perfil" element={<ProfilePage />} />
           <Route path="/perfil/editar" element={<EditProfilePage />} />
+          <Route path="/perfil/visual" element={<VisualPreferencesPage />} />
           <Route path="/perfil/saude" element={<HealthProfilePage />} />
           <Route path="/perfil/saude/anamnese" element={<AnamnesisStartPage />} />
           <Route path="/perfil/saude/anamnese/questionario" element={<HealthQuestionnairePage />} />

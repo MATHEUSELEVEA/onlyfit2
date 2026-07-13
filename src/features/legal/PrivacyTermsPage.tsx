@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   ArrowLeft,
   Check,
-  CheckCircle2,
+  ChevronDown,
   Clock3,
   Download,
   ExternalLink,
@@ -35,7 +35,7 @@ interface LegalDocumentState {
 
 export function PrivacyTermsPage() {
   const { language } = useTranslation();
-  const [selectedKey, setSelectedKey] = useState('');
+  const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
   const [checkedByKey, setCheckedByKey] = useState<Record<string, boolean>>({});
   const {
     data: legalDocuments = [],
@@ -71,11 +71,8 @@ export function PrivacyTermsPage() {
     [acceptances, legalDocuments],
   );
 
-  const selected = documents.find((item) => item.document.key === selectedKey) ?? documents[0];
   const pendingCount = documents.filter((item) => item.status !== 'accepted').length;
   const acceptedCount = documents.length - pendingCount;
-  const isSelectedAccepted = selected?.status === 'accepted';
-  const selectedChecked = selected ? checkedByKey[selected.document.key] === true : false;
   const isLoading = isLoadingDocuments || isLoadingAcceptances;
   const isError = isDocumentsError || isAcceptancesError;
 
@@ -91,10 +88,20 @@ export function PrivacyTermsPage() {
     [language],
   );
 
-  async function acceptSelectedDocument() {
-    if (!selected || isSelectedAccepted || !selectedChecked || acceptMutation.isPending) return;
-    await acceptMutation.mutateAsync(selected.document);
-    setCheckedByKey((current) => ({ ...current, [selected.document.key]: false }));
+  function toggleExpanded(key: string) {
+    setExpandedKeys((current) => ({ ...current, [key]: !current[key] }));
+  }
+
+  async function acceptDocument(item: LegalDocumentState) {
+    if (
+      item.status === 'accepted' ||
+      checkedByKey[item.document.key] !== true ||
+      acceptMutation.isPending
+    ) {
+      return;
+    }
+    await acceptMutation.mutateAsync(item.document);
+    setCheckedByKey((current) => ({ ...current, [item.document.key]: false }));
   }
 
   return (
@@ -125,7 +132,7 @@ export function PrivacyTermsPage() {
           </div>
         </header>
 
-        <main className="grid gap-4 px-4 py-5 lg:grid-cols-[340px_minmax(0,1fr)]">
+        <main className="px-4 py-5">
           <section className="overflow-hidden rounded-2xl border border-outline-variant/40 bg-surface shadow-sm">
             <div className="flex items-start gap-3 px-4 py-4">
               <IconChip icon={FileText} />
@@ -139,150 +146,56 @@ export function PrivacyTermsPage() {
               </div>
             </div>
 
+            {isError && (
+              <div className="border-t border-outline-variant/25 px-4 py-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void refetchDocuments();
+                    void refetchAcceptances();
+                  }}
+                  className="inline-flex min-h-10 items-center gap-2 rounded-full bg-error-container px-4 font-sans text-label text-on-error-container"
+                >
+                  <TriangleAlert size={16} aria-hidden />
+                  Tentar carregar novamente
+                </button>
+              </div>
+            )}
+
             <div className="divide-y divide-outline-variant/25 border-t border-outline-variant/25">
               {isLoading ? (
                 <LoadingBlock />
+              ) : documents.length === 0 ? (
+                <EmptyBlock />
               ) : (
                 documents.map((item) => (
-                  <DocumentListButton
+                  <DocumentAccordionItem
                     key={item.document.key}
                     item={item}
-                    selected={item.document.key === selected?.document.key}
-                    onClick={() => setSelectedKey(item.document.key)}
+                    expanded={expandedKeys[item.document.key] === true}
+                    checked={checkedByKey[item.document.key] === true}
+                    accepting={
+                      acceptMutation.isPending &&
+                      acceptMutation.variables?.key === item.document.key
+                    }
+                    acceptError={
+                      acceptMutation.isError &&
+                      acceptMutation.variables?.key === item.document.key
+                    }
+                    acceptedAtLabel={
+                      item.currentAcceptance
+                        ? dateFormatter.format(new Date(item.currentAcceptance.acceptedAt))
+                        : null
+                    }
+                    onToggle={() => toggleExpanded(item.document.key)}
+                    onCheckedChange={(next) =>
+                      setCheckedByKey((current) => ({ ...current, [item.document.key]: next }))
+                    }
+                    onAccept={() => acceptDocument(item)}
                   />
                 ))
               )}
             </div>
-          </section>
-
-          <section className="min-w-0 overflow-hidden rounded-2xl border border-outline-variant/40 bg-surface shadow-sm">
-            {!selected ? (
-              <EmptyBlock />
-            ) : (
-              <>
-                <div className="flex flex-col gap-4 px-4 py-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="font-sans text-title text-on-surface">
-                        {selected.document.title}
-                      </h2>
-                      <StatusPill status={selected.status} />
-                    </div>
-                    <p className="mt-1 font-sans text-body-sm text-on-surface-variant">
-                      Versão {selected.document.version}
-                    </p>
-                    <p className="mt-3 max-w-[68ch] font-sans text-body text-on-surface-variant">
-                      {selected.document.description}
-                    </p>
-                  </div>
-                  {selected.currentAcceptance && (
-                    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-primary-container px-3 py-1 font-sans text-counter text-on-primary-container">
-                      <LockKeyhole size={14} aria-hidden />
-                      Imutável
-                    </span>
-                  )}
-                </div>
-
-                {isError && (
-                  <div className="border-t border-outline-variant/25 px-4 py-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void refetchDocuments();
-                        void refetchAcceptances();
-                      }}
-                      className="inline-flex min-h-10 items-center gap-2 rounded-full bg-error-container px-4 font-sans text-label text-on-error-container"
-                    >
-                      <TriangleAlert size={16} aria-hidden />
-                      Tentar carregar novamente
-                    </button>
-                  </div>
-                )}
-
-                <div className="border-t border-outline-variant/25 px-4 py-4">
-                  <div className="overflow-hidden rounded-xl border border-outline-variant/40 bg-surface-container-lowest">
-                    <iframe
-                      title={`PDF - ${selected.document.title}`}
-                      src={selected.document.pdfPath}
-                      className="h-[58vh] min-h-[420px] w-full bg-surface-container-lowest"
-                    />
-                  </div>
-
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <a
-                      href={selected.document.pdfPath}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-full border border-outline-variant/50 px-4 font-sans text-label text-on-surface transition-colors active:bg-surface-container-low sm:flex-none"
-                    >
-                      <ExternalLink size={16} aria-hidden />
-                      Abrir PDF
-                    </a>
-                    <a
-                      href={selected.document.pdfPath}
-                      download
-                      className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-full border border-outline-variant/50 px-4 font-sans text-label text-on-surface transition-colors active:bg-surface-container-low sm:flex-none"
-                    >
-                      <Download size={16} aria-hidden />
-                      Baixar
-                    </a>
-                  </div>
-                </div>
-
-                <div className="border-t border-outline-variant/25 px-4 py-4">
-                  {selected.currentAcceptance ? (
-                    <AcceptedNotice
-                      acceptedAt={dateFormatter.format(new Date(selected.currentAcceptance.acceptedAt))}
-                    />
-                  ) : (
-                    <div className="space-y-4">
-                      {selected.status === 'new_version' && selected.latestAcceptance && (
-                        <p className="rounded-xl bg-surface-container-low px-3 py-3 font-sans text-body-sm text-on-surface-variant">
-                          Você já havia registrado uma versão anterior. Esta versão exige nova confirmação.
-                        </p>
-                      )}
-
-                      <label className="flex items-start gap-3 rounded-xl border border-outline-variant/40 px-3 py-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedChecked}
-                          onChange={(event) =>
-                            setCheckedByKey((current) => ({
-                              ...current,
-                              [selected.document.key]: event.target.checked,
-                            }))
-                          }
-                          className="mt-1 h-5 w-5 shrink-0 rounded border-outline-variant accent-primary"
-                        />
-                        <span className="font-sans text-body text-on-surface">
-                          {selected.document.checkboxLabel}
-                        </span>
-                      </label>
-
-                      {acceptMutation.isError && (
-                        <p role="alert" className="font-sans text-body-sm text-error">
-                          Não foi possível registrar agora. Tente novamente.
-                        </p>
-                      )}
-
-                      <button
-                        type="button"
-                        onClick={acceptSelectedDocument}
-                        disabled={!selectedChecked || acceptMutation.isPending}
-                        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 font-sans text-label text-on-primary shadow-sm transition-transform active:scale-[0.98] disabled:opacity-60"
-                      >
-                        {acceptMutation.isPending ? (
-                          <Loader2 size={17} className="animate-spin" aria-hidden />
-                        ) : (
-                          <Check size={17} aria-hidden />
-                        )}
-                        {selected.document.actionLabel}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
           </section>
         </main>
       </div>
@@ -290,38 +203,154 @@ export function PrivacyTermsPage() {
   );
 }
 
-function DocumentListButton({
+function DocumentAccordionItem({
   item,
-  selected,
-  onClick,
+  expanded,
+  checked,
+  accepting,
+  acceptError,
+  acceptedAtLabel,
+  onToggle,
+  onCheckedChange,
+  onAccept,
 }: {
   item: LegalDocumentState;
-  selected: boolean;
-  onClick: () => void;
+  expanded: boolean;
+  checked: boolean;
+  accepting: boolean;
+  acceptError: boolean;
+  acceptedAtLabel: string | null;
+  onToggle: () => void;
+  onCheckedChange: (next: boolean) => void;
+  onAccept: () => void;
 }) {
+  const { document, status } = item;
+  const panelId = `doc-panel-${document.key}`;
+  const isAccepted = status === 'accepted';
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={selected}
-      className={clsx(
-        'flex w-full items-start gap-3 px-4 py-4 text-left transition-colors active:bg-surface-container-low',
-        selected && 'bg-surface-container-low',
-      )}
-    >
-      <StatusIcon status={item.status} />
-      <span className="min-w-0 flex-1">
-        <span className="flex min-w-0 flex-wrap items-center gap-2">
-          <span className="font-sans text-body font-semibold text-on-surface">
-            {item.document.title}
+    <div className={clsx('transition-colors', expanded && 'bg-surface-container-low')}>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        aria-controls={panelId}
+        className="flex w-full items-start gap-3 px-4 py-4 text-left transition-colors active:bg-surface-container-low"
+      >
+        <StatusIcon status={status} />
+        <span className="min-w-0 flex-1">
+          <span className="flex min-w-0 flex-wrap items-center gap-2">
+            <span className="font-sans text-body font-semibold text-on-surface">
+              {document.title}
+            </span>
+            <StatusPill status={status} />
           </span>
-          <StatusPill status={item.status} />
+          <span className="mt-1 block font-sans text-body-sm text-on-surface-variant">
+            Versão {document.version}
+          </span>
         </span>
-        <span className="mt-1 block font-sans text-body-sm text-on-surface-variant">
-          Versão {item.document.version}
-        </span>
-      </span>
-    </button>
+        <ChevronDown
+          size={20}
+          aria-hidden
+          className={clsx(
+            'mt-0.5 shrink-0 text-on-surface-variant transition-transform duration-200',
+            expanded && 'rotate-180',
+          )}
+        />
+      </button>
+
+      <div id={panelId} className="px-4 pb-4">
+        <p className="max-w-[68ch] font-sans text-body text-on-surface-variant">
+          {document.description}
+        </p>
+
+        {expanded && (
+          <div className="mt-3 animate-doc-reveal">
+            <div className="overflow-hidden rounded-xl border border-outline-variant/40 bg-surface-container-lowest">
+              <iframe
+                title={`PDF - ${document.title}`}
+                src={document.pdfPath}
+                className="h-[58vh] min-h-[420px] w-full bg-surface-container-lowest"
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={expanded}
+            aria-controls={panelId}
+            className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-full border border-outline-variant/50 px-4 font-sans text-label text-on-surface transition-colors active:bg-surface-container-low sm:flex-none"
+          >
+            {expanded ? (
+              <>
+                <ChevronDown size={16} className="rotate-180" aria-hidden />
+                Recolher
+              </>
+            ) : (
+              <>
+                <ExternalLink size={16} aria-hidden />
+                Ler na tela
+              </>
+            )}
+          </button>
+          <a
+            href={document.pdfPath}
+            download
+            className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-full border border-outline-variant/50 px-4 font-sans text-label text-on-surface transition-colors active:bg-surface-container-low sm:flex-none"
+          >
+            <Download size={16} aria-hidden />
+            Baixar
+          </a>
+        </div>
+
+        <div className="mt-4">
+          {isAccepted && acceptedAtLabel ? (
+            <AcceptedNotice acceptedAt={acceptedAtLabel} />
+          ) : (
+            <div className="space-y-3">
+              {status === 'new_version' && item.latestAcceptance && (
+                <p className="rounded-xl bg-surface-container-low px-3 py-3 font-sans text-body-sm text-on-surface-variant">
+                  Você já havia registrado uma versão anterior. Esta versão exige nova confirmação.
+                </p>
+              )}
+
+              <label className="flex items-start gap-3 rounded-xl border border-outline-variant/40 px-3 py-3">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={(event) => onCheckedChange(event.target.checked)}
+                  className="mt-1 h-5 w-5 shrink-0 rounded border-outline-variant accent-primary"
+                />
+                <span className="font-sans text-body text-on-surface">{document.checkboxLabel}</span>
+              </label>
+
+              {acceptError && (
+                <p role="alert" className="font-sans text-body-sm text-error">
+                  Não foi possível registrar agora. Tente novamente.
+                </p>
+              )}
+
+              <button
+                type="button"
+                onClick={onAccept}
+                disabled={!checked || accepting}
+                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 font-sans text-label text-on-primary shadow-sm transition-transform active:scale-[0.98] disabled:opacity-60"
+              >
+                {accepting ? (
+                  <Loader2 size={17} className="animate-spin" aria-hidden />
+                ) : (
+                  <Check size={17} aria-hidden />
+                )}
+                {document.actionLabel}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -329,7 +358,7 @@ function StatusIcon({ status }: { status: LegalStatus }) {
   if (status === 'accepted') {
     return (
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-container text-on-primary-container">
-        <CheckCircle2 size={19} aria-hidden />
+        <ShieldCheck size={19} aria-hidden />
       </span>
     );
   }
