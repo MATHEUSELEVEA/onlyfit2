@@ -11,6 +11,9 @@ export interface MyProfile {
   username: string | null;
   fullName: string | null;
   avatarUrl: string | null;
+  bio: string | null;
+  countryCode: string | null;
+  language: string | null;
   isCreator: boolean;
   isProfessional: boolean;
   affinitySports: string[];
@@ -38,7 +41,7 @@ export function useMyProfile() {
       const { data, error } = await supabase
         .from('profiles')
         .select(
-          `id, username, full_name, avatar_url, is_creator, professional_shell_enabled,
+          `id, username, full_name, avatar_url, bio, country_code, language, is_creator, professional_shell_enabled,
            creator_profiles ( sports )`,
         )
         .eq('id', userId!)
@@ -53,6 +56,9 @@ export function useMyProfile() {
         username: data.username,
         fullName: data.full_name,
         avatarUrl: data.avatar_url,
+        bio: data.bio,
+        countryCode: data.country_code,
+        language: data.language,
         isCreator: Boolean(data.is_creator),
         isProfessional: Boolean(data.professional_shell_enabled),
         affinitySports: cp?.sports ?? [],

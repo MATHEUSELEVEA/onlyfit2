@@ -15,6 +15,8 @@ import { MarketPage } from './features/market/MarketPage';
 import { MyProductsPage } from './features/market/MyProductsPage';
 import { StudioPage } from './features/studio/StudioPage';
 import { ProfilePage } from './features/profile/ProfilePage';
+import { EditProfilePage } from './features/profile/EditProfilePage';
+import { MyBusinessesPage } from './features/profile/MyBusinessesPage';
 import { CreatorProfilePage } from './features/creators/CreatorProfilePage';
 import { LoginPage } from './pages/LoginPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
@@ -60,6 +62,8 @@ function AuthenticatedApp() {
           <Route path="/comunidades" element={<CommunitiesPage />} />
           <Route path="/desafios" element={<ChallengesPage />} />
           <Route path="/perfil" element={<ProfilePage />} />
+          <Route path="/perfil/editar" element={<EditProfilePage />} />
+          <Route path="/negocios" element={<MyBusinessesPage />} />
           <Route path="/creator/:username" element={<CreatorProfilePage />} />
           <Route path="*" element={<Navigate to="/feed" replace />} />
         </Route>
