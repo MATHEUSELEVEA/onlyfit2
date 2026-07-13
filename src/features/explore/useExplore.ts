@@ -24,29 +24,43 @@ interface CreatorRow {
     | null;
 }
 
+// Sanitiza o termo para uso em .or(...ilike...) do PostgREST: vírgula separa
+// filtros e parênteses agrupam, então removê-los evita query malformada.
+function sanitizeSearchTerm(term: string): string {
+  return term.replace(/[,()%]/g, ' ').trim();
+}
+
 // Pessoas para descoberta: qualquer perfil (profissional OU usuário comum),
 // com os dados públicos de creator_profiles hidratados via join opcional
 // (nulos para quem não é profissional) e o follow do usuário em lote.
-// Sem filtro de is_creator — o Explorar mostra todos. Exclui o próprio
-// usuário para não sugerir seguir a si mesmo. Busca/filtros são aplicados
-// no cliente sobre esta lista.
-export function useExploreCreators() {
+// Sem filtro de is_creator — o Explorar mostra todos. Exclui o próprio usuário.
+//
+// Sem termo de busca: amostra dos 50 primeiros (navegação). Com termo (>=2
+// chars): filtra no SERVIDOR por nome/username sobre TODOS os perfis — sem
+// isso a busca só enxergaria os 50 pré-carregados e a maioria dos usuários
+// (ex.: quem não está na amostra) nunca apareceria.
+export function useExploreCreators(searchTerm = '') {
   const { session } = useAuth();
   const userId = session?.user.id;
+  const term = sanitizeSearchTerm(searchTerm);
+  const hasTerm = term.length >= 2;
 
   return useQuery({
-    queryKey: ['explore-creators', userId],
+    queryKey: ['explore-creators', userId, hasTerm ? term.toLowerCase() : ''],
     enabled: Boolean(userId),
-    staleTime: 5 * 60_000,
+    staleTime: hasTerm ? 60_000 : 5 * 60_000,
     queryFn: async (): Promise<ExploreCreator[]> => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('profiles')
         .select(
           `id, username, full_name, avatar_url,
            creator_profiles (bio, sports, follower_count)`,
         )
-        .neq('id', userId!)
-        .limit(50);
+        .neq('id', userId!);
+      if (hasTerm) {
+        query = query.or(`username.ilike.%${term}%,full_name.ilike.%${term}%`);
+      }
+      const { data, error } = await query.limit(50);
       if (error) throw error;
 
       const rows = (data ?? []) as unknown as CreatorRow[];
