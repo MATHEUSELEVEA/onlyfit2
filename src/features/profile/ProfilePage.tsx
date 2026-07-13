@@ -293,6 +293,7 @@ export function ProfilePage() {
                 icon={Stethoscope}
                 title={t('profile.health.title')}
                 description={t('profile.health.description')}
+                to="/perfil/saude"
               />
               <ProfileLink
                 icon={Gavel}

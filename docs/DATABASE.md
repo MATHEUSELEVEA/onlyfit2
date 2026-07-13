@@ -27,6 +27,10 @@ Leitura:
 - `post_media` → páginas do carrossel (imagem/vídeo por `position`) quando o post tem mais de uma mídia. Post de mídia única não tem linha aqui — o feed cai no fallback `posts.video_url`/`thumbnail_url`. Ver `docs/DECISIONS.md` #0009.
 - `profiles` + `creator_profiles` → identidade, bio, esportes (`sports`, fonte única de modalidade/afinidade — ver `docs/DECISIONS.md` #0008; `category` existe no schema do v1 mas não é lida pelo app) e contadores de creators.
 - `creator_memberships` + `subscriptions` (legada) → estado "Assinado" (**somente leitura** — ver abaixo).
+- `health_questionnaires` + `health_questionnaire_versions` → anamnese configurável e versionada; o app lê somente versões publicadas.
+- `health_events` + `health_event_facts` → histórico de saúde confirmado e seus fatos atômicos, sempre filtrados pela RLS do próprio usuário.
+- `health_documents` + `health_document_processing_runs` → metadados de PDFs privados e propostas de extração; o arquivo original fica no R2 `onlyfit-private`.
+- RPC `get_my_health_consents()` → estado mais recente de cada finalidade de tratamento.
 
 Leitura + escrita (sempre a linha do próprio usuário, garantida por RLS):
 
@@ -34,6 +38,15 @@ Leitura + escrita (sempre a linha do próprio usuário, garantida por RLS):
 - `post_comments` → comentar (select/insert).
 - `creator_follows` → seguir/deixar de seguir (upsert com `status: 'active'`/delete).
 - `posts` + `post_media` → o estúdio (`features/studio`) publica o post do próprio creator (RLS `"Creators can insert own posts"`); mídia sobe via edge function `create-r2-upload-url`. Carrossel grava as páginas em `post_media`. Ver `docs/DECISIONS.md` #0009 e #0010.
+- `health_event_drafts` → rascunhos mutáveis do próprio usuário (não fazem parte do histórico oficial).
+- RPC `record_my_health_consent(...)` → adiciona concessão/revogação granular; nunca sobrescreve o consentimento anterior.
+- RPC `append_my_health_event(...)` → única escrita oficial do histórico; cria evento e fatos atomicamente, depois de validar consentimento e vínculos.
+
+Edge Functions do Perfil de Saúde:
+
+- `health-anamnesis-interpret` → interpreta apenas respostas objetivas ambíguas, com consentimento de IA.
+- `health-audio-transcribe` → transcreve em memória; o áudio não é persistido.
+- `health-document-upload-url` / `health-document-process` / `health-document-download-url` → upload PDF-only, extração/revisão e leitura temporária do original privado.
 
 > Posts **salvos** ainda não têm tabela no banco: ficam em `localStorage` por usuário (`useSavedPost`). Quando a tabela existir, só o hook muda.
 
