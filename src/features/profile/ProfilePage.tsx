@@ -1,13 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import {
-  Briefcase,
-  BriefcaseBusiness,
   Building2,
   Camera,
   Check,
-  ChevronRight,
   Gavel,
   Globe2,
   Inbox,
@@ -18,7 +15,6 @@ import {
   ShoppingBag,
   Stethoscope,
   WalletCards,
-  type LucideIcon,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuth } from '@/contexts/AuthContext';
@@ -28,8 +24,8 @@ import { THEMES, useTheme, type ThemeId } from '@/theme/ThemeProvider';
 import { SUPPORTED_LANGUAGES, useTranslation, type LanguageCode } from '@/i18n/I18nProvider';
 import { ShareSheet } from '@/components/ui/ShareSheet';
 import { AvatarEditor } from './AvatarEditor';
-import { AffinityGroupsCard } from './AffinityGroupsCard';
 import { myProfileQueryKey, useMyProfile, type MyProfile } from './useMyProfile';
+import { IconChip, ProfileLink, SectionEyebrow, SettingCard } from './components/SettingsPrimitives';
 
 const themeSwatches: Record<ThemeId, string> = {
   preto: '#131313',
@@ -51,38 +47,6 @@ export function ProfilePage() {
   const userId = session?.user.id;
   const profileQueryKey = myProfileQueryKey(userId);
   const { data: profile } = useMyProfile();
-
-  const becomeProfessionalMutation = useMutation({
-    mutationFn: async (enabled: boolean) => {
-      const { data, error } = await supabase.rpc('set_professional_tools_enabled', {
-        p_enabled: enabled,
-      });
-      if (error) throw error;
-      return data as { professional_shell_enabled: boolean; is_creator: boolean };
-    },
-    onMutate: async (enabled: boolean) => {
-      await queryClient.cancelQueries({ queryKey: profileQueryKey });
-      const previous = queryClient.getQueryData<MyProfile | null>(profileQueryKey);
-      queryClient.setQueryData<MyProfile | null>(profileQueryKey, (current) =>
-        current ? { ...current, isProfessional: enabled } : current,
-      );
-      return { previous };
-    },
-    onError: (_error, _enabled, context) => {
-      if (context) queryClient.setQueryData(profileQueryKey, context.previous);
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData<MyProfile | null>(profileQueryKey, (current) =>
-        current
-          ? {
-              ...current,
-              isProfessional: Boolean(data.professional_shell_enabled),
-              isCreator: Boolean(data.is_creator),
-            }
-          : current,
-      );
-    },
-  });
 
   const metadata = session?.user.user_metadata;
   const displayName = profile?.fullName ?? metadata?.full_name ?? metadata?.name ?? 'Meu perfil';
@@ -323,6 +287,7 @@ export function ProfilePage() {
                 icon={PencilLine}
                 title={t('profile.editProfile.title')}
                 description={t('profile.editProfile.description')}
+                to="/perfil/editar"
               />
               <ProfileLink
                 icon={WalletCards}
@@ -357,54 +322,13 @@ export function ProfilePage() {
             <SectionEyebrow>{t('profile.section.professional')}</SectionEyebrow>
 
             <div className="overflow-hidden rounded-2xl border border-outline-variant/40 bg-surface shadow-sm">
-              <div className="flex min-h-[72px] items-center gap-4 px-4 py-4">
-                <IconChip icon={BriefcaseBusiness} />
-                <div className="min-w-0 flex-1">
-                  <p className="font-sans text-body font-medium text-on-surface">
-                    {t('profile.becomeProfessional.title')}
-                  </p>
-                  <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">
-                    {t('profile.becomeProfessional.description')}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={isProfessional}
-                  aria-label={t('profile.becomeProfessional.title')}
-                  disabled={becomeProfessionalMutation.isPending}
-                  onClick={() => becomeProfessionalMutation.mutate(!isProfessional)}
-                  className={clsx(
-                    'relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-60',
-                    isProfessional ? 'bg-primary' : 'bg-surface-container-highest',
-                  )}
-                >
-                  <span
-                    className={clsx(
-                      'absolute left-1 top-1 h-4 w-4 rounded-full bg-surface-container-lowest shadow-sm transition-transform',
-                      isProfessional && 'translate-x-5',
-                    )}
-                  />
-                </button>
-              </div>
-
-              {isProfessional && (
-                <>
-                  <ProfileLink
-                    icon={Briefcase}
-                    title={t('profile.management.title')}
-                    description={t('profile.management.description')}
-                  />
-                  <ProfileLink
-                    icon={Building2}
-                    title={t('profile.business.title')}
-                    description={t('profile.business.description')}
-                  />
-                </>
-              )}
+              <ProfileLink
+                icon={Building2}
+                title={t('profile.business.title')}
+                description={t('profile.business.description')}
+                to="/negocios"
+              />
             </div>
-
-            {isProfessional && <AffinityGroupsCard />}
           </div>
 
           {/* Sessão */}
@@ -453,65 +377,3 @@ export function ProfilePage() {
   );
 }
 
-function SettingCard({ children }: { children: ReactNode }) {
-  return (
-    <div className="rounded-2xl border border-outline-variant/40 bg-surface p-4 shadow-sm">
-      {children}
-    </div>
-  );
-}
-
-function SectionEyebrow({ children }: { children: ReactNode }) {
-  return (
-    <h3 className="px-1 font-sans text-eyebrow uppercase text-on-surface-variant">{children}</h3>
-  );
-}
-
-function IconChip({ icon: Icon }: { icon: LucideIcon }) {
-  return (
-    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-      <Icon size={19} aria-hidden />
-    </span>
-  );
-}
-
-function ProfileLink({
-  icon: Icon,
-  title,
-  description,
-  to,
-}: {
-  icon: LucideIcon;
-  title: string;
-  description: string;
-  to?: string;
-}) {
-  const content = (
-    <>
-      <IconChip icon={Icon} />
-      <span className="min-w-0 flex-1">
-        <span className="block font-sans text-body font-medium text-on-surface">{title}</span>
-        <span className="mt-0.5 block font-sans text-body-sm text-on-surface-variant">
-          {description}
-        </span>
-      </span>
-      <ChevronRight size={19} className="shrink-0 text-outline" aria-hidden />
-    </>
-  );
-  const className =
-    'flex min-h-[72px] w-full items-center gap-4 border-t border-outline-variant/25 px-4 py-4 text-left transition-colors first:border-t-0 active:bg-surface-container-low';
-
-  if (to) {
-    return (
-      <Link to={to} className={className}>
-        {content}
-      </Link>
-    );
-  }
-
-  return (
-    <button type="button" className={className}>
-      {content}
-    </button>
-  );
-}
