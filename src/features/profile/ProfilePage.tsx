@@ -6,7 +6,6 @@ import {
   Camera,
   Check,
   Gavel,
-  Globe2,
   Inbox,
   LogOut,
   Plus,
@@ -19,9 +18,9 @@ import {
 import { clsx } from 'clsx';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { applyFontScale, readFontScale } from '@/theme/fontScale';
+import { applyFontScale, readFontScale, MAX_FONT_SCALE, MIN_FONT_SCALE } from '@/theme/fontScale';
 import { THEMES, useTheme, type ThemeId } from '@/theme/ThemeProvider';
-import { SUPPORTED_LANGUAGES, useTranslation, type LanguageCode } from '@/i18n/I18nProvider';
+import { useTranslation } from '@/i18n/I18nProvider';
 import { ShareSheet } from '@/components/ui/ShareSheet';
 import { AvatarEditor } from './AvatarEditor';
 import { myProfileQueryKey, useMyProfile, type MyProfile } from './useMyProfile';
@@ -35,7 +34,7 @@ const themeSwatches: Record<ThemeId, string> = {
 
 export function ProfilePage() {
   const { theme, setTheme } = useTheme();
-  const { language, setLanguage, t } = useTranslation();
+  const { t } = useTranslation();
   const { session, signOut } = useAuth();
   const queryClient = useQueryClient();
   const [fontScale, setFontScale] = useState(readFontScale);
@@ -181,37 +180,6 @@ export function ProfilePage() {
             <SectionEyebrow>{t('profile.section.preferences')}</SectionEyebrow>
 
             <SettingCard>
-              <div className="flex items-center gap-3">
-                <IconChip icon={Globe2} />
-                <p className="min-w-0 flex-1 font-sans text-body font-semibold text-on-surface">
-                  {t('profile.language.title')}
-                </p>
-                <div
-                  className="flex gap-1 rounded-full bg-surface-container-low p-1"
-                  role="group"
-                  aria-label={t('profile.language.title')}
-                >
-                  {SUPPORTED_LANGUAGES.map((option) => (
-                    <button
-                      key={option.code}
-                      type="button"
-                      onClick={() => setLanguage(option.code as LanguageCode)}
-                      aria-pressed={language === option.code}
-                      className={clsx(
-                        'min-h-8 min-w-10 rounded-full px-3 font-sans text-counter transition-colors',
-                        language === option.code
-                          ? 'bg-primary text-on-primary shadow-sm'
-                          : 'text-on-surface-variant',
-                      )}
-                    >
-                      {option.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </SettingCard>
-
-            <SettingCard>
               <label
                 htmlFor="font-scale"
                 className="flex items-center gap-3 font-sans text-body font-semibold text-on-surface"
@@ -219,19 +187,35 @@ export function ProfilePage() {
                 <IconChip icon={PencilLine} />
                 {t('profile.fontSize.title')}
               </label>
-              <div className="mt-4 flex items-center gap-4 text-on-surface">
-                <span className="font-sans text-counter">A</span>
+              <div className="mt-4 flex items-center gap-3 text-on-surface">
+                <button
+                  type="button"
+                  aria-label={t('profile.fontSize.decrease')}
+                  onClick={() => setFontScale((value) => Math.max(MIN_FONT_SCALE, value - 1))}
+                  disabled={fontScale <= MIN_FONT_SCALE}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-container-highest font-sans text-counter text-on-surface transition-transform active:scale-90 disabled:opacity-30"
+                >
+                  A
+                </button>
                 <input
                   id="font-scale"
                   className="h-1.5 flex-1 cursor-pointer appearance-none rounded-full bg-surface-container-highest accent-primary"
-                  max="3"
-                  min="1"
+                  max={MAX_FONT_SCALE}
+                  min={MIN_FONT_SCALE}
                   step="1"
                   type="range"
                   value={fontScale}
                   onChange={(event) => setFontScale(Number(event.target.value))}
                 />
-                <span className="font-sans text-title-lg">A</span>
+                <button
+                  type="button"
+                  aria-label={t('profile.fontSize.increase')}
+                  onClick={() => setFontScale((value) => Math.min(MAX_FONT_SCALE, value + 1))}
+                  disabled={fontScale >= MAX_FONT_SCALE}
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-surface-container-highest font-sans text-title-lg text-on-surface transition-transform active:scale-90 disabled:opacity-30"
+                >
+                  A
+                </button>
               </div>
             </SettingCard>
 

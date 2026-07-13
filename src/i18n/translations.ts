@@ -19,9 +19,9 @@ const pt = {
   'profile.messages.title': 'Mensagens',
   'profile.messages.description': 'Sua caixa de entrada',
 
-  'profile.language.title': 'Idioma',
-
   'profile.fontSize.title': 'Tamanho da fonte',
+  'profile.fontSize.decrease': 'Diminuir fonte',
+  'profile.fontSize.increase': 'Aumentar fonte',
 
   'profile.theme.title': 'Tema do aplicativo',
 
@@ -152,9 +152,9 @@ const en: Record<keyof typeof pt, string> = {
   'profile.messages.title': 'Messages',
   'profile.messages.description': 'Your inbox',
 
-  'profile.language.title': 'Language',
-
   'profile.fontSize.title': 'Font size',
+  'profile.fontSize.decrease': 'Decrease font size',
+  'profile.fontSize.increase': 'Increase font size',
 
   'profile.theme.title': 'App theme',
 

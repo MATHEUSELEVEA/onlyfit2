@@ -39,8 +39,14 @@ export function useUpdateProfile() {
         .maybeSingle();
 
       if (error) {
+        // Como `userId` sempre vem da própria sessão (nunca de outro usuário),
+        // um 42501 aqui nunca é "editando o perfil de outra pessoa" — é a
+        // sessão tendo expirado (refresh token inválido) e o Postgres barrando
+        // o update por falta de `auth.uid()`. Desloga para forçar novo login
+        // em vez de mostrar uma mensagem de permissão que confunde o usuário.
         if (error.code === '42501' || error.message?.includes('row-level security')) {
-          throw new Error('Sem permissão para editar este perfil.');
+          await supabase.auth.signOut();
+          throw new Error('Sua sessão expirou. Faça login novamente.');
         }
         if (error.code === '23505' || error.message?.includes('duplicate key')) {
           throw new Error('Este nome de usuário já está em uso.');
