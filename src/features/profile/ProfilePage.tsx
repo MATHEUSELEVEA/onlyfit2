@@ -151,7 +151,7 @@ export function ProfilePage() {
                 type="button"
                 aria-label={t('profile.shareProfile')}
                 onClick={() => setShareOpen(true)}
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white ring-1 ring-white/20 backdrop-blur-md transition-transform active:scale-95"
+                className="flex h-11 w-11 items-center justify-center text-white drop-shadow-[0_1px_5px_rgba(0,0,0,0.85)] transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
               >
                 <Share2 size={20} aria-hidden />
               </button>
@@ -169,7 +169,7 @@ export function ProfilePage() {
               type="button"
               aria-label={t('profile.editAvatar')}
               onClick={() => fileInputRef.current?.click()}
-              className="absolute bottom-4 right-4 flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white ring-1 ring-white/20 backdrop-blur-md transition-transform active:scale-95"
+              className="absolute bottom-4 right-4 flex h-11 w-11 items-center justify-center text-white drop-shadow-[0_1px_5px_rgba(0,0,0,0.85)] transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
             >
               <Camera size={20} aria-hidden />
             </button>
@@ -203,9 +203,9 @@ export function ProfilePage() {
             {t('profile.settingsTitle')}
           </h2>
 
-          {/* Conta */}
+          {/* Navegação */}
           <div className="space-y-3">
-            <SectionEyebrow>{t('profile.section.account')}</SectionEyebrow>
+            <SectionEyebrow>{t('profile.section.navigation')}</SectionEyebrow>
 
             <div className="overflow-hidden rounded-2xl border border-outline-variant/40 bg-surface shadow-sm">
               <ProfileLink
@@ -215,6 +215,26 @@ export function ProfilePage() {
                 to="/mensagens"
                 badge={unreadCount}
               />
+              <ProfileLink
+                icon={ShoppingBag}
+                title={t('profile.market.title')}
+                description={t('profile.market.description')}
+                to="/mercado"
+              />
+              <ProfileLink
+                icon={CalendarCheck}
+                title={t('profile.enrollments.title')}
+                description={t('profile.enrollments.description')}
+                to="/produtos"
+              />
+            </div>
+          </div>
+
+          {/* Conta */}
+          <div className="space-y-3">
+            <SectionEyebrow>{t('profile.section.account')}</SectionEyebrow>
+
+            <div className="overflow-hidden rounded-2xl border border-outline-variant/40 bg-surface shadow-sm">
               <ProfileLink
                 icon={PencilLine}
                 title={t('profile.editProfile.title')}
@@ -243,25 +263,6 @@ export function ProfilePage() {
                 title={t('profile.terms.title')}
                 description={t('profile.terms.description')}
                 to="/perfil/privacidade-termos"
-              />
-            </div>
-          </div>
-
-          {/* Navegação */}
-          <div className="space-y-3">
-            <SectionEyebrow>{t('profile.section.navigation')}</SectionEyebrow>
-
-            <div className="overflow-hidden rounded-2xl border border-outline-variant/40 bg-surface shadow-sm">
-              <ProfileLink
-                icon={ShoppingBag}
-                title={t('profile.market.title')}
-                description={t('profile.market.description')}
-                to="/mercado"
-              />
-              <ProfileLink
-                icon={CalendarCheck}
-                title={t('profile.enrollments.title')}
-                description={t('profile.enrollments.description')}
               />
             </div>
           </div>

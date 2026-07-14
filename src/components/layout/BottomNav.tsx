@@ -1,12 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Compass, Dumbbell, ShoppingBag, CircleUserRound } from 'lucide-react';
+import { Home, Compass, Dumbbell, CircleUserRound } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const items = [
   { to: '/feed', label: 'Início', icon: Home },
   { to: '/explorar', label: 'Explorar', icon: Compass },
   { to: '/treino', label: 'Treino', icon: Dumbbell },
-  { to: '/produtos', label: 'Meus produtos', icon: ShoppingBag },
   { to: '/perfil', label: 'Perfil', icon: CircleUserRound },
 ];
 

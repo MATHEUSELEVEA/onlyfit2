@@ -16,7 +16,7 @@ function MediaThumb({ media, index, total, onRemove, onMove }: MediaThumbProps) 
       {media.kind === 'video' ? (
         <>
           <video src={media.previewUrl} className="h-full w-full object-cover" muted preload="metadata" />
-          <span className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-full bg-black/45 px-1.5 py-0.5 text-white">
+          <span className="absolute left-1.5 top-1.5 flex h-7 w-7 items-center justify-center text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
             <Play size={12} fill="currentColor" aria-hidden />
           </span>
         </>
@@ -34,7 +34,7 @@ function MediaThumb({ media, index, total, onRemove, onMove }: MediaThumbProps) 
         type="button"
         onClick={onRemove}
         aria-label="Remover mídia"
-        className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white transition-transform active:scale-90"
+        className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)] transition-transform active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
       >
         <X size={16} aria-hidden />
       </button>
@@ -46,7 +46,7 @@ function MediaThumb({ media, index, total, onRemove, onMove }: MediaThumbProps) 
             type="button"
             onClick={() => onMove(index - 1)}
             aria-label="Mover para a esquerda"
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white active:scale-90"
+            className="flex h-7 w-7 items-center justify-center text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)] active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
           >
             <ArrowLeft size={14} aria-hidden />
           </button>
@@ -56,7 +56,7 @@ function MediaThumb({ media, index, total, onRemove, onMove }: MediaThumbProps) 
             type="button"
             onClick={() => onMove(index + 1)}
             aria-label="Mover para a direita"
-            className="flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white active:scale-90"
+            className="flex h-7 w-7 items-center justify-center text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)] active:scale-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
           >
             <ArrowRight size={14} aria-hidden />
           </button>

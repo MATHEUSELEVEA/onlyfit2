@@ -137,7 +137,7 @@ export function CreatorProfilePage() {
             type="button"
             onClick={() => navigate(-1)}
             aria-label="Voltar"
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white ring-1 ring-white/20 backdrop-blur-md transition-transform active:scale-95"
+            className="flex h-11 w-11 items-center justify-center text-white drop-shadow-[0_1px_5px_rgba(0,0,0,0.85)] transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
           >
             <ArrowLeft size={22} aria-hidden />
           </button>
@@ -145,7 +145,7 @@ export function CreatorProfilePage() {
             type="button"
             onClick={() => setShareOpen(true)}
             aria-label="Compartilhar perfil"
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white ring-1 ring-white/20 backdrop-blur-md transition-transform active:scale-95"
+            className="flex h-11 w-11 items-center justify-center text-white drop-shadow-[0_1px_5px_rgba(0,0,0,0.85)] transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
           >
             <Share2 size={20} aria-hidden />
           </button>

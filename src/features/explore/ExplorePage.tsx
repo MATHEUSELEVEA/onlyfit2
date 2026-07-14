@@ -130,7 +130,7 @@ function ContentTile({ item, featured }: { item: ExploreContentItem; featured?: 
       />
 
       {item.hasVideo && (
-        <span className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm">
+        <span className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
           <Play size={14} fill="currentColor" aria-label="Vídeo" />
         </span>
       )}

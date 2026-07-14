@@ -17,7 +17,7 @@ export function VideoViewPage() {
         type="button"
         onClick={() => navigate(-1)}
         aria-label="Voltar"
-        className="absolute left-4 top-[max(0.75rem,env(safe-area-inset-top))] z-30 flex h-11 w-11 items-center justify-center rounded-full bg-black/35 text-white ring-1 ring-white/20 backdrop-blur-md transition-transform active:scale-95"
+        className="absolute left-4 top-[max(0.75rem,env(safe-area-inset-top))] z-30 flex h-11 w-11 items-center justify-center text-white drop-shadow-[0_1px_5px_rgba(0,0,0,0.85)] transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
       >
         <ArrowLeft size={22} aria-hidden />
       </button>

@@ -40,8 +40,8 @@ const pt = {
   'profile.market.title': 'Mercado',
   'profile.market.description': 'Produtos e serviços à venda',
 
-  'profile.enrollments.title': 'Minhas inscrições',
-  'profile.enrollments.description': 'Acompanhe e cancele suas inscrições',
+  'profile.enrollments.title': 'Minhas compras',
+  'profile.enrollments.description': 'Gerencie suas inscrições e veja seu histórico de compras',
 
   'visual.back': 'Voltar para o perfil',
   'visual.title': 'Visual',
@@ -212,8 +212,8 @@ const en: Record<keyof typeof pt, string> = {
   'profile.market.title': 'Market',
   'profile.market.description': 'Products and services for sale',
 
-  'profile.enrollments.title': 'My enrollments',
-  'profile.enrollments.description': 'Track and cancel your enrollments',
+  'profile.enrollments.title': 'My purchases',
+  'profile.enrollments.description': 'Manage your enrollments and view purchase history',
 
   'visual.back': 'Back to profile',
   'visual.title': 'Appearance',
