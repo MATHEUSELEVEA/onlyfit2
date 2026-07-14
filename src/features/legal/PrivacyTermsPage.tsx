@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import {
   ArrowLeft,
   Check,
-  ChevronDown,
   Clock3,
   Download,
   ExternalLink,
@@ -35,7 +34,6 @@ interface LegalDocumentState {
 
 export function PrivacyTermsPage() {
   const { language } = useTranslation();
-  const [expandedKeys, setExpandedKeys] = useState<Record<string, boolean>>({});
   const [checkedByKey, setCheckedByKey] = useState<Record<string, boolean>>({});
   const {
     data: legalDocuments = [],
@@ -87,10 +85,6 @@ export function PrivacyTermsPage() {
       }),
     [language],
   );
-
-  function toggleExpanded(key: string) {
-    setExpandedKeys((current) => ({ ...current, [key]: !current[key] }));
-  }
 
   async function acceptDocument(item: LegalDocumentState) {
     if (
@@ -169,10 +163,9 @@ export function PrivacyTermsPage() {
                 <EmptyBlock />
               ) : (
                 documents.map((item) => (
-                  <DocumentAccordionItem
+                  <DocumentItem
                     key={item.document.key}
                     item={item}
-                    expanded={expandedKeys[item.document.key] === true}
                     checked={checkedByKey[item.document.key] === true}
                     accepting={
                       acceptMutation.isPending &&
@@ -187,7 +180,6 @@ export function PrivacyTermsPage() {
                         ? dateFormatter.format(new Date(item.currentAcceptance.acceptedAt))
                         : null
                     }
-                    onToggle={() => toggleExpanded(item.document.key)}
                     onCheckedChange={(next) =>
                       setCheckedByKey((current) => ({ ...current, [item.document.key]: next }))
                     }
@@ -203,40 +195,29 @@ export function PrivacyTermsPage() {
   );
 }
 
-function DocumentAccordionItem({
+function DocumentItem({
   item,
-  expanded,
   checked,
   accepting,
   acceptError,
   acceptedAtLabel,
-  onToggle,
   onCheckedChange,
   onAccept,
 }: {
   item: LegalDocumentState;
-  expanded: boolean;
   checked: boolean;
   accepting: boolean;
   acceptError: boolean;
   acceptedAtLabel: string | null;
-  onToggle: () => void;
   onCheckedChange: (next: boolean) => void;
   onAccept: () => void;
 }) {
   const { document, status } = item;
-  const panelId = `doc-panel-${document.key}`;
   const isAccepted = status === 'accepted';
 
   return (
-    <div className={clsx('transition-colors', expanded && 'bg-surface-container-low')}>
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={expanded}
-        aria-controls={panelId}
-        className="flex w-full items-start gap-3 px-4 py-4 text-left transition-colors active:bg-surface-container-low"
-      >
+    <div>
+      <div className="flex items-start gap-3 px-4 py-4">
         <StatusIcon status={status} />
         <span className="min-w-0 flex-1">
           <span className="flex min-w-0 flex-wrap items-center gap-2">
@@ -249,53 +230,23 @@ function DocumentAccordionItem({
             Versão {document.version}
           </span>
         </span>
-        <ChevronDown
-          size={20}
-          aria-hidden
-          className={clsx(
-            'mt-0.5 shrink-0 text-on-surface-variant transition-transform duration-200',
-            expanded && 'rotate-180',
-          )}
-        />
-      </button>
+      </div>
 
-      <div id={panelId} className="px-4 pb-4">
+      <div className="px-4 pb-4">
         <p className="max-w-[68ch] font-sans text-body text-on-surface-variant">
           {document.description}
         </p>
 
-        {expanded && (
-          <div className="mt-3 animate-doc-reveal">
-            <div className="overflow-hidden rounded-xl border border-outline-variant/40 bg-surface-container-lowest">
-              <iframe
-                title={`PDF - ${document.title}`}
-                src={document.pdfPath}
-                className="h-[58vh] min-h-[420px] w-full bg-surface-container-lowest"
-              />
-            </div>
-          </div>
-        )}
-
         <div className="mt-3 flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-expanded={expanded}
-            aria-controls={panelId}
+          <a
+            href={document.pdfPath}
+            target="_blank"
+            rel="noreferrer"
             className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-full border border-outline-variant/50 px-4 font-sans text-label text-on-surface transition-colors active:bg-surface-container-low sm:flex-none"
           >
-            {expanded ? (
-              <>
-                <ChevronDown size={16} className="rotate-180" aria-hidden />
-                Recolher
-              </>
-            ) : (
-              <>
-                <ExternalLink size={16} aria-hidden />
-                Ler na tela
-              </>
-            )}
-          </button>
+            <ExternalLink size={16} aria-hidden />
+            Abrir PDF
+          </a>
           <a
             href={document.pdfPath}
             download

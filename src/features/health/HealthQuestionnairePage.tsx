@@ -20,7 +20,7 @@ export function HealthQuestionnairePage() {
   if (isLoading) {
     return (
       <HealthPageShell width="form">
-        <HealthPageHeader title="Anamnese" backTo="/perfil/saude/anamnese" />
+        <HealthPageHeader title="Anamnese" backTo="/perfil/saude" />
         <main className="px-4 py-6"><LoadingRows /></main>
       </HealthPageShell>
     );
@@ -29,7 +29,7 @@ export function HealthQuestionnairePage() {
   if (isError || !questionnaire) {
     return (
       <HealthPageShell width="form">
-        <HealthPageHeader title="Anamnese" backTo="/perfil/saude/anamnese" />
+        <HealthPageHeader title="Anamnese" backTo="/perfil/saude" />
         <main className="px-4 py-6">
           <FeedbackMessage type="error">Não foi possível carregar as perguntas da anamnese.</FeedbackMessage>
           <button type="button" onClick={() => void refetch()} className="mt-4 min-h-11 w-full rounded-full bg-primary px-5 font-sans text-label text-on-primary">
@@ -111,7 +111,7 @@ export function HealthQuestionnairePage() {
       <HealthPageHeader
         title="Anamnese"
         description={`Etapa ${sectionIndex + 1} de ${sections.length}`}
-        backTo="/perfil/saude/anamnese"
+        backTo="/perfil/saude"
       />
       <div className="h-1 bg-surface-container" aria-hidden>
         <div className="h-full bg-primary transition-[width] duration-200 motion-reduce:transition-none" style={{ width: `${progress}%` }} />

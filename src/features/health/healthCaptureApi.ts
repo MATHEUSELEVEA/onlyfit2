@@ -1,28 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { HealthFactInput, QuestionnaireAnswer, QuestionnaireQuestion } from './types';
-
-export async function interpretAnamnesisAnswer(question: QuestionnaireQuestion, response: string) {
-  const { data, error } = await supabase.functions.invoke<{
-    understood: boolean;
-    value: QuestionnaireAnswer | null;
-    clarification: string | null;
-    error?: string;
-  }>('health-anamnesis-interpret', {
-    body: {
-      question: {
-        id: question.id,
-        label: question.label,
-        type: question.type,
-        options: question.options,
-        min: question.min,
-        max: question.max,
-      },
-      response,
-    },
-  });
-  if (error || data?.error) throw new Error(await functionErrorMessage(error, data?.error, 'Falha ao interpretar resposta.'));
-  return data;
-}
+import type { HealthFactInput } from './types';
 
 export async function transcribeHealthAudio(recording: Blob, mime: string) {
   const extension = mime.includes('mp4') ? 'm4a' : mime.includes('ogg') ? 'ogg' : 'webm';
