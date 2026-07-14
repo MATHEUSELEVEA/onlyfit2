@@ -98,6 +98,8 @@ export function useMarketProducts() {
         .eq('is_published', true)
         .neq('active', false)
         .neq('type', 'subscription')
+        // Comunidades e desafios não são vendáveis; nunca entram no Mercado.
+        .not('market_item_type', 'in', '("community","challenge")')
         .order('sales', { ascending: false, nullsFirst: false })
         .limit(100);
       if (error) throw error;

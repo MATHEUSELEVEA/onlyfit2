@@ -143,7 +143,6 @@ export interface CreatorChallenge {
   name: string;
   description: string | null;
   coverImageUrl: string | null;
-  price: number;
   participantCount: number;
 }
 
@@ -154,7 +153,7 @@ export function useCreatorChallenges(creatorId: string | null | undefined) {
     queryFn: async (): Promise<CreatorChallenge[]> => {
       const { data, error } = await supabase
         .from('challenge_runs')
-        .select('id, name, description, cover_image_url, entry_price, participant_count, status, created_at')
+        .select('id, name, description, cover_image_url, participant_count, status, created_at')
         .eq('creator_id', creatorId!)
         .in('status', ['active', 'scheduled'])
         .order('created_at', { ascending: false });
@@ -164,7 +163,6 @@ export function useCreatorChallenges(creatorId: string | null | undefined) {
         name: c.name ?? 'Desafio',
         description: c.description ?? null,
         coverImageUrl: c.cover_image_url ?? null,
-        price: c.entry_price ?? 0,
         participantCount: c.participant_count ?? 0,
       }));
     },
@@ -176,11 +174,11 @@ export interface CreatorCommunity {
   name: string;
   description: string | null;
   memberCount: number;
+  visibility: 'public' | 'private';
 }
 
-// A tabela communities não guarda preço: comunidade paga é vendida como um
-// product type=community. Aqui listamos as comunidades do criador; o preço de
-// entrada, quando houver, aparece na aba de produtos.
+// Comunidades são ferramentas de engajamento (não vendáveis): públicas ou
+// privadas (entrada por aprovação do criador). Aqui listamos as do criador.
 export function useCreatorCommunities(creatorId: string | null | undefined) {
   return useQuery({
     queryKey: ['creator-hub-communities', creatorId],
@@ -188,7 +186,7 @@ export function useCreatorCommunities(creatorId: string | null | undefined) {
     queryFn: async (): Promise<CreatorCommunity[]> => {
       const { data, error } = await supabase
         .from('communities')
-        .select('id, name, description, member_count, created_at')
+        .select('id, name, description, member_count, visibility, created_at')
         .eq('creator_id', creatorId!)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -197,6 +195,7 @@ export function useCreatorCommunities(creatorId: string | null | undefined) {
         name: c.name ?? 'Comunidade',
         description: c.description ?? null,
         memberCount: c.member_count ?? 0,
+        visibility: (c as { visibility?: string }).visibility === 'private' ? 'private' : 'public',
       }));
     },
   });

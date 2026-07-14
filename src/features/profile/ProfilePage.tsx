@@ -1,27 +1,33 @@
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Building2,
   Camera,
+  CalendarCheck,
   Gavel,
   Inbox,
+  Loader2,
   LogOut,
   Palette,
   Plus,
   PencilLine,
+  ReceiptText,
   Share2,
   ShoppingBag,
+  ShieldCheck,
   Stethoscope,
   WalletCards,
+  type LucideIcon,
 } from 'lucide-react';
+import { clsx } from 'clsx';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useTranslation } from '@/i18n/I18nProvider';
 import { ShareSheet } from '@/components/ui/ShareSheet';
 import { AvatarEditor } from './AvatarEditor';
 import { myProfileQueryKey, useMyProfile, type MyProfile } from './useMyProfile';
-import { ProfileLink, SectionEyebrow } from './components/SettingsPrimitives';
+import { IconChip, ProfileLink, SectionEyebrow } from './components/SettingsPrimitives';
 import { useUnreadCount } from '@/features/messages/useUnreadCount';
 import { useRealtimeMessages } from '@/features/messages/useRealtimeMessages';
 
@@ -32,6 +38,7 @@ export function ProfilePage() {
   const [shareOpen, setShareOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
   const [pickedFile, setPickedFile] = useState<File | null>(null);
+  const [professionalFeedback, setProfessionalFeedback] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const userId = session?.user.id;
@@ -50,6 +57,31 @@ export function ProfilePage() {
     ? `${window.location.origin}/creator/${encodeURIComponent(profile.username)}`
     : window.location.origin;
   const isProfessional = profile?.isProfessional ?? false;
+
+  const setProfessionalMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const { data, error } = await supabase.rpc('set_professional_tools_enabled', {
+        p_enabled: enabled,
+      });
+      if (error) throw error;
+      return data as { professional_shell_enabled: boolean; is_creator: boolean };
+    },
+    onSuccess: (data) => {
+      setProfessionalFeedback(null);
+      queryClient.setQueryData<MyProfile | null>(profileQueryKey, (current) =>
+        current
+          ? {
+              ...current,
+              isProfessional: Boolean(data.professional_shell_enabled),
+              isCreator: Boolean(data.is_creator),
+            }
+          : current,
+      );
+    },
+    onError: () => {
+      setProfessionalFeedback(t('profile.business.activationError'));
+    },
+  });
 
   async function handleSignOut() {
     if (signingOut) return;
@@ -75,6 +107,12 @@ export function ProfilePage() {
     queryClient.setQueryData<MyProfile | null>(profileQueryKey, (current) =>
       current ? { ...current, avatarUrl: publicUrl } : current,
     );
+  }
+
+  function toggleProfessional() {
+    if (!userId || setProfessionalMutation.isPending) return;
+    setProfessionalFeedback(null);
+    setProfessionalMutation.mutate(!isProfessional);
   }
 
   return (
@@ -165,20 +203,6 @@ export function ProfilePage() {
             {t('profile.settingsTitle')}
           </h2>
 
-          {/* Preferências */}
-          <div className="space-y-3">
-            <SectionEyebrow>{t('profile.section.preferences')}</SectionEyebrow>
-
-            <div className="overflow-hidden rounded-2xl border border-outline-variant/40 bg-surface shadow-sm">
-              <ProfileLink
-                icon={Palette}
-                title={t('profile.visual.title')}
-                description={t('profile.visual.description')}
-                to="/perfil/visual"
-              />
-            </div>
-          </div>
-
           {/* Conta */}
           <div className="space-y-3">
             <SectionEyebrow>{t('profile.section.account')}</SectionEyebrow>
@@ -196,6 +220,12 @@ export function ProfilePage() {
                 title={t('profile.editProfile.title')}
                 description={t('profile.editProfile.description')}
                 to="/perfil/editar"
+              />
+              <ProfileLink
+                icon={Palette}
+                title={t('profile.visual.title')}
+                description={t('profile.visual.description')}
+                to="/perfil/visual"
               />
               <ProfileLink
                 icon={WalletCards}
@@ -228,6 +258,11 @@ export function ProfilePage() {
                 description={t('profile.market.description')}
                 to="/mercado"
               />
+              <ProfileLink
+                icon={CalendarCheck}
+                title={t('profile.enrollments.title')}
+                description={t('profile.enrollments.description')}
+              />
             </div>
           </div>
 
@@ -236,13 +271,36 @@ export function ProfilePage() {
             <SectionEyebrow>{t('profile.section.professional')}</SectionEyebrow>
 
             <div className="overflow-hidden rounded-2xl border border-outline-variant/40 bg-surface shadow-sm">
-              <ProfileLink
-                icon={Building2}
-                title={t('profile.business.title')}
-                description={t('profile.business.description')}
-                to="/negocios"
+              <ProfessionalSwitchRow
+                checked={isProfessional}
+                disabled={!userId || setProfessionalMutation.isPending}
+                pending={setProfessionalMutation.isPending}
+                onToggle={toggleProfessional}
+                icon={ShieldCheck}
+                title={t('profile.becomeProfessional.title')}
+                description={t('profile.business.professionalToggleDescription')}
               />
+              {isProfessional && (
+                <>
+                  <ProfileLink
+                    icon={Building2}
+                    title={t('profile.business.title')}
+                    description={t('profile.business.description')}
+                    to="/negocios"
+                  />
+                  <ProfileLink
+                    icon={ReceiptText}
+                    title={t('profile.financialManagement.title')}
+                    description={t('profile.financialManagement.description')}
+                  />
+                </>
+              )}
             </div>
+            {professionalFeedback && (
+              <p role="alert" className="px-1 font-sans text-body-sm text-error">
+                {professionalFeedback}
+              </p>
+            )}
           </div>
 
           {/* Sessão */}
@@ -287,6 +345,56 @@ export function ProfilePage() {
         url={shareUrl}
         text={`Veja o perfil de ${displayName} no OnlyFit`}
       />
+    </div>
+  );
+}
+
+function ProfessionalSwitchRow({
+  icon,
+  title,
+  description,
+  checked,
+  disabled,
+  pending,
+  onToggle,
+}: {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  checked: boolean;
+  disabled: boolean;
+  pending: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="flex min-h-[72px] w-full items-center gap-4 border-t border-outline-variant/25 px-4 py-4 first:border-t-0">
+      <IconChip icon={icon} />
+      <span className="min-w-0 flex-1">
+        <span className="block font-sans text-body font-medium text-on-surface">{title}</span>
+        <span className="mt-0.5 block font-sans text-body-sm text-on-surface-variant">
+          {description}
+        </span>
+      </span>
+      {pending && <Loader2 size={16} className="shrink-0 animate-spin text-on-surface-variant" aria-hidden />}
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={title}
+        disabled={disabled}
+        onClick={onToggle}
+        className={clsx(
+          'relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-60',
+          checked ? 'bg-primary' : 'bg-surface-container-highest',
+        )}
+      >
+        <span
+          className={clsx(
+            'absolute left-1 top-1 h-4 w-4 rounded-full bg-surface-container-lowest shadow-sm transition-transform',
+            checked && 'translate-x-5',
+          )}
+        />
+      </button>
     </div>
   );
 }

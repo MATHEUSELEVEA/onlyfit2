@@ -40,6 +40,9 @@ const pt = {
   'profile.market.title': 'Mercado',
   'profile.market.description': 'Produtos e serviços à venda',
 
+  'profile.enrollments.title': 'Minhas inscrições',
+  'profile.enrollments.description': 'Acompanhe e cancele suas inscrições',
+
   'visual.back': 'Voltar para o perfil',
   'visual.title': 'Visual',
   'visual.description': 'Tamanho da fonte e tema do aplicativo',
@@ -108,6 +111,9 @@ const pt = {
   'profile.management.title': 'Gestão',
   'profile.management.description': 'Painel de operação profissional',
 
+  'profile.financialManagement.title': 'Gestão Financeira',
+  'profile.financialManagement.description': 'Acompanhe e gerencie o financeiro dos seus negócios',
+
   'profile.business.title': 'Meus negócios',
   'profile.business.description': 'Negócios próprios e convites de gestão',
   'profile.business.back': 'Voltar para o perfil',
@@ -119,18 +125,15 @@ const pt = {
   'profile.business.invitedTitle': 'Negócios de terceiros',
   'profile.business.invitedDescription': 'Negócios que outros donos convidaram você para gerenciar.',
   'profile.business.professionalToggleDescription': 'Obrigatório para criar e operar seus próprios negócios.',
-  'profile.business.affinityDescription': 'Mantenha pelo menos 1 grupo ativo. Você pode escolher até 3.',
-  'profile.business.affinityRequired': 'Selecione pelo menos 1 grupo de afinidade para salvar.',
+  'profile.business.affinityDescription': 'Opcional. Você pode escolher até 3 grupos.',
   'profile.business.activationError': 'Não foi possível salvar a chave profissional. Tente novamente.',
   'profile.business.affinitySaveError': 'Não foi possível salvar os grupos de afinidade.',
-  'profile.business.cancel': 'Cancelar',
-  'profile.business.saveProfessional': 'Salvar',
   'profile.business.createBusiness': 'Criar novo negócio',
   'profile.business.createNotice': 'A criação mobile será conectada aqui na próxima etapa.',
   'profile.business.emptyOwnedTitle': 'Nenhum negócio próprio ainda',
   'profile.business.emptyOwnedDescription': 'Quando você criar negócios, eles aparecerão nesta lista.',
   'profile.business.activateTitle': 'Ative seu perfil profissional',
-  'profile.business.activateDescription': 'Depois de salvar a chave profissional com pelo menos 1 grupo, o botão de criação aparece aqui.',
+  'profile.business.activateDescription': 'Ative a chave Tornar-me profissional no Perfil para liberar a criação de negócios.',
   'profile.business.emptyInvitedTitle': 'Nenhum convite recebido',
   'profile.business.emptyInvitedDescription': 'Quando alguém convidar você para gerenciar um negócio, ele aparecerá nesta seção.',
 
@@ -209,6 +212,9 @@ const en: Record<keyof typeof pt, string> = {
   'profile.market.title': 'Market',
   'profile.market.description': 'Products and services for sale',
 
+  'profile.enrollments.title': 'My enrollments',
+  'profile.enrollments.description': 'Track and cancel your enrollments',
+
   'visual.back': 'Back to profile',
   'visual.title': 'Appearance',
   'visual.description': 'Font size and app theme',
@@ -277,6 +283,9 @@ const en: Record<keyof typeof pt, string> = {
   'profile.management.title': 'Management',
   'profile.management.description': 'Professional operation dashboard',
 
+  'profile.financialManagement.title': 'Financial Management',
+  'profile.financialManagement.description': 'Track and manage your business finances',
+
   'profile.business.title': 'My businesses',
   'profile.business.description': 'Owned businesses and management invites',
   'profile.business.back': 'Back to profile',
@@ -288,18 +297,15 @@ const en: Record<keyof typeof pt, string> = {
   'profile.business.invitedTitle': 'Third-party businesses',
   'profile.business.invitedDescription': 'Businesses that other owners invited you to manage.',
   'profile.business.professionalToggleDescription': 'Required to create and operate your own businesses.',
-  'profile.business.affinityDescription': 'Keep at least 1 group active. You can pick up to 3.',
-  'profile.business.affinityRequired': 'Select at least 1 affinity group before saving.',
+  'profile.business.affinityDescription': 'Optional. You can pick up to 3 groups.',
   'profile.business.activationError': 'Could not save the professional switch. Try again.',
   'profile.business.affinitySaveError': 'Could not save affinity groups.',
-  'profile.business.cancel': 'Cancel',
-  'profile.business.saveProfessional': 'Save',
   'profile.business.createBusiness': 'Create new business',
   'profile.business.createNotice': 'Mobile business creation will be connected here in the next step.',
   'profile.business.emptyOwnedTitle': 'No owned businesses yet',
   'profile.business.emptyOwnedDescription': 'When you create businesses, they will appear in this list.',
   'profile.business.activateTitle': 'Activate your professional profile',
-  'profile.business.activateDescription': 'After saving the professional switch with at least 1 group, the create button appears here.',
+  'profile.business.activateDescription': 'Turn on Become a professional in Profile to unlock business creation.',
   'profile.business.emptyInvitedTitle': 'No invites received',
   'profile.business.emptyInvitedDescription': 'When someone invites you to manage a business, it will appear in this section.',
 

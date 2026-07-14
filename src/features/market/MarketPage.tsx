@@ -4,7 +4,6 @@ import { clsx } from 'clsx';
 import { FEED_SPORTS } from '@/lib/sports';
 import { productTypeMeta } from '@/lib/products';
 import { FilterChip } from '@/components/ui/FilterChip';
-import { useExploreCreators, useExploreCommunities, useExploreChallenges } from '@/features/explore/useExplore';
 import { ProductCard } from './ProductCard';
 import { useMarketProducts, type MarketProduct } from './useMarket';
 
@@ -20,8 +19,7 @@ function isFeatured(index: number): boolean {
 const TYPE_FILTERS: { key: string; label: string }[] = [
   { key: 'ebook', label: 'Ebook' },
   { key: 'training', label: 'Treino' },
-  { key: 'community', label: 'Comunidades' },
-  { key: 'challenge', label: 'Desafios' },
+  { key: 'diet', label: 'Dieta' },
 ];
 
 function filterProducts(
@@ -48,69 +46,17 @@ export function MarketPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const productsQuery = useMarketProducts();
-  const creatorsQuery = useExploreCreators();
-  const communitiesQuery = useExploreCommunities();
-  const challengesQuery = useExploreChallenges();
 
-  const isLoading =
-    productsQuery.isLoading || communitiesQuery.isLoading || challengesQuery.isLoading;
-  const isError = productsQuery.isError || communitiesQuery.isError || challengesQuery.isError;
+  const isLoading = productsQuery.isLoading;
+  const isError = productsQuery.isError;
   const refetch = () => {
     productsQuery.refetch();
-    communitiesQuery.refetch();
-    challengesQuery.refetch();
   };
 
-  // Esportes por creator para herdar em comunidades e desafios, que não têm
-  // tag própria (mesma regra usada no Explorar).
-  const creatorSports = useMemo(() => {
-    const map = new Map<string, string[]>();
-    creatorsQuery.data?.forEach((creator) => map.set(creator.id, creator.sports));
-    return map;
-  }, [creatorsQuery.data]);
-
-  // Mercado reúne produtos (tabela products) com comunidades e desafios
-  // pagos (tabelas próprias), que antes só apareciam no Explorar — o filtro
-  // de tipo "Comunidades"/"Desafios" precisa de itens de verdade para valer.
-  const products = useMemo((): MarketProduct[] => {
-    const fromProducts = productsQuery.data ?? [];
-
-    const fromCommunities: MarketProduct[] = (communitiesQuery.data ?? []).map((community) => ({
-      id: community.id,
-      name: community.name,
-      description: community.description,
-      type: 'community',
-      marketItemType: 'community',
-      thumbnailUrl: null,
-      coverImageUrl: null,
-      price: 0,
-      sales: community.memberCount,
-      sports: creatorSports.get(community.creatorId) ?? [],
-      creatorId: community.creatorId,
-      creatorName: community.creatorName,
-      creatorUsername: community.creatorUsername,
-      creatorAvatarUrl: null,
-    }));
-
-    const fromChallenges: MarketProduct[] = (challengesQuery.data ?? []).map((challenge) => ({
-      id: challenge.id,
-      name: challenge.name,
-      description: challenge.description,
-      type: 'challenge',
-      marketItemType: 'challenge',
-      thumbnailUrl: null,
-      coverImageUrl: challenge.coverImageUrl,
-      price: challenge.price,
-      sales: challenge.participantCount,
-      sports: creatorSports.get(challenge.creatorId) ?? [],
-      creatorId: challenge.creatorId,
-      creatorName: challenge.creatorName,
-      creatorUsername: challenge.creatorUsername,
-      creatorAvatarUrl: null,
-    }));
-
-    return [...fromProducts, ...fromCommunities, ...fromChallenges];
-  }, [productsQuery.data, communitiesQuery.data, challengesQuery.data, creatorSports]);
+  // Comunidades e desafios são ferramentas de engajamento (não vendáveis) e
+  // vivem no Explorar — o Mercado lista apenas produtos de verdade (tabela
+  // products).
+  const products = useMemo((): MarketProduct[] => productsQuery.data ?? [], [productsQuery.data]);
 
   const term = search.trim().toLowerCase();
   const visible = useMemo(

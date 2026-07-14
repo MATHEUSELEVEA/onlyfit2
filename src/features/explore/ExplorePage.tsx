@@ -15,7 +15,6 @@ import { clsx } from 'clsx';
 import { FEED_SPORTS, sportLabel } from '@/lib/sports';
 import { formatCount } from '@/lib/format';
 import { FilterChip } from '@/components/ui/FilterChip';
-import { PriceBadge } from '@/components/ui/PriceBadge';
 import { ProductCard } from '@/features/market/ProductCard';
 import { useMarketProducts } from '@/features/market/useMarket';
 import { useToggleCreatorFollow } from '@/features/creators/useCreatorFollow';
@@ -172,11 +171,10 @@ function CommunityTile({ community }: { community: ExploreCommunity }) {
             {community.description}
           </p>
         )}
-        <div className="mt-auto flex items-center justify-between gap-2 pt-1.5">
+        <div className="mt-auto flex items-center gap-2 pt-1.5">
           <span className="min-w-0 flex-1 truncate font-sans text-counter font-normal text-on-surface-variant">
             {formatCount(community.memberCount)} membros
           </span>
-          <PriceBadge price={0} />
         </div>
       </div>
     </>
@@ -222,11 +220,10 @@ function ChallengeTile({ challenge }: { challenge: ExploreChallenge }) {
             {challenge.description}
           </p>
         )}
-        <div className="mt-auto flex items-center justify-between gap-2 pt-1.5">
+        <div className="mt-auto flex items-center gap-2 pt-1.5">
           <span className="min-w-0 flex-1 truncate font-sans text-counter font-normal text-on-surface-variant">
             {formatCount(challenge.participantCount)} participantes
           </span>
-          <PriceBadge price={challenge.price} />
         </div>
       </div>
     </>

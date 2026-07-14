@@ -66,18 +66,11 @@ export function MyBusinessesPage() {
   const { data: ownedBusinesses = [], isLoading: isLoadingOwned } = useOwnedBusinesses(userId);
   const invitedBusinesses = useMemo<InvitedBusinessRow[]>(() => [], []);
 
-  const [activationOpen, setActivationOpen] = useState(false);
-  const [draftGroups, setDraftGroups] = useState<string[]>([]);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [createNotice, setCreateNotice] = useState(false);
 
   const isProfessional = profile?.isProfessional ?? false;
   const selectedGroups = profile?.affinitySports ?? [];
-  const busy = false;
-
-  // draftGroups só é lido enquanto o painel está aberto, e openActivation()
-  // semeia o valor a partir de selectedGroups antes de abrir — por isso não
-  // é preciso um efeito de sincronização enquanto o painel está fechado.
 
   const setAffinityGroupsMutation = useMutation({
     mutationFn: async (sports: string[]) => {
@@ -92,78 +85,11 @@ export function MyBusinessesPage() {
     },
   });
 
-  const setProfessionalMutation = useMutation({
-    mutationFn: async (enabled: boolean) => {
-      const { data, error } = await supabase.rpc('set_professional_tools_enabled', {
-        p_enabled: enabled,
-      });
-      if (error) throw error;
-      return data as { professional_shell_enabled: boolean; is_creator: boolean };
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData<MyProfile | null>(profileQueryKey, (current) =>
-        current
-          ? {
-              ...current,
-              isProfessional: Boolean(data.professional_shell_enabled),
-              isCreator: Boolean(data.is_creator),
-            }
-          : current,
-      );
-    },
-  });
-
-  const isSaving =
-    setAffinityGroupsMutation.isPending ||
-    setProfessionalMutation.isPending ||
-    busy;
-
-  function openActivation() {
-    setFeedback(null);
-    setCreateNotice(false);
-    setDraftGroups(selectedGroups);
-    setActivationOpen(true);
-  }
-
-  function toggleDraftGroup(key: string) {
-    setFeedback(null);
-    setDraftGroups((current) => {
-      const active = current.includes(key);
-      if (active && current.length <= 1) {
-        setFeedback(t('profile.business.affinityRequired'));
-        return current;
-      }
-      if (!active && current.length >= MAX_GROUPS) {
-        setFeedback(t('profile.affinity.limit'));
-        return current;
-      }
-      return active ? current.filter((item) => item !== key) : [...current, key];
-    });
-  }
-
-  async function saveActivation() {
-    setFeedback(null);
-    if (draftGroups.length === 0) {
-      setFeedback(t('profile.business.affinityRequired'));
-      return;
-    }
-
-    try {
-      await setAffinityGroupsMutation.mutateAsync(draftGroups);
-      await setProfessionalMutation.mutateAsync(true);
-      setActivationOpen(false);
-    } catch {
-      setFeedback(t('profile.business.activationError'));
-    }
-  }
+  const isSaving = setAffinityGroupsMutation.isPending;
 
   function toggleProfessionalGroup(key: string) {
     setFeedback(null);
     const active = selectedGroups.includes(key);
-    if (active && selectedGroups.length <= 1) {
-      setFeedback(t('profile.business.affinityRequired'));
-      return;
-    }
     if (!active && selectedGroups.length >= MAX_GROUPS) {
       setFeedback(t('profile.affinity.limit'));
       return;
@@ -172,25 +98,6 @@ export function MyBusinessesPage() {
     setAffinityGroupsMutation.mutate(next, {
       onError: () => setFeedback(t('profile.business.affinitySaveError')),
     });
-  }
-
-  function toggleProfessional() {
-    setCreateNotice(false);
-    if (isSaving) return;
-    if (activationOpen && !isProfessional) {
-      setActivationOpen(false);
-      setFeedback(null);
-      return;
-    }
-    if (isProfessional) {
-      setActivationOpen(false);
-      setFeedback(null);
-      setProfessionalMutation.mutate(false, {
-        onError: () => setFeedback(t('profile.business.activationError')),
-      });
-      return;
-    }
-    openActivation();
   }
 
   const dateFormatter = useMemo(
@@ -245,49 +152,16 @@ export function MyBusinessesPage() {
             count={ownedBusinesses.length}
             description={t('profile.business.ownedDescription')}
           >
-            <ProfessionalToggle
-              checked={isProfessional || activationOpen}
-              disabled={isSaving}
-              onToggle={toggleProfessional}
-              title={t('profile.becomeProfessional.title')}
-              description={t('profile.business.professionalToggleDescription')}
-            />
-
-            {(activationOpen || isProfessional) && (
+            {isProfessional && (
               <div className="border-t border-outline-variant/25 px-4 py-4">
                 <AffinitySelector
-                  selected={activationOpen ? draftGroups : selectedGroups}
+                  selected={selectedGroups}
                   disabled={isSaving}
-                  onToggle={activationOpen ? toggleDraftGroup : toggleProfessionalGroup}
+                  onToggle={toggleProfessionalGroup}
                   title={t('profile.affinity.title')}
                   description={t('profile.business.affinityDescription')}
                   pending={setAffinityGroupsMutation.isPending}
                 />
-
-                {activationOpen && (
-                  <div className="mt-4 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActivationOpen(false);
-                        setFeedback(null);
-                      }}
-                      disabled={isSaving}
-                      className="min-h-11 flex-1 rounded-full border border-outline-variant/50 px-4 font-sans text-label text-on-surface transition-colors active:bg-surface-container-low disabled:opacity-60"
-                    >
-                      {t('profile.business.cancel')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={saveActivation}
-                      disabled={isSaving || draftGroups.length === 0}
-                      className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full bg-primary px-4 font-sans text-label text-on-primary shadow-sm transition-transform active:scale-[0.98] disabled:opacity-60"
-                    >
-                      {isSaving && <Loader2 size={16} className="animate-spin" aria-hidden />}
-                      {t('profile.business.saveProfessional')}
-                    </button>
-                  </div>
-                )}
               </div>
             )}
 
@@ -420,49 +294,6 @@ function BusinessSection({
       </div>
       {children}
     </section>
-  );
-}
-
-function ProfessionalToggle({
-  checked,
-  disabled,
-  title,
-  description,
-  onToggle,
-}: {
-  checked: boolean;
-  disabled: boolean;
-  title: string;
-  description: string;
-  onToggle: () => void;
-}) {
-  return (
-    <div className="flex min-h-[78px] items-center gap-4 border-t border-outline-variant/25 px-4 py-4">
-      <IconChip icon={ShieldCheck} />
-      <div className="min-w-0 flex-1">
-        <p className="font-sans text-body font-medium text-on-surface">{title}</p>
-        <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{description}</p>
-      </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-label={title}
-        disabled={disabled}
-        onClick={onToggle}
-        className={clsx(
-          'relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-60',
-          checked ? 'bg-primary' : 'bg-surface-container-highest',
-        )}
-      >
-        <span
-          className={clsx(
-            'absolute left-1 top-1 h-4 w-4 rounded-full bg-surface-container-lowest shadow-sm transition-transform',
-            checked && 'translate-x-5',
-          )}
-        />
-      </button>
-    </div>
   );
 }
 

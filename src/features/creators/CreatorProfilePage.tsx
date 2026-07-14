@@ -463,15 +463,12 @@ function ChallengesList({ creatorId }: { creatorId: string | null }) {
           description={c.description}
           meta={`${formatCount(c.participantCount)} participantes`}
           action={
-            <div className="flex items-center gap-2">
-              <PriceBadge price={c.price} />
-              <button
-                type="button"
-                className="inline-flex min-h-[36px] items-center rounded-full bg-primary px-4 font-sans text-label text-on-primary active:scale-[0.98]"
-              >
-                {c.price > 0 ? 'Participar' : 'Entrar'}
-              </button>
-            </div>
+            <button
+              type="button"
+              className="inline-flex min-h-[36px] items-center rounded-full bg-primary px-5 font-sans text-label text-on-primary active:scale-[0.98]"
+            >
+              Participar
+            </button>
           }
         />
       ))}
@@ -493,13 +490,13 @@ function CommunitiesList({ creatorId }: { creatorId: string | null }) {
           icon={UsersRound}
           title={c.name}
           description={c.description}
-          meta={`${formatCount(c.memberCount)} membros`}
+          meta={`${formatCount(c.memberCount)} membros${c.visibility === 'private' ? ' · Privada' : ''}`}
           action={
             <button
               type="button"
               className="inline-flex min-h-[36px] items-center rounded-full bg-primary px-5 font-sans text-label text-on-primary active:scale-[0.98]"
             >
-              Entrar
+              {c.visibility === 'private' ? 'Solicitar entrada' : 'Entrar'}
             </button>
           }
         />

@@ -1,7 +1,8 @@
 // Metadados e inferência dos produtos do marketplace (ebook, aulas, treino,
-// dieta, comunidade, desafio, mentoria, combo, produto físico). Fonte única
-// usada pela vitrine do criador, pelo Mercado, por Meus produtos e pelo
-// Explorar — não duplique este mapa em feature nenhuma.
+// dieta, mentoria, combo, produto físico). Comunidades e desafios NÃO são
+// produtos (são ferramentas de engajamento, não vendáveis). Fonte única usada
+// pela vitrine do criador, pelo Mercado, por Meus produtos e pelo Explorar —
+// não duplique este mapa em feature nenhuma.
 import {
   BookOpen,
   Dumbbell,
@@ -10,8 +11,6 @@ import {
   Salad,
   ShoppingBag,
   Sparkles,
-  Trophy,
-  Users,
   type LucideIcon,
 } from 'lucide-react';
 import { FEED_SPORTS } from '@/lib/sports';
@@ -46,10 +45,6 @@ const TYPE_META: Record<string, ProductTypeMeta> = {
   nutrition: { key: 'diet', label: 'Dieta', icon: Salad },
   nutrição: { key: 'diet', label: 'Dieta', icon: Salad },
   physical: { key: 'physical', label: 'Produto físico', icon: Package },
-  community: { key: 'community', label: 'Comunidade', icon: Users },
-  comunidade: { key: 'community', label: 'Comunidade', icon: Users },
-  challenge: { key: 'challenge', label: 'Desafio', icon: Trophy },
-  desafio: { key: 'challenge', label: 'Desafio', icon: Trophy },
   mentoria: { key: 'mentoria', label: 'Mentoria', icon: Sparkles },
   combo: { key: 'combo', label: 'Combo', icon: Package },
 };

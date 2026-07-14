@@ -221,7 +221,6 @@ export interface ExploreChallenge {
   name: string;
   description: string | null;
   coverImageUrl: string | null;
-  price: number;
   participantCount: number;
   creatorId: string;
   creatorName: string;
@@ -233,7 +232,6 @@ interface ChallengeRow {
   name: string | null;
   description: string | null;
   cover_image_url: string | null;
-  entry_price: number | null;
   participant_count: number | null;
   creator_id: string;
   profiles:
@@ -252,7 +250,7 @@ export function useExploreChallenges() {
       const { data, error } = await supabase
         .from('challenge_runs')
         .select(
-          `id, name, description, cover_image_url, entry_price, participant_count, creator_id, status,
+          `id, name, description, cover_image_url, participant_count, creator_id, status,
            profiles:creator_id (full_name, username)`,
         )
         .in('status', ['active', 'scheduled'])
@@ -267,7 +265,6 @@ export function useExploreChallenges() {
           name: row.name || 'Desafio',
           description: row.description ?? null,
           coverImageUrl: row.cover_image_url,
-          price: row.entry_price ?? 0,
           participantCount: row.participant_count ?? 0,
           creatorId: row.creator_id,
           creatorName: profile?.full_name || profile?.username || 'Creator',
