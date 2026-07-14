@@ -23,9 +23,7 @@ import { MyBusinessesPage } from './features/profile/MyBusinessesPage';
 import { PrivacyTermsPage } from './features/legal/PrivacyTermsPage';
 import { CreatorProfilePage } from './features/creators/CreatorProfilePage';
 import { HealthProfilePage } from './features/health/HealthProfilePage';
-import { AnamnesisStartPage } from './features/health/AnamnesisStartPage';
 import { HealthQuestionnairePage } from './features/health/HealthQuestionnairePage';
-import { HealthAnamnesisConversationPage } from './features/health/HealthAnamnesisConversationPage';
 import { NewHealthRecordPage } from './features/health/NewHealthRecordPage';
 import { HealthEventDetailPage } from './features/health/HealthEventDetailPage';
 import { LoginPage } from './pages/LoginPage';
@@ -75,9 +73,7 @@ function AuthenticatedApp() {
           <Route path="/perfil/editar" element={<EditProfilePage />} />
           <Route path="/perfil/visual" element={<VisualPreferencesPage />} />
           <Route path="/perfil/saude" element={<HealthProfilePage />} />
-          <Route path="/perfil/saude/anamnese" element={<AnamnesisStartPage />} />
           <Route path="/perfil/saude/anamnese/questionario" element={<HealthQuestionnairePage />} />
-          <Route path="/perfil/saude/anamnese/conversa" element={<HealthAnamnesisConversationPage />} />
           <Route path="/perfil/saude/novo" element={<NewHealthRecordPage />} />
           <Route path="/perfil/saude/eventos/:eventId" element={<HealthEventDetailPage />} />
           <Route path="/perfil/privacidade-termos" element={<PrivacyTermsPage />} />

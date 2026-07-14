@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ClipboardList, ExternalLink, FileText, LockKeyhole, PencilLine, RefreshCw } from 'lucide-react';
+import { ClipboardList, ExternalLink, FileText, PencilLine, RefreshCw } from 'lucide-react';
 import { FeedbackMessage, HealthPageHeader, HealthPageShell, LoadingRows } from './components/HealthPrimitives';
 import { healthCategoryLabels, type HealthFactInput, type QuestionnaireAnswer, type QuestionnaireSchema } from './types';
 import { useHealthEvent } from './useHealthProfile';
@@ -70,16 +70,7 @@ export function HealthEventDetailPage() {
               </section>
             ) : null}
 
-            <section className="space-y-3">
-              <div className="flex items-start gap-3 rounded-xl bg-surface-container-low px-3 py-3">
-                <LockKeyhole size={18} className="mt-0.5 shrink-0 text-on-surface-variant" aria-hidden />
-                <div>
-                  <h2 className="font-sans text-body font-semibold text-on-surface">Registro imutável</h2>
-                  <p className="mt-1 font-sans text-body-sm text-on-surface-variant">
-                    Para atualizar esta informação, adicione uma correção. O conteúdo anterior continuará preservado.
-                  </p>
-                </div>
-              </div>
+            <section>
               <Link to={`/perfil/saude/novo?corrige=${event.id}`} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-outline-variant/50 px-5 font-sans text-label text-on-surface">
                 <PencilLine size={17} aria-hidden /> Corrigir informação
               </Link>

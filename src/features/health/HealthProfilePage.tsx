@@ -53,7 +53,6 @@ export function HealthProfilePage() {
   const { data: consents = [], isLoading: consentsLoading, isError: consentsError, refetch: refetchConsents } =
     useHealthConsents();
   const profileConsent = consents.find((consent) => consent.purpose === 'profile_storage');
-  const aiConsent = consents.find((consent) => consent.purpose === 'ai_assistance');
   const hasProfileConsent = profileConsent?.action === 'granted';
 
   if (consentsLoading) {
@@ -85,7 +84,7 @@ export function HealthProfilePage() {
 
   if (!hasProfileConsent) return <HealthConsentIntro />;
 
-  return <HealthProfileContent category={category} setCategory={setCategory} success={location.state?.success} aiEnabled={aiConsent?.action === 'granted'} />;
+  return <HealthProfileContent category={category} setCategory={setCategory} success={location.state?.success} />;
 }
 
 function HealthConsentIntro() {
@@ -193,12 +192,10 @@ function HealthProfileContent({
   category,
   setCategory,
   success,
-  aiEnabled,
 }: {
   category: HealthCategory | 'all';
   setCategory: (category: HealthCategory | 'all') => void;
   success?: string;
-  aiEnabled: boolean;
 }) {
   const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useHealthEvents(category);
   const { data: anamnesisData } = useHealthEvents('anamnesis');
@@ -240,7 +237,7 @@ function HealthProfileContent({
             </div>
           </div>
           <Link
-            to="/perfil/saude/anamnese"
+            to="/perfil/saude/anamnese/questionario"
             className="flex min-h-12 items-center justify-between border-t border-outline-variant/25 px-4 font-sans text-label text-primary transition-colors active:bg-surface-container"
           >
             {latestAnamnesis ? 'Responder novamente' : 'Responder anamnese'}
@@ -293,53 +290,8 @@ function HealthProfileContent({
             </button>
           ) : null}
         </section>
-
-        <section className="flex items-start gap-3 rounded-xl bg-surface-container-low px-3 py-3">
-          <LockKeyhole size={18} className="mt-0.5 shrink-0 text-on-surface-variant" aria-hidden />
-          <p className="font-sans text-body-sm text-on-surface-variant">
-            Seus registros são privados nesta versão. Profissionais e analytics não recebem acesso.
-          </p>
-        </section>
-
-        <AiPreference enabled={aiEnabled} />
       </main>
     </HealthPageShell>
-  );
-}
-
-function AiPreference({ enabled }: { enabled: boolean }) {
-  const recordConsent = useRecordHealthConsent();
-  const [error, setError] = useState('');
-
-  async function change() {
-    setError('');
-    try {
-      await recordConsent.mutateAsync({
-        purpose: 'ai_assistance',
-        action: enabled ? 'revoked' : 'granted',
-        statement: enabled ? 'Revogo a autorização para assistência por inteligência artificial no Perfil de Saúde.' : AI_CONSENT,
-      });
-    } catch {
-      setError('Não foi possível atualizar sua escolha.');
-    }
-  }
-
-  return (
-    <section className="rounded-2xl border border-outline-variant/40 bg-surface px-4 py-4">
-      <div className="flex items-start gap-3">
-        <HealthIcon icon={BrainCircuit} />
-        <div className="min-w-0 flex-1">
-          <h2 className="font-sans text-body font-semibold text-on-surface">Assistência por IA</h2>
-          <p className="mt-1 font-sans text-body-sm text-on-surface-variant">
-            {enabled ? 'Ativada para conversa, transcrição e PDFs quando necessário.' : 'Desativada. Texto, questionário e extração básica de PDF continuam disponíveis.'}
-          </p>
-        </div>
-        <button type="button" onClick={() => void change()} disabled={recordConsent.isPending} className="min-h-11 shrink-0 rounded-full border border-outline-variant/50 px-3 font-sans text-label text-on-surface disabled:opacity-60">
-          {recordConsent.isPending ? 'Salvando' : enabled ? 'Desativar' : 'Ativar'}
-        </button>
-      </div>
-      {error ? <div className="mt-3"><FeedbackMessage type="error">{error}</FeedbackMessage></div> : null}
-    </section>
   );
 }
 
