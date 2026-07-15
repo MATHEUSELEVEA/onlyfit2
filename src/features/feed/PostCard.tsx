@@ -141,13 +141,15 @@ export function PostCard({ post }: PostCardProps) {
         >
           <Heart size={22} fill={post.likedByMe ? 'currentColor' : 'none'} aria-hidden />
         </RailButton>
-        <RailButton
-          label="Comentar"
-          count={formatCount(post.commentCount)}
-          onClick={() => setCommentsPostId(post.id)}
-        >
-          <MessageCircle size={22} aria-hidden />
-        </RailButton>
+        {!post.commentsDisabled && (
+          <RailButton
+            label="Comentar"
+            count={formatCount(post.commentCount)}
+            onClick={() => setCommentsPostId(post.id)}
+          >
+            <MessageCircle size={22} aria-hidden />
+          </RailButton>
+        )}
         <RailButton label="Salvar" active={saved} onClick={toggleSaved}>
           <Bookmark size={22} fill={saved ? 'currentColor' : 'none'} aria-hidden />
         </RailButton>
