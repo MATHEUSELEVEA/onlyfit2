@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { HealthFactInput } from './types';
+import type { HealthCategory, HealthFactInput } from './types';
 
 export async function transcribeHealthAudio(recording: Blob, mime: string) {
   const extension = mime.includes('mp4') ? 'm4a' : mime.includes('ogg') ? 'ogg' : 'webm';
@@ -10,6 +10,25 @@ export async function transcribeHealthAudio(recording: Blob, mime: string) {
   });
   if (error || data?.error || !data?.text) throw new Error(await functionErrorMessage(error, data?.error, 'Falha ao transcrever áudio.'));
   return data.text;
+}
+
+export interface HealthPhotoProposal {
+  title: string;
+  category: HealthCategory;
+  effective_date: string | null;
+  narrative: string;
+  facts: HealthFactInput[];
+  warnings: string[];
+}
+
+export async function extractHealthPhoto(photo: File) {
+  const form = new FormData();
+  form.append('file', photo);
+  const { data, error } = await supabase.functions.invoke<{ proposal?: HealthPhotoProposal; error?: string }>('health-photo-extract', {
+    body: form,
+  });
+  if (error || data?.error || !data?.proposal) throw new Error(await functionErrorMessage(error, data?.error, 'Falha ao ler a foto.'));
+  return data.proposal;
 }
 
 export interface HealthDocumentProposal {

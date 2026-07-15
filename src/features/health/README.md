@@ -8,6 +8,7 @@ Implementação autodeclarada acessada por `Perfil > Perfil de Saúde`.
 - Um registro confirmado nunca é atualizado; correções criam outro evento.
 - Texto não usa IA.
 - Áudio é transcrito em memória e descartado; somente o texto revisado é confirmado.
+- Foto é lida pela IA em memória e descartada, como o áudio: nada de imagem é armazenado. A leitura é uma proposta (inclusive a categoria) e exige revisão.
 - Documento aceita somente PDF privado. Extração é uma proposta e exige confirmação.
 - Compartilhamento profissional e analytics não fazem parte desta fase.
 
@@ -19,7 +20,7 @@ Implementação autodeclarada acessada por `Perfil > Perfil de Saúde`.
 - `healthCaptureApi.ts`: fronteira com as Edge Functions.
 - páginas/componentes: somente estado e apresentação.
 
-O backend vive em `../onlyfit-supabase`: migration `20260713200000_self_health_profile.sql` e funções `health-*`.
+O backend vive em `../onlyfit-supabase`: migrations `20260713200000_self_health_profile.sql` e `20260715120000_health_photo_capture.sql`, e funções `health-*`.
 
 ## Alterar a anamnese
 

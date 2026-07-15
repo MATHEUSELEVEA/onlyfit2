@@ -17,7 +17,8 @@ export type HealthCaptureMethod =
   | 'ai_conversation'
   | 'text'
   | 'audio_transcript'
-  | 'pdf';
+  | 'pdf'
+  | 'photo';
 
 export type HealthEventType =
   | 'questionnaire_response'

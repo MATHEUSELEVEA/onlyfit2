@@ -1,15 +1,17 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Check, FileCheck2, FileText, Loader2, Mic, Paperclip, Square, Trash2, Upload } from 'lucide-react';
+import { Camera, Check, FileCheck2, FileText, Loader2, Mic, Paperclip, Square, Trash2, Upload } from 'lucide-react';
 import { clsx } from 'clsx';
 import { SelectField, TextAreaField, TextField } from '@/components/ui/TextField';
 import { FeedbackMessage, HealthPageHeader, HealthPageShell, LoadingRows } from './components/HealthPrimitives';
-import { transcribeHealthAudio, uploadAndProcessHealthPdf } from './healthCaptureApi';
+import { extractHealthPhoto, transcribeHealthAudio, uploadAndProcessHealthPdf } from './healthCaptureApi';
 import { recordCategoryOptions, type HealthCaptureMethod, type HealthCategory, type HealthEvent, type HealthFactInput } from './types';
 import { useHealthAudioRecorder } from './useHealthAudioRecorder';
 import { useAppendHealthEvent, useHealthEvent } from './useHealthProfile';
 
-type EntryMode = 'text' | 'audio' | 'pdf';
+type EntryMode = 'text' | 'audio' | 'photo' | 'pdf';
+
+const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export function NewHealthRecordPage() {
   const [searchParams] = useSearchParams();
@@ -26,6 +28,7 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
   const appendEvent = useAppendHealthEvent();
   const recorder = useHealthAudioRecorder();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<EntryMode>('text');
   const [category, setCategory] = useState<HealthCategory>(correctedEvent?.category === 'anamnesis' ? 'other' : correctedEvent?.category ?? 'condition');
   const [title, setTitle] = useState(correctedEvent ? `Correção: ${correctedEvent.title}` : '');
@@ -34,10 +37,20 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
   const [error, setError] = useState('');
   const [captureBusy, setCaptureBusy] = useState(false);
   const [documentId, setDocumentId] = useState<string | null>(null);
-  const [documentFacts, setDocumentFacts] = useState<HealthFactInput[]>([]);
+  const [extractedFacts, setExtractedFacts] = useState<HealthFactInput[]>([]);
   const [documentName, setDocumentName] = useState('');
-  const [documentWarnings, setDocumentWarnings] = useState<string[]>([]);
+  const [captureWarnings, setCaptureWarnings] = useState<string[]>([]);
+  const [photoPreview, setPhotoPreview] = useState('');
+  const [photoReviewed, setPhotoReviewed] = useState(false);
   const [usedAi, setUsedAi] = useState(false);
+
+  // A foto nunca sai do dispositivo depois da leitura: a prévia é um object URL
+  // local e precisa ser revogada para não vazar memória entre trocas de modo.
+  useEffect(() => () => {
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+  }, [photoPreview]);
+
+  const usesExtractedFacts = mode === 'pdf' || mode === 'photo';
 
   function changeMode(next: EntryMode) {
     setMode(next);
@@ -46,9 +59,11 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
     setNarrative('');
     setCategory(next === 'pdf' ? 'exam' : 'condition');
     setDocumentId(null);
-    setDocumentFacts([]);
+    setExtractedFacts([]);
     setDocumentName('');
-    setDocumentWarnings([]);
+    setCaptureWarnings([]);
+    setPhotoPreview('');
+    setPhotoReviewed(false);
     setUsedAi(false);
   }
 
@@ -65,6 +80,38 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
       setError(value instanceof Error ? value.message : 'Não foi possível transcrever o áudio.');
     } finally {
       setCaptureBusy(false);
+    }
+  }
+
+  async function selectPhoto(file: File | undefined) {
+    if (!file) return;
+    setError('');
+    setPhotoReviewed(false);
+    if (!PHOTO_TYPES.includes(file.type)) {
+      setError('Envie uma foto JPEG, PNG ou WEBP.');
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('A foto deve ter no máximo 10 MB.');
+      return;
+    }
+    setCaptureBusy(true);
+    setPhotoPreview(URL.createObjectURL(file));
+    try {
+      const proposal = await extractHealthPhoto(file);
+      setTitle(proposal.title);
+      setCategory(proposal.category);
+      setNarrative(proposal.narrative);
+      setEffectiveDate(proposal.effective_date || todayInputValue());
+      setExtractedFacts(proposal.facts);
+      setCaptureWarnings(proposal.warnings);
+      setPhotoReviewed(true);
+      setUsedAi(true);
+    } catch (value) {
+      setError(value instanceof Error ? value.message : 'Não foi possível ler a foto.');
+    } finally {
+      setCaptureBusy(false);
+      if (photoInputRef.current) photoInputRef.current.value = '';
     }
   }
 
@@ -93,8 +140,8 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
       setTitle(result.proposal.title || file.name.replace(/\.pdf$/i, ''));
       setNarrative(result.proposal.narrative);
       setEffectiveDate(result.proposal.effective_date || todayInputValue());
-      setDocumentFacts(result.proposal.facts);
-      setDocumentWarnings(result.proposal.warnings);
+      setExtractedFacts(result.proposal.facts);
+      setCaptureWarnings(result.proposal.warnings);
       setUsedAi(result.usedAi);
     } catch (value) {
       setError(value instanceof Error ? value.message : 'Não foi possível processar o PDF.');
@@ -111,7 +158,8 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
     if (!cleanNarrative) return setError('Descreva a informação clínica que deseja registrar.');
     if (!effectiveDate) return setError('Informe quando essa informação aconteceu ou passou a valer.');
     if (mode === 'pdf' && !documentId) return setError('Envie e revise um PDF antes de confirmar.');
-    if (mode === 'pdf' && documentFacts.some((fact) =>
+    if (mode === 'photo' && !photoReviewed) return setError('Envie e revise uma foto antes de confirmar.');
+    if (usesExtractedFacts && extractedFacts.some((fact) =>
       (fact.value_numeric != null && !Number.isFinite(fact.value_numeric))
       || (fact.value_numeric == null && !fact.value_text && fact.value_boolean == null && !fact.value_date))) {
       return setError('Revise os resultados extraídos: todo item mantido precisa ter um valor válido.');
@@ -128,9 +176,11 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
         captureMethod: modeToCaptureMethod(mode),
         correctsEventId: correctsId,
         documentId,
-        content: mode === 'pdf' ? { original_filename: documentName, extracted_facts: documentFacts } : correctsId ? { correction_reason: 'user_correction' } : {},
+        content: mode === 'pdf' ? { original_filename: documentName, extracted_facts: extractedFacts }
+          : mode === 'photo' ? { extracted_facts: extractedFacts, photo_saved: false }
+          : correctsId ? { correction_reason: 'user_correction' } : {},
         provenance: { submitted_via: 'onlyfit-mobile', input_mode: mode, ai_used: mode === 'audio' || usedAi, user_reviewed: true },
-        facts: mode === 'pdf' ? documentFacts : [],
+        facts: usesExtractedFacts ? extractedFacts : [],
       });
       navigate('/perfil/saude', { replace: true, state: { success: correctsId ? 'Correção adicionada ao histórico.' : 'Registro adicionado ao histórico.' } });
     } catch {
@@ -138,15 +188,16 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
     }
   }
 
-  const canShowForm = mode === 'text' || mode === 'audio' || Boolean(documentId);
+  const canShowForm = mode === 'text' || mode === 'audio' || (mode === 'pdf' && Boolean(documentId)) || (mode === 'photo' && photoReviewed);
   return (
     <HealthPageShell width="form">
       <HealthPageHeader title={correctsId ? 'Corrigir informação' : 'Adicionar registro'} description={correctsId ? 'A informação anterior continuará no histórico' : 'Você revisa tudo antes de salvar'} backTo={correctsId ? `/perfil/saude/eventos/${correctsId}` : '/perfil/saude'} />
       <main className="space-y-6 px-4 py-6">
         {!correctsId ? (
-          <div className="grid grid-cols-3 gap-2" role="tablist" aria-label="Forma de entrada">
+          <div className="grid grid-cols-4 gap-2" role="tablist" aria-label="Forma de entrada">
             <ModeButton icon={FileText} label="Escrever" selected={mode === 'text'} onClick={() => changeMode('text')} />
             <ModeButton icon={Mic} label="Gravar" selected={mode === 'audio'} onClick={() => changeMode('audio')} />
+            <ModeButton icon={Camera} label="Foto" selected={mode === 'photo'} onClick={() => changeMode('photo')} />
             <ModeButton icon={Paperclip} label="PDF" selected={mode === 'pdf'} onClick={() => changeMode('pdf')} />
           </div>
         ) : null}
@@ -166,6 +217,24 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
           </section>
         ) : null}
 
+        {mode === 'photo' ? (
+          <section className="rounded-2xl border border-outline-variant/40 bg-surface px-4 py-5 text-center">
+            {photoPreview ? (
+              <img src={photoPreview} alt="Foto enviada para leitura" className="mx-auto max-h-56 w-auto rounded-xl object-contain" />
+            ) : (
+              <Camera size={26} className="mx-auto text-primary" aria-hidden />
+            )}
+            <h2 className="mt-3 font-sans text-title text-on-surface">{photoReviewed ? 'Leitura pronta para revisão' : 'Fotografar informação de saúde'}</h2>
+            <p className="mt-2 font-sans text-body-sm text-on-surface-variant">
+              Fotografe receita, laudo, exame ou caixa de medicamento. A foto é enviada somente para leitura e não é armazenada: apenas o texto revisado será salvo.
+            </p>
+            <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => void selectPhoto(event.target.files?.[0])} />
+            <button type="button" onClick={() => photoInputRef.current?.click()} disabled={captureBusy} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 font-sans text-label text-on-primary disabled:opacity-60">
+              {captureBusy ? <Loader2 size={17} className="animate-spin" aria-hidden /> : <Camera size={17} aria-hidden />} {captureBusy ? 'Lendo a foto...' : photoReviewed ? 'Trocar foto' : 'Tirar ou escolher foto'}
+            </button>
+          </section>
+        ) : null}
+
         {mode === 'pdf' ? (
           <section className="rounded-2xl border border-outline-variant/40 bg-surface px-4 py-5 text-center">
             {documentId ? <FileCheck2 size={26} className="mx-auto text-primary" aria-hidden /> : <Paperclip size={26} className="mx-auto text-primary" aria-hidden />}
@@ -178,16 +247,16 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
           </section>
         ) : null}
 
-        {documentWarnings.length ? (
-          <div className="space-y-2">{documentWarnings.map((warning) => <FeedbackMessage key={warning} type="info">{warning}</FeedbackMessage>)}</div>
+        {captureWarnings.length ? (
+          <div className="space-y-2">{captureWarnings.map((warning) => <FeedbackMessage key={warning} type="info">{warning}</FeedbackMessage>)}</div>
         ) : null}
         {canShowForm ? (
           <section className="space-y-4">
             <SelectField label="Categoria" value={category} onChange={(value) => setCategory(value as HealthCategory)} options={recordCategoryOptions} />
             <TextField label="Título" hint="Exemplo: Dor no joelho direito" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} />
             <TextField label="Data da informação" type="date" max={todayInputValue()} value={effectiveDate} onChange={(event) => setEffectiveDate(event.target.value)} />
-            <TextAreaField label={correctsId ? 'Informação correta' : mode === 'audio' ? 'Transcrição revisada' : mode === 'pdf' ? 'Resumo revisado' : 'Descrição'} hint={mode === 'text' ? 'Este texto será salvo diretamente, sem análise por IA.' : 'Edite qualquer informação antes de confirmar.'} value={narrative} onChange={(event) => setNarrative(event.target.value)} maxLength={5000} className="min-h-[160px]" />
-            {mode === 'pdf' && documentFacts.length ? <ExtractedFacts facts={documentFacts} onChange={setDocumentFacts} /> : null}
+            <TextAreaField label={correctsId ? 'Informação correta' : mode === 'audio' ? 'Transcrição revisada' : mode === 'pdf' ? 'Resumo revisado' : mode === 'photo' ? 'Leitura revisada' : 'Descrição'} hint={mode === 'text' ? 'Este texto será salvo diretamente, sem análise por IA.' : 'Edite qualquer informação antes de confirmar.'} value={narrative} onChange={(event) => setNarrative(event.target.value)} maxLength={5000} className="min-h-[160px]" />
+            {usesExtractedFacts && extractedFacts.length ? <ExtractedFacts facts={extractedFacts} onChange={setExtractedFacts} /> : null}
           </section>
         ) : null}
 
@@ -249,11 +318,12 @@ function ExtractedFacts({ facts, onChange }: { facts: HealthFactInput[]; onChang
 }
 
 function ModeButton({ icon: Icon, label, selected, onClick }: { icon: typeof FileText; label: string; selected: boolean; onClick: () => void }) {
-  return <button type="button" role="tab" aria-selected={selected} onClick={onClick} className={clsx('flex min-h-12 items-center justify-center gap-2 rounded-xl font-sans text-label transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', selected ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant')}><Icon size={17} aria-hidden /> {label}</button>;
+  return <button type="button" role="tab" aria-selected={selected} onClick={onClick} className={clsx('flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 font-sans text-label transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', selected ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant')}><Icon size={18} aria-hidden /> {label}</button>;
 }
 
 function modeToCaptureMethod(mode: EntryMode): HealthCaptureMethod {
   if (mode === 'audio') return 'audio_transcript';
+  if (mode === 'photo') return 'photo';
   if (mode === 'pdf') return 'pdf';
   return 'text';
 }
