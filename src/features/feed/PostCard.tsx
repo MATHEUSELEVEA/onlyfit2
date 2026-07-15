@@ -51,16 +51,18 @@ function RailButton({ label, count, active, onClick, children }: RailButtonProps
 
 interface FollowButtonProps {
   creatorId: string;
+  viewerId: string | undefined;
 }
 
 // Botão "Seguir" no estilo do reels do Instagram: pílula translúcida sobre a
-// mídia, some quando o usuário já segue o creator. Persiste em creator_follows
-// pelos hooks compartilhados de creators.
-function FollowButton({ creatorId }: FollowButtonProps) {
+// mídia, some quando o usuário já segue o creator ou quando o post é próprio.
+// Persiste em creator_follows pelos hooks compartilhados de creators.
+function FollowButton({ creatorId, viewerId }: FollowButtonProps) {
+  const isOwnPost = creatorId === viewerId;
   const { data: following } = useCreatorFollowState(creatorId);
   const toggleFollow = useToggleCreatorFollow(creatorId);
 
-  if (following) return null;
+  if (isOwnPost || following) return null;
 
   return (
     <button
@@ -199,7 +201,7 @@ export function PostCard({ post }: PostCardProps) {
             )}
           </Link>
 
-          <FollowButton creatorId={post.author.id} />
+          <FollowButton creatorId={post.author.id} viewerId={session?.user.id} />
         </div>
 
         <PostCaption text={post.caption} onLiftChange={setCaptionLift} />

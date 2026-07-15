@@ -12,10 +12,11 @@ interface ExploreCreatorLike {
 export function useCreatorFollowState(creatorId: string | null | undefined) {
   const { session } = useAuth();
   const userId = session?.user.id;
+  const isOwnCreator = Boolean(creatorId && userId && creatorId === userId);
 
   return useQuery({
     queryKey: ['creator-follow', creatorId, userId],
-    enabled: Boolean(creatorId && userId),
+    enabled: Boolean(creatorId && userId && !isOwnCreator),
     queryFn: async (): Promise<boolean> => {
       const { data, error } = await supabase
         .from('creator_follows')
@@ -42,6 +43,7 @@ export function useToggleCreatorFollow(creatorId: string | null | undefined) {
   return useMutation({
     mutationFn: async (nextFollowing: boolean) => {
       if (!creatorId || !userId) throw new Error('Sessão expirada. Entre novamente.');
+      if (creatorId === userId) throw new Error('Você não pode seguir a si próprio.');
 
       if (nextFollowing) {
         const { error } = await supabase
@@ -61,7 +63,7 @@ export function useToggleCreatorFollow(creatorId: string | null | undefined) {
       }
     },
     onMutate: async (nextFollowing) => {
-      if (!creatorId) return {};
+      if (!creatorId || !userId || creatorId === userId) return { skipped: true };
       await Promise.all([
         queryClient.cancelQueries({ queryKey: ['explore-creators'] }),
         queryClient.cancelQueries({ queryKey: ['creator-follow', creatorId] }),
@@ -81,6 +83,7 @@ export function useToggleCreatorFollow(creatorId: string | null | undefined) {
       return { exploreSnapshot };
     },
     onError: (_error, nextFollowing, context) => {
+      if (context?.skipped) return;
       context?.exploreSnapshot?.forEach(([key, data]) => queryClient.setQueryData(key, data));
       queryClient.setQueryData(['creator-follow', creatorId, userId], !nextFollowing);
     },
