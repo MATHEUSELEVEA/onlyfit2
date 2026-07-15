@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { SelectField } from '@/components/ui/TextField';
 import { UserPickerField } from './components/UserPickerField';
+import { BusinessOfferingsSection } from './components/BusinessOfferingsSection';
 import type { UserSuggestion } from './useUserSearch';
 
 interface BusinessWorkspaceRow {
@@ -52,6 +53,28 @@ export function BusinessWorkspacePage() {
   const inviteFeedbackRef = useRef<HTMLDivElement | null>(null);
 
   const isOwner = Boolean(business && session && business.owner_id === session.user.id);
+
+  // Membros convidados com papel de proprietário também gerenciam; o RPC já é
+  // usado (e cacheado) na lista de negócios, então a leitura aqui é barata.
+  const { data: connections } = useQuery({
+    queryKey: ['mobile-business-connections', session?.user.id] as const,
+    enabled: Boolean(session && business && !isOwner),
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('list_my_organization_connections');
+      if (error) throw error;
+      return (data ?? []) as { organization_id: string; role: string; membership_status: string }[];
+    },
+  });
+  const canManage =
+    isOwner ||
+    Boolean(
+      connections?.some(
+        (connection) =>
+          connection.organization_id === businessId &&
+          connection.role === 'owner' &&
+          connection.membership_status === 'active',
+      ),
+    );
   const invitedUsername = (invitedUser?.username ?? inviteUsername).trim().replace(/^@/, '');
 
   const inviteMutation = useMutation({
@@ -226,6 +249,8 @@ export function BusinessWorkspacePage() {
                   </div>
                 </section>
               )}
+
+              {businessId && <BusinessOfferingsSection businessId={businessId} canManage={canManage} />}
 
               <section className="mt-8 rounded-2xl bg-surface-container p-5">
                 <h2 className="font-sans text-title text-on-surface">{t('profile.business.workspace.comingTitle')}</h2>
