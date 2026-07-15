@@ -186,6 +186,8 @@ const recordCategoryOrder: HealthCategory[] = [
   'other',
 ];
 
+export const defaultRecordCategory = recordCategoryOrder[0] ?? 'habit';
+
 export const recordCategoryOptions = recordCategoryOrder.map((value) => ({
   value,
   label: healthCategoryLabels[value],

@@ -26,6 +26,8 @@ import { clsx } from 'clsx';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { useTranslation } from '@/i18n/I18nProvider';
+import { CopyHandle } from '@/components/ui/CopyHandle';
+import { ProfileHero } from '@/components/ui/ProfileHero';
 import { ShareSheet } from '@/components/ui/ShareSheet';
 import { AvatarEditor } from './AvatarEditor';
 import { myProfileQueryKey, useMyProfile, type MyProfile } from './useMyProfile';
@@ -122,43 +124,7 @@ export function ProfilePage() {
       <div className="mx-auto min-h-full w-full max-w-[720px] bg-background md:my-6 md:overflow-hidden md:rounded-3xl md:border md:border-outline-variant/30 md:shadow-xl">
         {/* ---------- Herói: foto em moldura padronizada ---------- */}
         <header>
-          <div className="relative h-[clamp(360px,96vw,500px)] w-full overflow-hidden bg-surface-container-lowest">
-            {avatarUrl ? (
-              <>
-                <img
-                  src={avatarUrl}
-                  alt=""
-                  aria-hidden
-                  className="absolute inset-0 h-full w-full scale-110 object-cover object-center opacity-55 blur-2xl"
-                />
-                <div aria-hidden className="absolute inset-0 bg-surface-container-lowest/45" />
-                <div className="absolute inset-x-4 bottom-0 top-[72px] flex items-end justify-center sm:inset-x-8">
-                  <div className="h-full max-h-full aspect-square max-w-full overflow-hidden rounded-3xl bg-surface-container-low">
-                    <img
-                      src={avatarUrl}
-                      alt={`Foto de ${displayName}`}
-                      className="h-full w-full object-contain object-bottom"
-                    />
-                  </div>
-                </div>
-              </>
-            ) : (
-              <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary to-surface-tint">
-                <span className="font-sans text-display text-on-primary">{initial}</span>
-              </div>
-            )}
-
-            {/* Legibilidade dos controles flutuantes no topo */}
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/55 to-transparent"
-            />
-            {/* A imagem termina em fade antes do nome */}
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background to-transparent"
-            />
-
+          <ProfileHero avatarUrl={avatarUrl} displayName={displayName} initial={initial}>
             {/* Logo + ações flutuando sobre a imagem */}
             <div className="absolute inset-x-0 top-0 flex items-start justify-between px-4 pt-[max(1rem,env(safe-area-inset-top))]">
               <span className="font-sans text-title-lg text-white drop-shadow">OnlyFit</span>
@@ -202,7 +168,7 @@ export function ProfilePage() {
             >
               <Camera size={20} aria-hidden />
             </button>
-          </div>
+          </ProfileHero>
 
           {/* Identidade, abaixo da imagem */}
           <div className="flex flex-col items-center px-6 pb-6 text-center">
@@ -212,6 +178,7 @@ export function ProfilePage() {
             >
               {displayName}
             </h1>
+            {profile?.username && <CopyHandle username={profile.username} className="mt-0.5" />}
             <span className="mt-2 inline-flex items-center rounded-full bg-secondary-container px-3 py-1 font-sans text-eyebrow uppercase text-on-secondary-container">
               {isProfessional ? t('profile.professional') : t('profile.member')}
             </span>

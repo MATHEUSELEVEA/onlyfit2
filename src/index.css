@@ -5,6 +5,12 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --z-nav: 50;
+    --z-nav-featured: 55;
+    --z-sheet: 60;
+  }
+
   html,
   body,
   #root {
@@ -25,6 +31,38 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  .feed-viewport {
+    height: 100vh;
+    height: 100dvh;
+    background: #000;
+  }
+
+  @supports (height: 100lvh) {
+    .feed-viewport {
+      height: 100lvh;
+    }
+  }
+
+  .feed-stage {
+    width: min(100vw, 480px);
+    max-width: 100%;
+  }
+
+  .feed-post-meta {
+    bottom: calc(64px + env(safe-area-inset-bottom));
+  }
+
+  .feed-actions-rail {
+    bottom: calc(168px + env(safe-area-inset-bottom));
+  }
+
+  @media (max-width: 360px) {
+    .feed-actions-rail {
+      bottom: calc(154px + env(safe-area-inset-bottom));
+      gap: 1rem;
+    }
   }
 }
 

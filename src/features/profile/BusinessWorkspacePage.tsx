@@ -6,7 +6,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from '@/i18n/I18nProvider';
 import { supabase } from '@/lib/supabase';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { SelectField, TextField } from '@/components/ui/TextField';
+import { SelectField } from '@/components/ui/TextField';
+import { UserPickerField } from './components/UserPickerField';
+import type { UserSuggestion } from './useUserSearch';
 
 interface BusinessWorkspaceRow {
   id: string;
@@ -37,29 +39,39 @@ export function BusinessWorkspacePage() {
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteUsername, setInviteUsername] = useState('');
+  // Escolher na busca é o caminho normal; digitar o @ exato continua valendo,
+  // então o que vai para a RPC é a seleção quando existe, senão o texto.
+  const [invitedUser, setInvitedUser] = useState<UserSuggestion | null>(null);
   const [inviteRole, setInviteRole] = useState<'staff' | 'owner'>('staff');
   const [inviteError, setInviteError] = useState<string | null>(null);
-  const [inviteFeedback, setInviteFeedback] = useState<{ username: string; role: 'staff' | 'owner' } | null>(null);
+  const [inviteFeedback, setInviteFeedback] = useState<{
+    username: string;
+    name: string | null;
+    role: 'staff' | 'owner';
+  } | null>(null);
   const inviteFeedbackRef = useRef<HTMLDivElement | null>(null);
 
   const isOwner = Boolean(business && session && business.owner_id === session.user.id);
+  const invitedUsername = (invitedUser?.username ?? inviteUsername).trim().replace(/^@/, '');
 
   const inviteMutation = useMutation({
     mutationFn: async () => {
       if (!businessId) return;
       const { error } = await supabase.rpc('invite_organization_member', {
         p_organization_id: businessId,
-        p_username: inviteUsername.trim(),
+        p_username: invitedUsername,
         p_role: inviteRole,
       });
-      if (error) throw error;
+      // O erro do PostgREST é objeto plain, não Error: jogado cru, o onError
+      // abaixo não reconheceria nenhum caso e tudo viraria a mensagem genérica.
+      if (error) throw new Error(error.message);
     },
     onSuccess: () => {
-      const normalizedUsername = inviteUsername.trim().replace(/^@/, '');
       setInviteError(null);
-      setInviteFeedback({ username: normalizedUsername, role: inviteRole });
+      setInviteFeedback({ username: invitedUsername, name: invitedUser?.name ?? null, role: inviteRole });
       setInviteOpen(false);
       setInviteUsername('');
+      setInvitedUser(null);
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : '';
@@ -83,6 +95,7 @@ export function BusinessWorkspacePage() {
 
   function openInvite() {
     setInviteUsername('');
+    setInvitedUser(null);
     setInviteRole('staff');
     setInviteError(null);
     setInviteFeedback(null);
@@ -98,7 +111,7 @@ export function BusinessWorkspacePage() {
     event.preventDefault();
     setInviteError(null);
     setInviteFeedback(null);
-    if (inviteUsername.trim().replace(/^@/, '').length < 2) {
+    if (invitedUsername.length < 2) {
       setInviteError(t('profile.business.invite.usernameRequired'));
       return;
     }
@@ -176,7 +189,8 @@ export function BusinessWorkspacePage() {
                       {t('profile.business.invite.successTitle')}
                     </span>
                     <span className="mt-0.5 block font-sans text-body-sm">
-                      @{inviteFeedback.username} · {inviteFeedback.role === 'owner' ? t('profile.business.role.owner') : t('profile.business.role.collaborator')}
+                      {inviteFeedback.name ? `${inviteFeedback.name} · ` : ''}@{inviteFeedback.username} ·{' '}
+                      {inviteFeedback.role === 'owner' ? t('profile.business.role.owner') : t('profile.business.role.collaborator')}
                     </span>
                     <span className="mt-1 block font-sans text-body-sm">
                       {t('profile.business.invite.success')}
@@ -231,15 +245,18 @@ export function BusinessWorkspacePage() {
         description={business?.name}
       >
         <form onSubmit={submitInvite} className="space-y-4 px-5 pb-6 pt-4">
-          <TextField
+          <UserPickerField
             label={t('profile.business.invite.username')}
-            value={inviteUsername}
-            placeholder="@usuario"
-            autoCapitalize="none"
-            autoCorrect="off"
+            query={inviteUsername}
+            onQueryChange={(value) => {
+              setInviteUsername(value);
+              setInviteError(null);
+            }}
+            selected={invitedUser}
+            onSelect={setInvitedUser}
+            disabled={inviteMutation.isPending}
             error={inviteError}
             hint={t('profile.business.invite.usernameHint')}
-            onChange={(event) => setInviteUsername(event.target.value)}
           />
           <SelectField
             label={t('profile.business.invite.role')}

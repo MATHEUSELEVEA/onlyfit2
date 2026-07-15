@@ -13,7 +13,7 @@ const items = [
 export function BottomNav() {
   return (
     <nav
-      className="z-50 flex shrink-0 items-stretch justify-around border-t border-outline-variant/40 bg-surface-container-lowest/95 pb-safe-bottom backdrop-blur-md"
+      className="relative isolate z-[var(--z-nav)] flex shrink-0 items-stretch justify-around border-t border-outline-variant/40 bg-surface-container-lowest/95 pb-safe-bottom backdrop-blur-md"
       aria-label="Navegação principal"
     >
       {items.map(({ to, label, icon: Icon, featured }) => (
@@ -23,6 +23,7 @@ export function BottomNav() {
           className={({ isActive }) =>
             clsx(
               'flex min-h-[52px] flex-1 flex-col items-center justify-center transition-colors',
+              featured && 'relative z-[var(--z-nav-featured)]',
               featured ? 'gap-0.5 py-0.5' : 'gap-0.5 py-1.5',
               isActive ? 'text-on-surface' : 'text-on-surface-variant',
             )
@@ -34,7 +35,7 @@ export function BottomNav() {
                 className={clsx(
                   'flex items-center justify-center transition-all',
                   featured &&
-                    '-translate-y-2 rounded-full border border-primary/40 text-primary ring-4 ring-primary/10',
+                    'relative z-[var(--z-nav-featured)] -translate-y-2 rounded-full border border-primary/40 bg-surface-container-lowest text-primary ring-4 ring-primary/10',
                 )}
               >
                 <Icon

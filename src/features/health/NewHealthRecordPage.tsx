@@ -6,7 +6,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { TextAreaField, TextField } from '@/components/ui/TextField';
 import { FeedbackMessage, HealthPageHeader, HealthPageShell, LoadingRows } from './components/HealthPrimitives';
 import { extractHealthPhoto, transcribeHealthAudio, uploadAndProcessHealthPdf } from './healthCaptureApi';
-import { recordCategoryOptions, type HealthCaptureMethod, type HealthCategory, type HealthEvent, type HealthFactInput } from './types';
+import { defaultRecordCategory, recordCategoryOptions, type HealthCaptureMethod, type HealthCategory, type HealthEvent, type HealthFactInput } from './types';
 import { useHealthAudioRecorder } from './useHealthAudioRecorder';
 import { useAppendHealthEvent, useHealthEvent } from './useHealthProfile';
 
@@ -32,7 +32,7 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<EntryMode>('text');
-  const [category, setCategory] = useState<HealthCategory>(correctedEvent?.category === 'anamnesis' ? 'other' : correctedEvent?.category ?? 'condition');
+  const [category, setCategory] = useState<HealthCategory>(correctedEvent?.category === 'anamnesis' ? 'other' : correctedEvent?.category ?? defaultRecordCategory);
   const [title, setTitle] = useState(correctedEvent ? `Correção: ${correctedEvent.title}` : '');
   const [narrative, setNarrative] = useState(correctedEvent?.narrative ?? '');
   const [effectiveDate, setEffectiveDate] = useState(todayInputValue());
@@ -61,7 +61,7 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
     setError('');
     setTitle('');
     setNarrative('');
-    setCategory(next === 'pdf' ? 'exam' : 'condition');
+    setCategory(defaultRecordCategory);
     setDocumentId(null);
     setExtractedFacts([]);
     setDocumentName('');
@@ -200,7 +200,7 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
   return (
     <HealthPageShell width="form">
       <HealthPageHeader title={correctsId ? 'Corrigir informação' : 'Adicionar registro'} description={correctsId ? 'A informação anterior continuará no histórico' : 'Você revisa tudo antes de salvar'} backTo={correctsId ? `/perfil/saude/eventos/${correctsId}` : openedFromMyFit ? '/meu-fit' : '/perfil/saude'} />
-      <main className="space-y-6 px-4 py-6">
+      <main className="space-y-6 px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-6">
         {!correctsId ? (
           <div className="grid grid-cols-4 gap-2" role="tablist" aria-label="Forma de entrada">
             <ModeButton icon={FileText} label="Escrever" selected={mode === 'text'} onClick={() => changeMode('text')} />

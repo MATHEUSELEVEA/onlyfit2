@@ -36,7 +36,7 @@ export function MeuFitPage() {
 
   return (
     <div className="h-full overflow-y-auto bg-background pb-10">
-      <PageTopBar title={t('meufit.title')} description={t('meufit.subtitle')} backFallback="/feed" />
+      <PageTopBar title={t('meufit.title')} description={t('meufit.subtitle')} showBackButton={false} />
       <div className="mx-auto w-full max-w-[720px] px-6 pt-6">
         <div className="space-y-4">
           {pillars.map(({ icon: Icon, title, description, to }) => (

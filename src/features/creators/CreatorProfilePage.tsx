@@ -20,6 +20,8 @@ import type { LucideIcon } from 'lucide-react';
 import { formatCount, formatPrice } from '@/lib/format';
 import { productTypeMeta } from '@/lib/products';
 import { sportLabel } from '@/lib/sports';
+import { CopyHandle } from '@/components/ui/CopyHandle';
+import { ProfileHero } from '@/components/ui/ProfileHero';
 import { ShareSheet } from '@/components/ui/ShareSheet';
 import { PriceBadge } from '@/components/ui/PriceBadge';
 import type { FeedAuthor } from '@/features/feed/types';
@@ -107,30 +109,12 @@ export function CreatorProfilePage() {
 
   return (
     <div className="h-full overflow-y-auto bg-background pb-8">
-      {/* ---------- Herói: foto preenchendo o topo (igual ao perfil próprio) ---------- */}
-      <div className="relative h-[42vh] max-h-[400px] min-h-[280px] w-full overflow-hidden">
-        {creator.avatarUrl ? (
-          <img
-            src={creator.avatarUrl}
-            alt={`Foto de ${creator.displayName ?? creator.username}`}
-            className="h-full w-full object-cover object-top"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary to-surface-tint">
-            <span className="font-sans text-display text-on-primary">{initial}</span>
-          </div>
-        )}
-
-        {/* Escurece o topo para os controles e faz fade para o fundo embaixo */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/55 to-transparent"
-        />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent"
-        />
-
+      {/* ---------- Herói: mesma moldura do perfil próprio ---------- */}
+      <ProfileHero
+        avatarUrl={creator.avatarUrl}
+        displayName={creator.displayName ?? creator.username}
+        initial={initial}
+      >
         {/* Controles flutuando sobre a imagem */}
         <div className="absolute inset-x-0 top-0 flex items-center justify-between px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
           <button
@@ -150,7 +134,7 @@ export function CreatorProfilePage() {
             <Share2 size={20} aria-hidden />
           </button>
         </div>
-      </div>
+      </ProfileHero>
 
       {/* Identidade, abaixo da imagem */}
       <div className="flex flex-col items-center px-5 text-center">
@@ -160,9 +144,7 @@ export function CreatorProfilePage() {
             <BadgeCheck size={18} className="shrink-0 text-primary" aria-label="Verificado" />
           )}
         </h1>
-        {creator.displayName && (
-          <span className="mt-0.5 font-sans text-body text-on-surface-variant">@{creator.username}</span>
-        )}
+        {creator.displayName && <CopyHandle username={creator.username} className="mt-0.5" />}
 
         {creator.sports.length > 0 && (
           <span className="mt-3 inline-flex rounded-full bg-primary/10 px-3 py-1 font-sans text-eyebrow uppercase text-primary">

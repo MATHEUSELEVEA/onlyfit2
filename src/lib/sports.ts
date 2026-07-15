@@ -18,5 +18,11 @@ export const FEED_SPORTS: FeedSport[] = [
 const SPORT_LABELS = new Map(FEED_SPORTS.map((sport) => [sport.key, sport.label]));
 
 export function sportLabel(key: string): string {
-  return SPORT_LABELS.get(key) ?? key;
+  return SPORT_LABELS.get(key) ?? humanizeSportKey(key);
+}
+
+function humanizeSportKey(key: string): string {
+  const clean = key.replace(/[_-]+/g, ' ').trim();
+  if (!clean) return key;
+  return clean.replace(/\b\w/g, (letter) => letter.toUpperCase());
 }

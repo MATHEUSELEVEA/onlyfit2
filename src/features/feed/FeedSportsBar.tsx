@@ -1,5 +1,5 @@
 import { clsx } from 'clsx';
-import { FEED_SPORTS } from '@/lib/sports';
+import { FEED_SPORTS, sportLabel } from '@/lib/sports';
 
 interface FeedSportsBarProps {
   selected: string | null;
@@ -9,9 +9,14 @@ interface FeedSportsBarProps {
 
 export function FeedSportsBar({ selected, availableSports, onSelect }: FeedSportsBarProps) {
   const available = new Set(availableSports);
+  const knownKeys = new Set(FEED_SPORTS.map(({ key }) => key));
+  const dynamicSports = availableSports
+    .filter((key) => key && !knownKeys.has(key))
+    .map((key) => ({ key, label: sportLabel(key) }));
   const tabs: { key: string | null; label: string }[] = [
     { key: null, label: 'Tudo' },
     ...FEED_SPORTS.filter(({ key }) => available.has(key)),
+    ...dynamicSports,
   ];
 
   return (

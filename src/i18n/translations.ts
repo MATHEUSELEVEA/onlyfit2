@@ -157,8 +157,8 @@ const pt = {
   'profile.business.role.owner': 'Proprietário',
   'profile.business.invite.title': 'Convidar para a gestão',
   'profile.business.invite.username': 'Usuário convidado',
-  'profile.business.invite.usernameHint': 'Informe o @usuário exato da pessoa na OnlyFit.',
-  'profile.business.invite.usernameRequired': 'Informe um @usuário válido.',
+  'profile.business.invite.usernameHint': 'Busque pelo nome ou @usuário da pessoa na OnlyFit.',
+  'profile.business.invite.usernameRequired': 'Escolha uma pessoa ou informe um @usuário válido.',
   'profile.business.invite.role': 'Papel no negócio',
   'profile.business.invite.roleHint': 'Nesta fase, os dois papéis acessam a mesma área de gestão.',
   'profile.business.invite.cancel': 'Manter sem convite',
@@ -274,6 +274,18 @@ const pt = {
   'messages.media.video': '🎬 Vídeo',
   'messages.media.audio': '🎤 Áudio',
   'messages.micDenied': 'Permita o microfone para gravar áudio.',
+
+  'userSearch.placeholder': 'Buscar por nome ou @usuário',
+  'userSearch.suggestions': 'Sugestões de pessoas',
+  'userSearch.empty': 'Nenhuma pessoa encontrada',
+  'userSearch.emptyHint': 'Confira a escrita do nome ou tente o @usuário exato.',
+  'userSearch.error': 'Não foi possível buscar agora. Tente de novo.',
+  'userSearch.clear': 'Limpar busca',
+  'userSearch.change': 'Trocar',
+
+  'copyHandle.action': 'Copiar @usuário',
+  'copyHandle.copied': '@usuário copiado',
+  'copyHandle.error': 'Não foi possível copiar.',
 } as const;
 
 const en: Record<keyof typeof pt, string> = {
@@ -431,8 +443,8 @@ const en: Record<keyof typeof pt, string> = {
   'profile.business.role.owner': 'Owner',
   'profile.business.invite.title': 'Invite to management',
   'profile.business.invite.username': 'Invited user',
-  'profile.business.invite.usernameHint': 'Enter the person’s exact OnlyFit @username.',
-  'profile.business.invite.usernameRequired': 'Enter a valid @username.',
+  'profile.business.invite.usernameHint': 'Search by the person’s name or OnlyFit @username.',
+  'profile.business.invite.usernameRequired': 'Pick someone or enter a valid @username.',
   'profile.business.invite.role': 'Business role',
   'profile.business.invite.roleHint': 'At this stage, both roles access the same management area.',
   'profile.business.invite.cancel': 'Keep without invitation',
@@ -548,6 +560,18 @@ const en: Record<keyof typeof pt, string> = {
   'messages.media.video': '🎬 Video',
   'messages.media.audio': '🎤 Audio',
   'messages.micDenied': 'Allow the microphone to record audio.',
+
+  'userSearch.placeholder': 'Search by name or @username',
+  'userSearch.suggestions': 'People suggestions',
+  'userSearch.empty': 'No one found',
+  'userSearch.emptyHint': 'Check the spelling or try the exact @username.',
+  'userSearch.error': 'We could not search right now. Try again.',
+  'userSearch.clear': 'Clear search',
+  'userSearch.change': 'Change',
+
+  'copyHandle.action': 'Copy @username',
+  'copyHandle.copied': '@username copied',
+  'copyHandle.error': 'Could not copy.',
 };
 
 export const dictionaries = { pt, en };

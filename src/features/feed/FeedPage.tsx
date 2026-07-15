@@ -45,10 +45,10 @@ export function FeedPage() {
   };
 
   return (
-    <div className="relative h-full">
+    <div className="feed-viewport relative">
       {/* Topo: barra de grupos de afinidade (rolagem lateral, estilo TikTok).
           Acompanha a largura do palco do post (ver PostCard). */}
-      <header className="absolute inset-x-0 top-0 z-20 mx-auto w-full max-w-[56.25dvh] pb-2 pt-safe-top">
+      <header className="absolute inset-x-0 top-0 z-20 mx-auto feed-stage pb-2 pt-safe-top">
         <div className="mt-2">
           <FeedSportsBar
             selected={selectedSport}

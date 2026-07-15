@@ -4,11 +4,11 @@ import {
   BadgeCheck,
   Bookmark,
   ChevronRight,
+  CirclePlus,
   Dumbbell,
   Heart,
   MessageCircle,
   Share2,
-  SquarePlus,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { ShareSheet } from '@/components/ui/ShareSheet';
@@ -85,6 +85,7 @@ export function PostCard({ post }: PostCardProps) {
   const [shareOpen, setShareOpen] = useState(false);
   const articleRef = useRef<HTMLElement>(null);
   const [inView, setInView] = useState(false);
+  const [captionLift, setCaptionLift] = useState(0);
 
   // O feed mantém todos os posts carregados montados, então é a visibilidade —
   // e não a montagem — que decide qual vídeo toca. Sem isso todos tocam juntos.
@@ -105,12 +106,9 @@ export function PostCard({ post }: PostCardProps) {
   const shareUrl = `${window.location.origin}/video/${post.id}`;
 
   return (
-    // O palco tem a proporção de um celular (9:16) mesmo em tela grande: no
-    // celular ele ocupa a largura toda; em tablet/desktop vira uma coluna
-    // centrada, em vez de esticar o vídeo pela tela inteira.
     <article
       ref={articleRef}
-      className="relative mx-auto h-full w-full max-w-[56.25dvh] overflow-hidden bg-surface-container-lowest"
+      className="relative mx-auto h-full overflow-hidden bg-surface-container-lowest feed-stage"
     >
       {/* Mídia de fundo: vídeo, imagem única ou carrossel (imagem e/ou vídeo) */}
       <PostMedia
@@ -128,8 +126,13 @@ export function PostCard({ post }: PostCardProps) {
         }}
       />
 
-      {/* Trilho de ações à direita */}
-      <div className="absolute bottom-40 right-3 z-10 flex flex-col items-center gap-5">
+      {/* Trilho de ações à direita. Fica acima do bloco de legenda (que é
+          largura cheia e cresce para cima) para continuar clicável, e sobe junto
+          quando a legenda expande. */}
+      <div
+        className="absolute right-3 z-20 flex flex-col items-center gap-5 feed-actions-rail transition-transform duration-300 ease-out motion-reduce:transition-none"
+        style={{ transform: `translateY(${-captionLift}px)` }}
+      >
         <RailButton
           label="Curtir"
           count={formatCount(post.likeCount)}
@@ -152,12 +155,12 @@ export function PostCard({ post }: PostCardProps) {
           <Share2 size={22} aria-hidden />
         </RailButton>
         <RailButton label="Criar post" onClick={() => navigate('/studio')}>
-          <SquarePlus size={22} aria-hidden />
+          <CirclePlus size={22} aria-hidden />
         </RailButton>
       </div>
 
       {/* Área inferior: creator, legenda e banner de produto */}
-      <div className="absolute bottom-0 left-0 z-10 flex w-full flex-col gap-3 p-4">
+      <div className="absolute left-0 z-10 flex w-full flex-col gap-3 p-4 feed-post-meta">
         <div className="flex items-center gap-3">
           <Link
             to={profileTo}
@@ -197,7 +200,7 @@ export function PostCard({ post }: PostCardProps) {
           <FollowButton creatorId={post.author.id} />
         </div>
 
-        <PostCaption text={post.caption} />
+        <PostCaption text={post.caption} onLiftChange={setCaptionLift} />
 
         {post.product && (
           <button

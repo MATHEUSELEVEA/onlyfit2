@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { sanitizeSearchTerm } from '@/lib/search';
 import { useAuth } from '@/contexts/AuthContext';
 
 export interface ExploreCreator {
@@ -25,12 +26,6 @@ interface CreatorRow {
     | { bio: string | null; sports: string[] | null; follower_count: number | null }
     | { bio: string | null; sports: string[] | null; follower_count: number | null }[]
     | null;
-}
-
-// Sanitiza o termo para uso em .or(...ilike...) do PostgREST: vírgula separa
-// filtros e parênteses agrupam, então removê-los evita query malformada.
-function sanitizeSearchTerm(term: string): string {
-  return term.replace(/[,()%]/g, ' ').trim();
 }
 
 // Pessoas para descoberta: qualquer perfil (profissional OU usuário comum),

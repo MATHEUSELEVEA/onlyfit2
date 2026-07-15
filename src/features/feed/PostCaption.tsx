@@ -2,16 +2,21 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 
 interface PostCaptionProps {
   text: string;
+  // Quanto a legenda cresceu ao expandir, em px. O PostCard usa esse valor para
+  // empurrar o trilho de ações para cima na mesma medida.
+  onLiftChange?: (lift: number) => void;
 }
 
 // Legenda do criador no estilo TikTok:
 // - colapsada mostra 2 linhas; se o texto passar disso, corta com "… mais";
 // - ao tocar em "mais", expande o texto inteiro (com rolagem se for muito grande);
 // - fundo sempre transparente (o texto vive sobre a mídia, só com sombra).
-export function PostCaption({ text }: PostCaptionProps) {
+export function PostCaption({ text, onLiftChange }: PostCaptionProps) {
   const [expanded, setExpanded] = useState(false);
   const [clamped, setClamped] = useState(false);
   const paragraphRef = useRef<HTMLParagraphElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const collapsedHeightRef = useRef(0);
 
   const measure = useCallback(() => {
     const el = paragraphRef.current;
@@ -30,11 +35,25 @@ export function PostCaption({ text }: PostCaptionProps) {
     return () => window.removeEventListener('resize', measure);
   }, [expanded, measure]);
 
+  // A legenda cresce para cima (o bloco é ancorado no rodapé), então o delta de
+  // altura entre colapsada e expandida é exatamente o quanto o trilho de ações
+  // precisa subir para não ficar embaixo do texto.
+  useLayoutEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    if (!expanded) {
+      collapsedHeightRef.current = el.offsetHeight;
+      onLiftChange?.(0);
+      return;
+    }
+    onLiftChange?.(Math.max(0, el.offsetHeight - collapsedHeightRef.current));
+  }, [expanded, text, onLiftChange]);
+
   if (!text) return null;
 
   if (expanded) {
     return (
-      <div className="max-w-[88%]">
+      <div ref={rootRef} className="max-w-[88%]">
         <div className="no-scrollbar max-h-40 overflow-y-auto">
           <p className="whitespace-pre-wrap font-sans text-body-sm text-white drop-shadow">
             {text}{' '}
@@ -52,7 +71,7 @@ export function PostCaption({ text }: PostCaptionProps) {
   }
 
   return (
-    <div className="relative max-w-[88%]">
+    <div ref={rootRef} className="relative max-w-[88%]">
       <p
         ref={paragraphRef}
         className="line-clamp-2 font-sans text-body-sm text-white drop-shadow"
