@@ -25,6 +25,7 @@ import { ProfileHero } from '@/components/ui/ProfileHero';
 import { ShareSheet } from '@/components/ui/ShareSheet';
 import { PriceBadge } from '@/components/ui/PriceBadge';
 import type { FeedAuthor } from '@/features/feed/types';
+import { useAuth } from '@/contexts/AuthContext';
 import { useCreatorFollowState, useToggleCreatorFollow } from './useCreatorFollow';
 import { useCreatorSubscription } from './useCreatorSubscription';
 import {
@@ -68,6 +69,7 @@ function Thumb({ url, label, icon: Icon }: { url: string | null; label: string; 
 }
 
 export function CreatorProfilePage() {
+  const { session } = useAuth();
   const { labelFor } = useAffinityGroups();
   const { username = '' } = useParams();
   const navigate = useNavigate();
@@ -92,6 +94,7 @@ export function CreatorProfilePage() {
     subscriberCount: 0,
   };
   const creatorId = creator.id || null;
+  const isOwnProfile = Boolean(creatorId && session?.user.id && creatorId === session.user.id);
   const initial = creator.username.slice(0, 1).toUpperCase() || '?';
 
   const { data: following = false } = useCreatorFollowState(creatorId);
@@ -196,21 +199,23 @@ export function CreatorProfilePage() {
               'Assinar'
             )}
           </button>
-          <button
-            type="button"
-            onClick={() => toggleFollow.mutate(!following)}
-            aria-pressed={following}
-            disabled={!creatorId}
-            className={clsx(
-              'inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full font-sans text-label transition-all active:scale-[0.98] disabled:opacity-50',
-              following
-                ? 'bg-surface-container text-on-surface'
-                : 'border border-outline-variant/60 text-on-surface',
-            )}
-          >
-            {following && <Check size={15} strokeWidth={3} aria-hidden />}
-            {following ? 'Seguindo' : 'Seguir'}
-          </button>
+          {!isOwnProfile && (
+            <button
+              type="button"
+              onClick={() => toggleFollow.mutate(!following)}
+              aria-pressed={following}
+              disabled={!creatorId}
+              className={clsx(
+                'inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full font-sans text-label transition-all active:scale-[0.98] disabled:opacity-50',
+                following
+                  ? 'bg-surface-container text-on-surface'
+                  : 'border border-outline-variant/60 text-on-surface',
+              )}
+            >
+              {following && <Check size={15} strokeWidth={3} aria-hidden />}
+              {following ? 'Seguindo' : 'Seguir'}
+            </button>
+          )}
           <button
             type="button"
             aria-label="Enviar mensagem"
