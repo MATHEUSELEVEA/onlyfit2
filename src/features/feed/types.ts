@@ -36,4 +36,6 @@ export interface FeedPost {
   // Estado do usuário logado sobre o post (hidratado no fetch, atualizado
   // de forma otimista por useToggleLike).
   likedByMe: boolean;
+  // O autor pode desativar comentários no próprio post (flag em posts.metadata).
+  commentsDisabled: boolean;
 }

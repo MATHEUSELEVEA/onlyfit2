@@ -13,7 +13,7 @@ import type { FeedMedia, FeedPost } from './types';
 const PAGE_SIZE = 10;
 
 const POST_SELECT = `id, creator_id, title, description, is_premium, thumbnail_url, video_url,
-   likes, comments, published_at,
+   likes, comments, published_at, metadata,
    profiles:creator_id!inner (
      username, full_name, avatar_url,
      creator_profiles (verified)
@@ -31,6 +31,7 @@ interface PostRow {
   likes: number | null;
   comments: number | null;
   published_at: string;
+  metadata: Record<string, unknown> | null;
   profiles: {
     username: string | null;
     full_name: string | null;
@@ -113,6 +114,7 @@ function toFeedPost(
     createdAt: row.published_at,
     product: null, // banner de produto entra na próxima etapa
     likedByMe: likedPostIds.has(row.id),
+    commentsDisabled: row.metadata?.comments_disabled === true,
   };
 }
 
