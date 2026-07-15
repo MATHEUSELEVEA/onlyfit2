@@ -451,12 +451,12 @@ function ChallengesList({ creatorId }: { creatorId: string | null }) {
           description={c.description}
           meta={`${formatCount(c.participantCount)} participantes`}
           action={
-            <button
-              type="button"
+            <Link
+              to={`/desafios/${c.id}`}
               className="inline-flex min-h-[36px] items-center rounded-full bg-primary px-5 font-sans text-label text-on-primary active:scale-[0.98]"
             >
               Participar
-            </button>
+            </Link>
           }
         />
       ))}

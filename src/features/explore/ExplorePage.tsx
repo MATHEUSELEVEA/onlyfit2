@@ -200,9 +200,7 @@ function CommunityTile({ community }: { community: ExploreCommunity }) {
 }
 
 function ChallengeTile({ challenge }: { challenge: ExploreChallenge }) {
-  const to = challenge.creatorUsername
-    ? `/creator/${encodeURIComponent(challenge.creatorUsername)}`
-    : null;
+  const to = `/desafios/${challenge.id}`;
 
   const inner = (
     <>
@@ -237,14 +235,13 @@ function ChallengeTile({ challenge }: { challenge: ExploreChallenge }) {
       </div>
     </>
   );
-  const className =
-    'group flex flex-col overflow-hidden rounded-2xl border border-outline-variant/25 bg-surface-container-lowest';
-  return to ? (
-    <Link to={to} className={className}>
+  return (
+    <Link
+      to={to}
+      className="group flex flex-col overflow-hidden rounded-2xl border border-outline-variant/25 bg-surface-container-lowest"
+    >
       {inner}
     </Link>
-  ) : (
-    <div className={className}>{inner}</div>
   );
 }
 
