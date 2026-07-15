@@ -11,7 +11,10 @@ import { ExplorePage } from './features/explore/ExplorePage';
 import { TrainingPage } from './pages/TrainingPage';
 import { DietPage } from './pages/DietPage';
 import { MeuFitPage } from './features/meufit/MeuFitPage';
-import { CommunitiesPage } from './pages/CommunitiesPage';
+import { CommunitiesPage } from './features/communities/CommunitiesPage';
+import { CommunityPage } from './features/communities/CommunityPage';
+import { CommunityFormPage } from './features/communities/CommunityFormPage';
+import { TopicPage } from './features/communities/TopicPage';
 import { ChallengesPage } from './pages/ChallengesPage';
 import { ProductsPage } from './features/market/ProductsPage';
 import { MyProductsPage } from './features/market/MyProductsPage';
@@ -78,6 +81,10 @@ function AuthenticatedApp() {
           <Route path="/mercado" element={<Navigate to="/produtos" replace />} />
           <Route path="/market" element={<Navigate to="/produtos" replace />} />
           <Route path="/comunidades" element={<CommunitiesPage />} />
+          <Route path="/comunidades/nova" element={<CommunityFormPage />} />
+          <Route path="/comunidades/:communityId" element={<CommunityPage />} />
+          <Route path="/comunidades/:communityId/editar" element={<CommunityFormPage />} />
+          <Route path="/comunidades/:communityId/topicos/:topicId" element={<TopicPage />} />
           <Route path="/desafios" element={<ChallengesPage />} />
           <Route path="/perfil" element={<ProfilePage />} />
           <Route path="/perfil/menu" element={<SettingsMenuPage />} />

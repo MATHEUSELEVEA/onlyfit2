@@ -14,6 +14,7 @@ import {
   Salad,
   ShieldCheck,
   Stethoscope,
+  Target,
   UsersRound,
   WalletCards,
   type LucideIcon,
@@ -117,6 +118,18 @@ export function SettingsMenuPage() {
               description={t('profile.messages.description')}
               to="/mensagens"
               badge={unreadCount}
+            />
+            <ProfileLink
+              icon={UsersRound}
+              title={t('profile.communities.title')}
+              description={t('profile.communities.description')}
+              to="/comunidades"
+            />
+            <ProfileLink
+              icon={Target}
+              title={t('profile.challenges.title')}
+              description={t('profile.challenges.description')}
+              to="/desafios"
             />
             <ProfileLink
               icon={CalendarCheck}
