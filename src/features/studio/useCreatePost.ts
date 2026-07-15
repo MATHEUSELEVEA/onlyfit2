@@ -60,7 +60,7 @@ export function useCreatePost() {
         .insert({
           creator_id: userId,
           description: input.caption.trim() || null,
-          sports: input.sports.length ? input.sports : null,
+          sports: input.sports,
           is_premium: input.visibility === 'paid_members',
           visibility: input.visibility,
           // Espelha a página de capa no formato de mídia única do v1.
