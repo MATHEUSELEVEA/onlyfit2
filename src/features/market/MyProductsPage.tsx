@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Library, Loader2, Search, ShoppingBag } from 'lucide-react';
+import { Loader2, Search, ShoppingBag } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { PageTopBar } from '@/components/layout/PageTopBar';
 import { FilterChip } from '@/components/ui/FilterChip';
 import { productTypeMeta } from '@/lib/products';
 import { ProductCard } from './ProductCard';
@@ -33,22 +34,11 @@ export function MyProductsPage() {
 
   return (
     <div className="h-full overflow-y-auto bg-background pb-8">
+      <PageTopBar title="Meus produtos" description="Tudo o que você já adquiriu" />
       <div className="mx-auto w-full max-w-[720px]">
-        <header className="sticky top-0 z-10 bg-background/95 px-4 pb-3 pt-safe-top backdrop-blur-md">
-          <div className="mt-3 flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-container text-on-primary-container">
-              <Library size={20} aria-hidden />
-            </span>
-            <div>
-              <h1 className="font-sans text-title-lg text-on-surface">Meus produtos</h1>
-              <p className="font-sans text-body-sm text-on-surface-variant">
-                Tudo o que você já adquiriu
-              </p>
-            </div>
-          </div>
-
-          {products.length > 0 && (
-            <div className="relative mt-4">
+        {products.length > 0 && (
+          <div className="bg-background px-4 pb-3 pt-4">
+            <div className="relative">
               <Search
                 size={18}
                 className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant"
@@ -63,8 +53,8 @@ export function MyProductsPage() {
                 className="min-h-[44px] w-full rounded-xl border border-outline-variant/40 bg-surface py-2 pl-11 pr-4 font-sans text-body text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
             </div>
-          )}
-        </header>
+          </div>
+        )}
 
         {typeOptions.length > 1 && (
           <div className="no-scrollbar mt-1 flex gap-2 overflow-x-auto px-4">
