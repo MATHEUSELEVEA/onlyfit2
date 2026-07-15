@@ -19,7 +19,7 @@ import { clsx } from 'clsx';
 import type { LucideIcon } from 'lucide-react';
 import { formatCount, formatPrice } from '@/lib/format';
 import { productTypeMeta } from '@/lib/products';
-import { sportLabel } from '@/lib/sports';
+import { useAffinityGroups } from '@/lib/sports';
 import { CopyHandle } from '@/components/ui/CopyHandle';
 import { ProfileHero } from '@/components/ui/ProfileHero';
 import { ShareSheet } from '@/components/ui/ShareSheet';
@@ -68,6 +68,7 @@ function Thumb({ url, label, icon: Icon }: { url: string | null; label: string; 
 }
 
 export function CreatorProfilePage() {
+  const { labelFor } = useAffinityGroups();
   const { username = '' } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -148,7 +149,7 @@ export function CreatorProfilePage() {
 
         {creator.sports.length > 0 && (
           <span className="mt-3 inline-flex rounded-full bg-primary/10 px-3 py-1 font-sans text-eyebrow uppercase text-primary">
-            {creator.sports.map(sportLabel).join(' · ')}
+            {creator.sports.map(labelFor).join(' · ')}
           </span>
         )}
         {creator.bio && (

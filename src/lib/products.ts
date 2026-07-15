@@ -16,7 +16,7 @@ import {
   Sparkles,
   type LucideIcon,
 } from 'lucide-react';
-import { FEED_SPORTS } from '@/lib/sports';
+import { affinitySlug, type AffinityGroup } from '@/lib/sports';
 
 export interface ProductTypeMeta {
   /** Chave normalizada, estável para usar como valor de filtro. */
@@ -114,21 +114,19 @@ export function productCategory(product: {
   return typeKey === 'physical' ? 'accessories' : 'content';
 }
 
-// Palavras-chave por esporte para inferir os grupos de afinidade de um produto
-// a partir do texto (nome/categoria/descrição). É aproximado de propósito: o
-// schema de produto não guarda `sports`, e isto só alimenta um filtro opcional.
-const SPORT_KEYWORDS: Record<string, string[]> = {
-  bodybuilding: ['muscul', 'hipertrofia', 'bodybuild', 'fisiculturismo', 'academia'],
-  hyrox: ['hyrox', 'crossfit', 'cross training', 'funcional', 'wod', 'sled', 'burpee broad jump', 'wall ball'],
-  lutas: ['luta', 'jiu', 'jitsu', 'boxe', 'muay', 'mma', 'karate', 'karatê', 'judô', 'judo', 'taekwondo'],
-  corrida: ['corrida', 'runner', 'running', 'maratona', 'trote', ' 5k', ' 10k', 'meia maratona'],
-  triathlon: ['triathlon', 'triatlo', 'ironman', 'ciclismo', 'cycling', 'pedal', 'bike', 'bicicleta', 'spinning', 'natação', 'natacao', 'nado', 'swim', 'piscina'],
-  saude: ['saúde', 'saude', 'nutrição', 'nutricao', 'dieta', 'diet', 'alimentação', 'alimentacao', 'nutrition', 'wellness', 'keto', 'emagrec'],
-};
-
-export function inferProductSports(text: string): string[] {
-  const haystack = text.toLowerCase();
-  return FEED_SPORTS.filter(({ key }) =>
-    (SPORT_KEYWORDS[key] ?? []).some((word) => haystack.includes(word)),
-  ).map(({ key }) => key);
+// Infere os grupos de afinidade de um produto a partir do texto
+// (nome/categoria/descrição). Os termos de cada grupo são a própria taxonomia do
+// banco — chave, rótulo e aliases —, então grupo novo passa a ser reconhecido
+// sem tocar neste arquivo. É aproximado de propósito: o schema de produto não
+// guarda `sports`, e isto só alimenta um filtro opcional.
+export function inferProductSports(text: string, groups: AffinityGroup[]): string[] {
+  const haystack = affinitySlug(text);
+  if (!haystack) return [];
+  return groups
+    .filter((group) =>
+      [group.key, group.label, ...group.aliases]
+        .map(affinitySlug)
+        .some((term) => term.length > 2 && haystack.includes(term)),
+    )
+    .map((group) => group.key);
 }

@@ -1,7 +1,7 @@
 import { Loader2, Lock, Globe } from 'lucide-react';
 import { clsx } from 'clsx';
 import { FilterChip } from '@/components/ui/FilterChip';
-import { FEED_SPORTS } from '@/lib/sports';
+import { useAffinityGroups } from '@/lib/sports';
 import type { PostVisibility } from '../useCreatePost';
 
 interface DetailsStepProps {
@@ -34,6 +34,8 @@ export function DetailsStep({
   isPublishing,
   error,
 }: DetailsStepProps) {
+  const { groups } = useAffinityGroups();
+
   return (
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
@@ -52,7 +54,7 @@ export function DetailsStep({
         <div className="space-y-2">
           <span className="font-sans text-label text-on-surface">Modalidades</span>
           <div className="flex flex-wrap gap-2">
-            {FEED_SPORTS.map((sport) => (
+            {groups.map((sport) => (
               <FilterChip
                 key={sport.key}
                 active={sports.includes(sport.key)}

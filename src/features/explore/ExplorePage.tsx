@@ -12,7 +12,7 @@ import {
   UsersRound,
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { FEED_SPORTS, sportLabel } from '@/lib/sports';
+import { useAffinityGroups } from '@/lib/sports';
 import { formatCount } from '@/lib/format';
 import { FilterChip } from '@/components/ui/FilterChip';
 import { useToggleCreatorFollow } from '@/features/creators/useCreatorFollow';
@@ -49,6 +49,7 @@ const PEOPLE_KINDS: { key: PeopleKind; label: string }[] = [
 ];
 
 function CreatorCard({ creator }: { creator: ExploreCreator }) {
+  const { labelFor } = useAffinityGroups();
   const toggleFollow = useToggleCreatorFollow(creator.id);
   const profileTo = creator.username ? `/creator/${encodeURIComponent(creator.username)}` : null;
 
@@ -78,7 +79,7 @@ function CreatorCard({ creator }: { creator: ExploreCreator }) {
         </span>
         {creator.sports.length > 0 && (
           <span className="mt-0.5 block truncate font-sans text-counter font-normal text-on-surface-variant">
-            {creator.sports.slice(0, 3).map(sportLabel).join(' · ')}
+            {creator.sports.slice(0, 3).map(labelFor).join(' · ')}
           </span>
         )}
       </span>
@@ -248,6 +249,7 @@ function ChallengeTile({ challenge }: { challenge: ExploreChallenge }) {
 }
 
 export function ExplorePage() {
+  const { groups } = useAffinityGroups();
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<ExploreTab>('content');
   const [peopleKind, setPeopleKind] = useState<PeopleKind>('all');
@@ -463,7 +465,7 @@ export function ExplorePage() {
               <FilterChip active={sport === null} onClick={() => setSport(null)}>
                 Todos
               </FilterChip>
-              {FEED_SPORTS.map(({ key, label }) => (
+              {groups.map(({ key, label }) => (
                 <FilterChip key={key} active={sport === key} onClick={() => setSport(key)}>
                   {label}
                 </FilterChip>

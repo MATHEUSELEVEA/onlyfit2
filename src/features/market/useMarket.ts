@@ -1,7 +1,9 @@
+import { useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { inferProductSports } from '@/lib/products';
+import { useAffinityGroups, type AffinityGroup } from '@/lib/sports';
 
 // Marketplace: leitura pública dos produtos à venda e leitura das compras do
 // próprio usuário. Tudo somente leitura — o front nunca escreve em produto ou
@@ -60,7 +62,7 @@ function firstProfile(value: ProductRow['profiles']): SellerProfile | null {
   return value ?? null;
 }
 
-function toMarketProduct(row: ProductRow): MarketProduct {
+function toMarketProduct(row: ProductRow, groups: AffinityGroup[]): MarketProduct {
   const seller = firstProfile(row.profiles);
   const name = row.name ?? 'Produto';
   const description = row.description ?? null;
@@ -76,6 +78,7 @@ function toMarketProduct(row: ProductRow): MarketProduct {
     sales: row.sales ?? 0,
     sports: inferProductSports(
       [name, description, row.type, row.market_item_type].filter(Boolean).join(' '),
+      groups,
     ),
     creatorId: row.tenant_id ?? row.creator_id ?? '',
     creatorName: seller?.full_name || seller?.username || 'Creator',
@@ -88,10 +91,19 @@ function toMarketProduct(row: ProductRow): MarketProduct {
 // (é plano recorrente, tem fluxo próprio), como no Market do v1. Ordena por
 // vendas para deixar o que bomba no topo.
 export function useMarketProducts() {
+  const { groups } = useAffinityGroups();
+  // A afinidade sai do texto do produto no `select`, não no `queryFn`: quando a
+  // taxonomia chega (ou muda), os produtos são remapeados sem refazer o fetch.
+  const select = useCallback(
+    (rows: ProductRow[]) => rows.map((row) => toMarketProduct(row, groups)),
+    [groups],
+  );
+
   return useQuery({
     queryKey: ['market-products'],
     staleTime: 5 * 60_000,
-    queryFn: async (): Promise<MarketProduct[]> => {
+    select,
+    queryFn: async (): Promise<ProductRow[]> => {
       const { data, error } = await supabase
         .from('products')
         .select(PRODUCT_COLUMNS)
@@ -103,7 +115,7 @@ export function useMarketProducts() {
         .order('sales', { ascending: false, nullsFirst: false })
         .limit(100);
       if (error) throw error;
-      return ((data ?? []) as unknown as ProductRow[]).map(toMarketProduct);
+      return (data ?? []) as unknown as ProductRow[];
     },
   });
 }
@@ -119,12 +131,30 @@ interface PurchaseRow {
 export function usePurchasedProducts() {
   const { session } = useAuth();
   const userId = session?.user.id;
+  const { groups } = useAffinityGroups();
+
+  const select = useCallback(
+    (rows: PurchaseRow[]) => {
+      const purchased = rows
+        .map((row) => {
+          const product = Array.isArray(row.products) ? row.products[0] : row.products;
+          return product ? toMarketProduct(product, groups) : null;
+        })
+        .filter((p): p is MarketProduct => p !== null);
+
+      return purchased.filter(
+        (product, index) => purchased.findIndex((item) => item.id === product.id) === index,
+      );
+    },
+    [groups],
+  );
 
   return useQuery({
     queryKey: ['purchased-products', userId],
     enabled: Boolean(userId),
     staleTime: 2 * 60_000,
-    queryFn: async (): Promise<MarketProduct[]> => {
+    select,
+    queryFn: async (): Promise<PurchaseRow[]> => {
       const { data, error } = await supabase
         .from('product_purchases')
         .select(`id, created_at, products ( ${PRODUCT_COLUMNS} )`)
@@ -132,17 +162,7 @@ export function usePurchasedProducts() {
         .order('created_at', { ascending: false })
         .limit(100);
       if (error) throw error;
-
-      const purchased = ((data ?? []) as unknown as PurchaseRow[])
-        .map((row) => {
-          const product = Array.isArray(row.products) ? row.products[0] : row.products;
-          return product ? toMarketProduct(product) : null;
-        })
-        .filter((p): p is MarketProduct => p !== null);
-
-      return purchased.filter(
-        (product, index) => purchased.findIndex((item) => item.id === product.id) === index,
-      );
+      return (data ?? []) as unknown as PurchaseRow[];
     },
   });
 }

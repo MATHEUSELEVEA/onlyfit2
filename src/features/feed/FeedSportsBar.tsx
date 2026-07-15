@@ -1,5 +1,5 @@
 import { clsx } from 'clsx';
-import { FEED_SPORTS, sportLabel } from '@/lib/sports';
+import { useAffinityGroups } from '@/lib/sports';
 
 interface FeedSportsBarProps {
   selected: string | null;
@@ -8,15 +8,13 @@ interface FeedSportsBarProps {
 }
 
 export function FeedSportsBar({ selected, availableSports, onSelect }: FeedSportsBarProps) {
-  const available = new Set(availableSports);
-  const knownKeys = new Set(FEED_SPORTS.map(({ key }) => key));
-  const dynamicSports = availableSports
-    .filter((key) => key && !knownKeys.has(key))
-    .map((key) => ({ key, label: sportLabel(key) }));
+  const { labelFor } = useAffinityGroups();
+
+  // `availableSports` já vem do banco (feed_home_available_sports) na ordem da
+  // taxonomia, e é ele quem manda: mostra só grupo com conteúdo pro usuário.
   const tabs: { key: string | null; label: string }[] = [
     { key: null, label: 'Tudo' },
-    ...FEED_SPORTS.filter(({ key }) => available.has(key)),
-    ...dynamicSports,
+    ...availableSports.filter(Boolean).map((key) => ({ key, label: labelFor(key) })),
   ];
 
   return (

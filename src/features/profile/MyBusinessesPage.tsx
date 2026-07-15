@@ -18,7 +18,7 @@ import { clsx } from 'clsx';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from '@/i18n/I18nProvider';
 import { supabase } from '@/lib/supabase';
-import { FEED_SPORTS, sportLabel } from '@/lib/sports';
+import { useAffinityGroups } from '@/lib/sports';
 import { myProfileQueryKey, useMyProfile, type MyProfile } from './useMyProfile';
 
 const MAX_GROUPS = 3;
@@ -69,6 +69,7 @@ const businessStatusLabel: Record<string, string> = {
 };
 
 export function MyBusinessesPage() {
+  const { groups, labelFor } = useAffinityGroups();
   const { session } = useAuth();
   const { language, t } = useTranslation();
   const queryClient = useQueryClient();
@@ -207,7 +208,7 @@ export function MyBusinessesPage() {
                   }
                 >
                   <div className="flex flex-wrap gap-2 p-3">
-                    {FEED_SPORTS.map((sport) => {
+                    {groups.map((sport) => {
                       const active = selectedGroups.includes(sport.key);
                       return (
                         <button
@@ -246,7 +247,7 @@ export function MyBusinessesPage() {
                         name={business.name}
                         logoUrl={business.logo_url}
                         verified={business.verified}
-                        meta={businessMeta(business, dateFormatter)}
+                        meta={businessMeta(business, dateFormatter, labelFor)}
                         badge={business.status ? businessStatusLabel[business.status] ?? business.status : null}
                         verifiedLabel={t('profile.business.verified')}
                       />
@@ -370,9 +371,13 @@ export function MyBusinessesPage() {
   );
 }
 
-function businessMeta(business: BusinessRow, dateFormatter: Intl.DateTimeFormat) {
+function businessMeta(
+  business: BusinessRow,
+  dateFormatter: Intl.DateTimeFormat,
+  labelFor: (key: string) => string,
+) {
   const createdAt = business.created_at ? dateFormatter.format(new Date(business.created_at)) : null;
-  const sports = (business.sports ?? []).map(sportLabel).join(', ');
+  const sports = (business.sports ?? []).map(labelFor).join(', ');
   const kind =
     business.business_type === 'independent'
       ? 'Negócio independente'

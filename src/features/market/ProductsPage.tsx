@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Loader2, Search, SlidersHorizontal } from 'lucide-react';
 import { clsx } from 'clsx';
-import { FEED_SPORTS } from '@/lib/sports';
+import { useAffinityGroups } from '@/lib/sports';
 import { MARKET_CATEGORIES, productCategory } from '@/lib/products';
 import { FilterChip } from '@/components/ui/FilterChip';
 import { ProductCard } from './ProductCard';
@@ -41,6 +41,7 @@ export function ProductsPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const productsQuery = useMarketProducts();
+  const { groups } = useAffinityGroups();
 
   const isLoading = productsQuery.isLoading;
   const isError = productsQuery.isError;
@@ -160,7 +161,7 @@ export function ProductsPage() {
               <FilterChip active={sport === null} onClick={() => setSport(null)}>
                 Todos
               </FilterChip>
-              {FEED_SPORTS.map(({ key, label }) => (
+              {groups.map(({ key, label }) => (
                 <FilterChip key={key} active={sport === key} onClick={() => setSport(key)}>
                   {label}
                 </FilterChip>
