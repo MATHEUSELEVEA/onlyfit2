@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from '@/i18n/I18nProvider';
 import { supabase } from '@/lib/supabase';
 import { TextAreaField, TextField } from '@/components/ui/TextField';
-import { useMyProfile } from './useMyProfile';
+import { isCpfConfigured, useSensitiveProfile } from './useSensitiveProfile';
 
 type BusinessType = 'independent' | 'company';
 
@@ -46,7 +46,7 @@ export function CreateBusinessPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { data: profile, isLoading: isLoadingProfile } = useMyProfile();
+  const { data: sensitiveProfile, isLoading: isLoadingProfile } = useSensitiveProfile();
 
   const [businessType, setBusinessType] = useState<BusinessType>('independent');
   const [name, setName] = useState('');
@@ -65,7 +65,7 @@ export function CreateBusinessPage() {
   }, [logoPreview]);
 
   const selectedSpecialty = specialties.find((item) => item.value === specialty);
-  const hasCpf = Boolean(profile?.cpfLast4);
+  const hasCpf = isCpfConfigured(sensitiveProfile);
 
   const createMutation = useMutation({
     mutationFn: async () => {
