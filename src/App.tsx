@@ -15,7 +15,9 @@ import { CommunitiesPage } from './features/communities/CommunitiesPage';
 import { CommunityPage } from './features/communities/CommunityPage';
 import { CommunityFormPage } from './features/communities/CommunityFormPage';
 import { TopicPage } from './features/communities/TopicPage';
-import { ChallengesPage } from './pages/ChallengesPage';
+import { ChallengesPage } from './features/challenges/ChallengesPage';
+import { ChallengePage } from './features/challenges/ChallengePage';
+import { ChallengeFormPage } from './features/challenges/ChallengeFormPage';
 import { ProductsPage } from './features/market/ProductsPage';
 import { MyProductsPage } from './features/market/MyProductsPage';
 import { StudioPage } from './features/studio/StudioPage';
@@ -86,6 +88,9 @@ function AuthenticatedApp() {
           <Route path="/comunidades/:communityId/editar" element={<CommunityFormPage />} />
           <Route path="/comunidades/:communityId/topicos/:topicId" element={<TopicPage />} />
           <Route path="/desafios" element={<ChallengesPage />} />
+          <Route path="/desafios/novo" element={<ChallengeFormPage />} />
+          <Route path="/desafios/:challengeId" element={<ChallengePage />} />
+          <Route path="/desafios/:challengeId/editar" element={<ChallengeFormPage />} />
           <Route path="/perfil" element={<ProfilePage />} />
           <Route path="/perfil/menu" element={<SettingsMenuPage />} />
           <Route path="/perfil/editar" element={<EditProfilePage />} />
