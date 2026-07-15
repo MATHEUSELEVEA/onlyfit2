@@ -12,7 +12,6 @@ import {
   LogOut,
   MessageCircle,
   Palette,
-  Plus,
   PencilLine,
   ReceiptText,
   Salad,
@@ -216,14 +215,6 @@ export function ProfilePage() {
             <span className="mt-2 inline-flex items-center rounded-full bg-secondary-container px-3 py-1 font-sans text-eyebrow uppercase text-on-secondary-container">
               {isProfessional ? t('profile.professional') : t('profile.member')}
             </span>
-
-            <Link
-              to="/studio"
-              className="mt-5 inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-6 font-sans text-label text-on-primary shadow-sm transition-transform active:scale-[0.98]"
-            >
-              <Plus size={19} aria-hidden />
-              <span>{t('profile.createPost')}</span>
-            </Link>
           </div>
         </header>
 

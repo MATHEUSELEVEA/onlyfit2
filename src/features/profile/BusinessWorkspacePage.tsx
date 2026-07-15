@@ -1,7 +1,7 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Building2, ChevronRight, Loader2, ShieldCheck, UserPlus } from 'lucide-react';
+import { ArrowLeft, Building2, CheckCircle2, ChevronRight, Loader2, ShieldCheck, UserPlus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from '@/i18n/I18nProvider';
 import { supabase } from '@/lib/supabase';
@@ -39,7 +39,8 @@ export function BusinessWorkspacePage() {
   const [inviteUsername, setInviteUsername] = useState('');
   const [inviteRole, setInviteRole] = useState<'staff' | 'owner'>('staff');
   const [inviteError, setInviteError] = useState<string | null>(null);
-  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
+  const [inviteFeedback, setInviteFeedback] = useState<{ username: string; role: 'staff' | 'owner' } | null>(null);
+  const inviteFeedbackRef = useRef<HTMLDivElement | null>(null);
 
   const isOwner = Boolean(business && session && business.owner_id === session.user.id);
 
@@ -54,13 +55,15 @@ export function BusinessWorkspacePage() {
       if (error) throw error;
     },
     onSuccess: () => {
+      const normalizedUsername = inviteUsername.trim().replace(/^@/, '');
       setInviteError(null);
-      setInviteSuccess(t('profile.business.invite.success'));
+      setInviteFeedback({ username: normalizedUsername, role: inviteRole });
+      setInviteOpen(false);
       setInviteUsername('');
     },
     onError: (error) => {
       const message = error instanceof Error ? error.message : '';
-      setInviteSuccess(null);
+      setInviteFeedback(null);
       setInviteError(
         message.includes('username_not_found')
           ? t('profile.business.invite.userNotFound')
@@ -73,11 +76,16 @@ export function BusinessWorkspacePage() {
     },
   });
 
+  useEffect(() => {
+    if (!inviteFeedback || inviteOpen) return;
+    inviteFeedbackRef.current?.focus();
+  }, [inviteFeedback, inviteOpen]);
+
   function openInvite() {
     setInviteUsername('');
     setInviteRole('staff');
     setInviteError(null);
-    setInviteSuccess(null);
+    setInviteFeedback(null);
     setInviteOpen(true);
   }
 
@@ -89,7 +97,7 @@ export function BusinessWorkspacePage() {
   function submitInvite(event: FormEvent) {
     event.preventDefault();
     setInviteError(null);
-    setInviteSuccess(null);
+    setInviteFeedback(null);
     if (inviteUsername.trim().replace(/^@/, '').length < 2) {
       setInviteError(t('profile.business.invite.usernameRequired'));
       return;
@@ -151,6 +159,31 @@ export function BusinessWorkspacePage() {
                   </p>
                 </div>
               </div>
+
+              {inviteFeedback && (
+                <div
+                  ref={inviteFeedbackRef}
+                  tabIndex={-1}
+                  role="status"
+                  aria-live="polite"
+                  className="mt-6 flex gap-3 rounded-2xl bg-primary-container px-4 py-3 text-on-primary-container outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+                    <CheckCircle2 size={19} aria-hidden />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-sans text-body font-semibold">
+                      {t('profile.business.invite.successTitle')}
+                    </span>
+                    <span className="mt-0.5 block font-sans text-body-sm">
+                      @{inviteFeedback.username} · {inviteFeedback.role === 'owner' ? t('profile.business.role.owner') : t('profile.business.role.collaborator')}
+                    </span>
+                    <span className="mt-1 block font-sans text-body-sm">
+                      {t('profile.business.invite.success')}
+                    </span>
+                  </span>
+                </div>
+              )}
 
               {isOwner && (
                 <section className="mt-8" aria-labelledby="team-title">
@@ -218,7 +251,6 @@ export function BusinessWorkspacePage() {
             ]}
           />
           <p className="font-sans text-body-sm text-on-surface-variant">{t('profile.business.invite.roleHint')}</p>
-          {inviteSuccess && <p role="status" className="font-sans text-body-sm text-primary">{inviteSuccess}</p>}
           <div className="flex gap-2 pt-2">
             <button
               type="button"
