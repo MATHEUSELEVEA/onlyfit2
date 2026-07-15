@@ -3,9 +3,9 @@
 Fluxo de branches e commits. Simples de propósito: trunk-based com branches curtas.
 
 > ## ⛔ Regra inegociável (vale para pessoas E agentes de IA)
-> **Nunca** commite nem faça push direto na `main`. **Todo** trabalho — inclusive um único arquivo, doc ou ajuste trivial — segue **branch → Pull Request → merge na `main`**, sem exceção.
+> **Nunca** commite nem faça push direto na `main`. Quando o usuário pedir PR, merge ou deploy, **nunca** faça só localmente: o fluxo obrigatório é **branch a partir da `main` → commit → push da branch → Pull Request para `main` → merge do PR**.
 >
-> Agente de IA (Claude Code e afins): antes de qualquer `git commit`, verifique a branch atual; se for `main`, **crie uma branch primeiro** (`git checkout -b feat/<slug>`), commite lá, faça push, abra o PR (`gh pr create`) e só então mergeie (`gh pr merge --squash`). Isto é a regra 8 do `CLAUDE.md`.
+> Agente de IA (Claude Code e afins): commit local sem push/PR/merge não conclui a tarefa. Antes de qualquer `git commit`, verifique a branch atual; se for `main`, **crie uma branch primeiro** (`git checkout -b feat/<slug>`), commite lá, faça push, abra o PR (`gh pr create`) e só então mergeie (`gh pr merge --squash`). Isto é a regra 9 do `CLAUDE.md`.
 
 ## Branches
 
