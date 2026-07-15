@@ -4,11 +4,14 @@
 // pela vitrine do criador, pelo Mercado, por Meus produtos e pelo Explorar —
 // não duplique este mapa em feature nenhuma.
 import {
+  Backpack,
   BookOpen,
   Dumbbell,
   GraduationCap,
   Package,
+  Pill,
   Salad,
+  Shirt,
   ShoppingBag,
   Sparkles,
   type LucideIcon,
@@ -62,6 +65,53 @@ export function productTypeMeta(
   // com mais precisão se o item é ebook, curso etc.
   if (marketKey && marketKey !== 'digital') return TYPE_META[marketKey] ?? TYPE_META[typeKey] ?? DEFAULT_META;
   return TYPE_META[typeKey] ?? TYPE_META[marketKey] ?? DEFAULT_META;
+}
+
+export interface MarketCategory {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+// Corredores do marketplace de saúde: do físico (vestuário, suplemento,
+// acessório) ao digital (conteúdo, treino, dieta). É a espinha do Produtos.
+export const MARKET_CATEGORIES: MarketCategory[] = [
+  { key: 'apparel', label: 'Vestuário', icon: Shirt },
+  { key: 'supplements', label: 'Suplementos', icon: Pill },
+  { key: 'accessories', label: 'Acessórios', icon: Backpack },
+  { key: 'content', label: 'Conteúdos', icon: BookOpen },
+  { key: 'training', label: 'Treinos', icon: Dumbbell },
+  { key: 'diet', label: 'Dietas', icon: Salad },
+];
+
+// Produto físico ainda não tem categoria no schema (entra quando o Produtos for
+// desenvolvido de verdade); até lá vale a mesma aproximação por texto usada em
+// inferProductSports.
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  apparel: ['camiseta', 'regata', 'legging', 'short', 'bermuda', 'top ', 'tênis', 'tenis', 'meia', 'moletom', 'roupa', 'vestuário', 'vestuario', 'uniforme', 'kimono'],
+  supplements: ['whey', 'creatina', 'suplemento', 'proteína', 'proteina', 'bcaa', 'pré-treino', 'pre-treino', 'vitamina', 'colágeno', 'colageno', 'termogênico', 'termogenico', 'ômega', 'omega', 'glutamina'],
+  accessories: ['garrafa', 'coqueteleira', 'luva', 'strap', 'cinto', 'faixa', 'elástico', 'elastico', 'corda', 'halter', 'acessório', 'acessorio', 'mochila', 'bolsa', 'joelheira', 'munhequeira'],
+};
+
+// Categoria do produto no marketplace: o tipo manda quando é digital de treino
+// ou dieta; o resto sai do texto e cai em "Conteúdos" quando nada bate.
+export function productCategory(product: {
+  name: string;
+  description: string | null;
+  type: string;
+  marketItemType: string | null;
+}): string {
+  const typeKey = productTypeMeta(product.type, product.marketItemType).key;
+  if (typeKey === 'training') return 'training';
+  if (typeKey === 'diet') return 'diet';
+
+  const haystack = `${product.name} ${product.description ?? ''}`.toLowerCase();
+  const matched = Object.entries(CATEGORY_KEYWORDS).find(([, words]) =>
+    words.some((word) => haystack.includes(word)),
+  );
+  if (matched) return matched[0];
+
+  return typeKey === 'physical' ? 'accessories' : 'content';
 }
 
 // Palavras-chave por esporte para inferir os grupos de afinidade de um produto

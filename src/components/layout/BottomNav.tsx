@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Compass, Dumbbell, CircleUserRound } from 'lucide-react';
+import { Home, Compass, ShoppingBag, Activity, CircleUserRound } from 'lucide-react';
 import { clsx } from 'clsx';
 
 const items = [
   { to: '/feed', label: 'Início', icon: Home },
   { to: '/explorar', label: 'Explorar', icon: Compass },
-  { to: '/treino', label: 'Treino', icon: Dumbbell },
+  { to: '/meu-fit', label: 'Meu Fit', icon: Activity, featured: true },
+  { to: '/produtos', label: 'Produtos', icon: ShoppingBag },
   { to: '/perfil', label: 'Perfil', icon: CircleUserRound },
 ];
 
@@ -15,21 +16,35 @@ export function BottomNav() {
       className="z-50 flex shrink-0 items-stretch justify-around border-t border-outline-variant/40 bg-surface-container-lowest/95 pb-safe-bottom backdrop-blur-md"
       aria-label="Navegação principal"
     >
-      {items.map(({ to, label, icon: Icon }) => (
+      {items.map(({ to, label, icon: Icon, featured }) => (
         <NavLink
           key={to}
           to={to}
           className={({ isActive }) =>
             clsx(
-              'flex min-h-[52px] flex-1 flex-col items-center justify-center gap-0.5 py-1.5 transition-colors',
+              'flex min-h-[52px] flex-1 flex-col items-center justify-center transition-colors',
+              featured ? 'gap-0.5 py-0.5' : 'gap-0.5 py-1.5',
               isActive ? 'text-on-surface' : 'text-on-surface-variant',
             )
           }
         >
           {({ isActive }) => (
             <>
-              <Icon size={22} strokeWidth={isActive ? 2.25 : 1.75} aria-hidden />
-              <span className="font-sans text-nav">{label}</span>
+              <span
+                className={clsx(
+                  'flex items-center justify-center transition-all',
+                  featured &&
+                    '-translate-y-2 rounded-full border border-primary/40 text-primary ring-4 ring-primary/10',
+                )}
+              >
+                <Icon
+                  size={featured ? 27 : 22}
+                  strokeWidth={featured || isActive ? 2.25 : 1.75}
+                  className={featured ? 'm-2.5' : undefined}
+                  aria-hidden
+                />
+              </span>
+              <span className={clsx('font-sans text-nav', featured && '-mt-2 font-medium text-primary')}>{label}</span>
             </>
           )}
         </NavLink>

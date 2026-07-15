@@ -1,4 +1,11 @@
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useQuery,
+  type InfiniteData,
+  type QueryClient,
+  type QueryKey,
+} from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import type { FeedMedia, FeedPost } from './types';
@@ -119,19 +126,29 @@ async function fetchLikedPostIds(userId: string, postIds: string[]): Promise<Set
   return new Set(((data ?? []) as { post_id: string }[]).map((row) => row.post_id));
 }
 
-async function fetchFeedPosts(userId: string, sports: string[]): Promise<FeedPost[]> {
+interface FeedPage {
+  posts: FeedPost[];
+  /** Ids que a RPC devolveu — pode ser maior que posts.length (ver abaixo). */
+  idCount: number;
+}
+
+async function fetchFeedPage(userId: string, sports: string[], offset: number): Promise<FeedPage> {
   // Mesma RPC do onlyfit v1: retorna os ids na ordem correta do feed "home".
   // p_sports null = sem filtro ("Tudo"); array = filtra por grupo de afinidade.
   const { data: idRows, error: rpcError } = await supabase.rpc('feed_home_posts_page', {
     p_limit: PAGE_SIZE,
-    p_offset: 0,
+    p_offset: offset,
     p_sports: sports.length ? sports : null,
   });
   if (rpcError) throw rpcError;
 
   const ids = ((idRows ?? []) as { post_id: string }[]).map((r) => r.post_id).filter(Boolean);
-  if (ids.length === 0) return [];
+  if (ids.length === 0) return { posts: [], idCount: 0 };
 
+  // A RPC é SECURITY DEFINER e enxerga tudo; este select passa pelo RLS. Post
+  // pago de um creator que o usuário segue vem na lista de ids mas não pode ser
+  // lido, então a página rende menos posts do que os ids pedidos — por isso o
+  // offset da próxima página anda por idCount, e não por posts.length.
   const { data, error } = await supabase.from('posts').select(POST_SELECT).in('id', ids);
   if (error) throw error;
 
@@ -146,7 +163,7 @@ async function fetchFeedPosts(userId: string, sports: string[]): Promise<FeedPos
     fetchPostMedia(rowIds),
   ]);
 
-  return rows.map((row) => toFeedPost(row, likedPostIds, mediaByPost));
+  return { posts: rows.map((row) => toFeedPost(row, likedPostIds, mediaByPost)), idCount: ids.length };
 }
 
 async function fetchFeedPostById(userId: string, postId: string): Promise<FeedPost | null> {
@@ -186,18 +203,68 @@ export function useAvailableFeedSports() {
   });
 }
 
+// Feed paginado: o usuário rola até o fim do que segue, não só a primeira
+// página. Sem isto o feed parava nos 10 primeiros posts e creators com posts
+// mais antigos nunca apareciam.
 export function useFeed(sports: string[]) {
   const { session } = useAuth();
   const userId = session?.user.id;
 
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ['feed', userId, sports],
-    queryFn: () => fetchFeedPosts(userId!, sports),
+    queryFn: ({ pageParam }) => fetchFeedPage(userId!, sports, pageParam),
+    initialPageParam: 0,
+    // Página com menos ids que o pedido = acabou o feed.
+    getNextPageParam: (lastPage, _pages, lastOffset) =>
+      lastPage.idCount < PAGE_SIZE ? undefined : lastOffset + lastPage.idCount,
     enabled: Boolean(userId),
     // Mantém o feed atual na tela enquanto o novo grupo carrega — sem isso o
     // data volta a undefined a cada troca de filtro e o skeleton pisca.
     placeholderData: keepPreviousData,
   });
+}
+
+// Um post aparece em dois caches: as páginas do feed e a tela de vídeo único.
+// Quem mexe num post (curtir, comentar) tem que atualizar os dois.
+const POST_CACHE_KEYS = [['feed'], ['feed-post']];
+
+export type PostCacheSnapshot = [QueryKey, unknown][];
+
+export async function cancelPostCaches(queryClient: QueryClient) {
+  await Promise.all(POST_CACHE_KEYS.map((queryKey) => queryClient.cancelQueries({ queryKey })));
+}
+
+/** Snapshot dos caches de post, para rollback de update otimista. */
+export function snapshotPostCaches(queryClient: QueryClient): PostCacheSnapshot {
+  return POST_CACHE_KEYS.flatMap((queryKey) => queryClient.getQueriesData({ queryKey }));
+}
+
+export function restorePostCaches(queryClient: QueryClient, snapshot: PostCacheSnapshot) {
+  snapshot.forEach(([key, data]) => queryClient.setQueryData(key, data));
+}
+
+// O feed é paginado, então o cache é { pages: [{ posts }] } e não uma lista
+// chapada de posts: quem mexe num post tem que descer até page.posts.
+export function updatePostCaches(
+  queryClient: QueryClient,
+  postId: string,
+  update: (post: FeedPost) => FeedPost,
+) {
+  queryClient.setQueriesData<InfiniteData<FeedPage>>({ queryKey: ['feed'] }, (cache) =>
+    cache
+      ? {
+          ...cache,
+          pages: cache.pages.map((page) => ({
+            ...page,
+            posts: page.posts.map((post) => (post.id === postId ? update(post) : post)),
+          })),
+        }
+      : cache,
+  );
+
+  queryClient.setQueriesData<FeedPost | null>({ queryKey: ['feed-post'] }, (post) =>
+    post && post.id === postId ? update(post) : post,
+  );
 }
 
 // Post específico aberto a partir do Explorar — entra fixado no topo do

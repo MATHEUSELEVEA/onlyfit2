@@ -11,6 +11,8 @@ export interface ExploreCreator {
   sports: string[];
   followerCount: number;
   followedByMe: boolean;
+  /** Identidade no mobile: profissional (casca de profissional ligada) ou membro. */
+  isProfessional: boolean;
 }
 
 interface CreatorRow {
@@ -18,6 +20,7 @@ interface CreatorRow {
   username: string | null;
   full_name: string | null;
   avatar_url: string | null;
+  professional_shell_enabled: boolean | null;
   creator_profiles:
     | { bio: string | null; sports: string[] | null; follower_count: number | null }
     | { bio: string | null; sports: string[] | null; follower_count: number | null }[]
@@ -53,7 +56,7 @@ export function useExploreCreators(searchTerm = '') {
       let query = supabase
         .from('profiles')
         .select(
-          `id, username, full_name, avatar_url,
+          `id, username, full_name, avatar_url, professional_shell_enabled,
            creator_profiles (bio, sports, follower_count)`,
         )
         .neq('id', userId!);
@@ -91,6 +94,7 @@ export function useExploreCreators(searchTerm = '') {
           sports: cp?.sports ?? [],
           followerCount: cp?.follower_count ?? 0,
           followedByMe: followedIds.has(row.id),
+          isProfessional: Boolean(row.professional_shell_enabled),
         };
       });
     },
@@ -127,6 +131,8 @@ interface ContentRow {
 // Conteúdo público recente de qualquer autor (profissional ou usuário comum),
 // sem personalização — o objetivo é descoberta. Sem filtro de is_creator:
 // posts públicos de todos entram. RLS/visibility já restringem ao público.
+// Só conteúdo gratuito: o Explorar existe para descobrir sem pagar (o que é
+// pago vive no Produtos), então post premium fica de fora.
 export function useExploreContent() {
   return useQuery({
     queryKey: ['explore-content'],
@@ -139,6 +145,9 @@ export function useExploreContent() {
            profiles:creator_id!inner (full_name, username)`,
         )
         .eq('visibility', 'public')
+        // `not is true` (e não `eq false`) porque is_premium é nullable no
+        // schema do v1: nulo é conteúdo gratuito antigo e precisa entrar.
+        .not('is_premium', 'is', true)
         .order('published_at', { ascending: false })
         .limit(24);
       if (error) throw error;

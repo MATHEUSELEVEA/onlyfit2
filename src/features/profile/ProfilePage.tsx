@@ -5,18 +5,21 @@ import {
   Building2,
   Camera,
   CalendarCheck,
+  Dumbbell,
   Gavel,
   Inbox,
   Loader2,
   LogOut,
+  MessageCircle,
   Palette,
   Plus,
   PencilLine,
   ReceiptText,
+  Salad,
   Share2,
-  ShoppingBag,
   ShieldCheck,
   Stethoscope,
+  UsersRound,
   WalletCards,
   type LucideIcon,
 } from 'lucide-react';
@@ -118,15 +121,28 @@ export function ProfilePage() {
   return (
     <div className="h-full overflow-y-auto bg-background pb-10">
       <div className="mx-auto min-h-full w-full max-w-[720px] bg-background md:my-6 md:overflow-hidden md:rounded-3xl md:border md:border-outline-variant/30 md:shadow-xl">
-        {/* ---------- Herói: foto preenchendo o topo ---------- */}
+        {/* ---------- Herói: foto em moldura padronizada ---------- */}
         <header>
-          <div className="relative h-[46vh] max-h-[430px] min-h-[300px] w-full overflow-hidden">
+          <div className="relative h-[clamp(360px,96vw,500px)] w-full overflow-hidden bg-surface-container-lowest">
             {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt={`Foto de ${displayName}`}
-                className="h-full w-full object-cover object-top"
-              />
+              <>
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  aria-hidden
+                  className="absolute inset-0 h-full w-full scale-110 object-cover object-center opacity-55 blur-2xl"
+                />
+                <div aria-hidden className="absolute inset-0 bg-surface-container-lowest/45" />
+                <div className="absolute inset-x-4 bottom-0 top-[72px] flex items-end justify-center sm:inset-x-8">
+                  <div className="h-full max-h-full aspect-square max-w-full overflow-hidden rounded-3xl bg-surface-container-low">
+                    <img
+                      src={avatarUrl}
+                      alt={`Foto de ${displayName}`}
+                      className="h-full w-full object-contain object-bottom"
+                    />
+                  </div>
+                </div>
+              </>
             ) : (
               <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary to-surface-tint">
                 <span className="font-sans text-display text-on-primary">{initial}</span>
@@ -145,16 +161,30 @@ export function ProfilePage() {
             />
 
             {/* Logo + ações flutuando sobre a imagem */}
-            <div className="absolute inset-x-0 top-0 flex items-center justify-between px-4 pt-[max(1rem,env(safe-area-inset-top))]">
+            <div className="absolute inset-x-0 top-0 flex items-start justify-between px-4 pt-[max(1rem,env(safe-area-inset-top))]">
               <span className="font-sans text-title-lg text-white drop-shadow">OnlyFit</span>
-              <button
-                type="button"
-                aria-label={t('profile.shareProfile')}
-                onClick={() => setShareOpen(true)}
-                className="flex h-11 w-11 items-center justify-center text-white drop-shadow-[0_1px_5px_rgba(0,0,0,0.85)] transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
-              >
-                <Share2 size={20} aria-hidden />
-              </button>
+              <div className="flex flex-col items-center gap-2">
+                <Link
+                  to="/mensagens"
+                  aria-label={t('profile.messages.title')}
+                  className="relative flex h-11 w-11 items-center justify-center text-white drop-shadow-[0_1px_5px_rgba(0,0,0,0.85)] transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                >
+                  <MessageCircle size={21} aria-hidden />
+                  {unreadCount > 0 && (
+                    <span className="absolute right-0.5 top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#ff1744] px-1 font-sans text-[10px] font-bold leading-none text-white ring-2 ring-black/70">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </Link>
+                <button
+                  type="button"
+                  aria-label={t('profile.shareProfile')}
+                  onClick={() => setShareOpen(true)}
+                  className="flex h-11 w-11 items-center justify-center text-white drop-shadow-[0_1px_5px_rgba(0,0,0,0.85)] transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                >
+                  <Share2 size={20} aria-hidden />
+                </button>
+              </div>
             </div>
 
             {/* Trocar foto de perfil */}
@@ -209,6 +239,24 @@ export function ProfilePage() {
 
             <div className="overflow-hidden rounded-2xl border border-outline-variant/40 bg-surface shadow-sm">
               <ProfileLink
+                icon={Stethoscope}
+                title={t('profile.health.title')}
+                description={t('profile.health.description')}
+                to="/perfil/saude"
+              />
+              <ProfileLink
+                icon={Dumbbell}
+                title={t('profile.training.title')}
+                description={t('profile.training.description')}
+                to="/meu-fit/treino"
+              />
+              <ProfileLink
+                icon={Salad}
+                title={t('profile.diet.title')}
+                description={t('profile.diet.description')}
+                to="/meu-fit/dieta"
+              />
+              <ProfileLink
                 icon={Inbox}
                 title={t('profile.messages.title')}
                 description={t('profile.messages.description')}
@@ -216,16 +264,10 @@ export function ProfilePage() {
                 badge={unreadCount}
               />
               <ProfileLink
-                icon={ShoppingBag}
-                title={t('profile.market.title')}
-                description={t('profile.market.description')}
-                to="/mercado"
-              />
-              <ProfileLink
                 icon={CalendarCheck}
                 title={t('profile.enrollments.title')}
                 description={t('profile.enrollments.description')}
-                to="/produtos"
+                to="/meus-produtos"
               />
             </div>
           </div>
@@ -242,21 +284,15 @@ export function ProfilePage() {
                 to="/perfil/editar"
               />
               <ProfileLink
-                icon={Palette}
-                title={t('profile.visual.title')}
-                description={t('profile.visual.description')}
-                to="/perfil/visual"
-              />
-              <ProfileLink
                 icon={WalletCards}
                 title={t('profile.payment.title')}
                 description={t('profile.payment.description')}
               />
               <ProfileLink
-                icon={Stethoscope}
-                title={t('profile.health.title')}
-                description={t('profile.health.description')}
-                to="/perfil/saude"
+                icon={Palette}
+                title={t('profile.visual.title')}
+                description={t('profile.visual.description')}
+                to="/perfil/visual"
               />
               <ProfileLink
                 icon={Gavel}
@@ -288,6 +324,11 @@ export function ProfilePage() {
                     title={t('profile.business.title')}
                     description={t('profile.business.description')}
                     to="/negocios"
+                  />
+                  <ProfileLink
+                    icon={UsersRound}
+                    title={t('profile.customerManagement.title')}
+                    description={t('profile.customerManagement.description')}
                   />
                   <ProfileLink
                     icon={ReceiptText}

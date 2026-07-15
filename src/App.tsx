@@ -9,9 +9,11 @@ import { FeedPage } from './features/feed/FeedPage';
 import { VideoViewPage } from './features/feed/VideoViewPage';
 import { ExplorePage } from './features/explore/ExplorePage';
 import { TrainingPage } from './pages/TrainingPage';
+import { DietPage } from './pages/DietPage';
+import { MeuFitPage } from './features/meufit/MeuFitPage';
 import { CommunitiesPage } from './pages/CommunitiesPage';
 import { ChallengesPage } from './pages/ChallengesPage';
-import { MarketPage } from './features/market/MarketPage';
+import { ProductsPage } from './features/market/ProductsPage';
 import { MyProductsPage } from './features/market/MyProductsPage';
 import { StudioPage } from './features/studio/StudioPage';
 import { ProfilePage } from './features/profile/ProfilePage';
@@ -63,10 +65,15 @@ function AuthenticatedApp() {
           <Route path="/video/:postId" element={<VideoViewPage />} />
           <Route path="/explorar" element={<ExplorePage />} />
           <Route path="/studio" element={<StudioPage />} />
-          <Route path="/treino" element={<TrainingPage />} />
-          <Route path="/produtos" element={<MyProductsPage />} />
-          <Route path="/mercado" element={<MarketPage />} />
-          <Route path="/market" element={<Navigate to="/mercado" replace />} />
+          <Route path="/meu-fit" element={<MeuFitPage />} />
+          <Route path="/meu-fit/treino" element={<TrainingPage />} />
+          <Route path="/meu-fit/dieta" element={<DietPage />} />
+          <Route path="/treino" element={<Navigate to="/meu-fit" replace />} />
+          <Route path="/produtos" element={<ProductsPage />} />
+          <Route path="/meus-produtos" element={<MyProductsPage />} />
+          {/* /mercado era o nome antigo da vitrine, virou /produtos (bottom nav) */}
+          <Route path="/mercado" element={<Navigate to="/produtos" replace />} />
+          <Route path="/market" element={<Navigate to="/produtos" replace />} />
           <Route path="/comunidades" element={<CommunitiesPage />} />
           <Route path="/desafios" element={<ChallengesPage />} />
           <Route path="/perfil" element={<ProfilePage />} />

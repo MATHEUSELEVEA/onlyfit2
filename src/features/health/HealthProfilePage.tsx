@@ -28,7 +28,7 @@ import { healthCategoryLabels, type HealthCategory, type HealthEvent } from './t
 import { useHealthConsents, useHealthEvents, useRecordHealthConsent } from './useHealthProfile';
 
 const PROFILE_CONSENT =
-  'Autorizo o tratamento das informações que eu registrar para criar e manter meu Perfil de Saúde no OnlyFit.';
+  'Autorizo o tratamento das informações que eu registrar para criar e manter minha Ficha de saúde no OnlyFit.';
 const AI_CONSENT =
   'Autorizo o uso de inteligência artificial quando eu escolher conversa assistida, transcrição de áudio ou análise de PDF.';
 
@@ -58,7 +58,7 @@ export function HealthProfilePage() {
   if (consentsLoading) {
     return (
       <HealthPageShell>
-        <HealthPageHeader title="Perfil de Saúde" description="Carregando suas informações" backTo="/perfil" />
+        <HealthPageHeader title="Ficha de saúde" description="Carregando suas informações" backTo="/perfil" />
         <main className="px-4 py-6"><LoadingRows /></main>
       </HealthPageShell>
     );
@@ -67,7 +67,7 @@ export function HealthProfilePage() {
   if (consentsError) {
     return (
       <HealthPageShell>
-        <HealthPageHeader title="Perfil de Saúde" backTo="/perfil" />
+        <HealthPageHeader title="Ficha de saúde" backTo="/perfil" />
         <main className="px-4 py-6">
           <FeedbackMessage type="error">Não foi possível verificar suas permissões de saúde.</FeedbackMessage>
           <button
@@ -95,7 +95,7 @@ function HealthConsentIntro() {
 
   async function continueToProfile() {
     if (!profileChecked) {
-      setError('Confirme o uso dos dados para criar seu Perfil de Saúde.');
+      setError('Confirme o uso dos dados para criar sua Ficha de saúde.');
       return;
     }
     setError('');
@@ -113,7 +113,7 @@ function HealthConsentIntro() {
 
   return (
     <HealthPageShell width="form">
-      <HealthPageHeader title="Perfil de Saúde" description="Seus dados, sob seu controle" backTo="/perfil" />
+      <HealthPageHeader title="Ficha de saúde" description="Seus dados, sob seu controle" backTo="/perfil" />
       <main className="space-y-6 px-4 py-6">
         <section className="space-y-3">
           <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -181,7 +181,7 @@ function HealthConsentIntro() {
           className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 font-sans text-label text-on-primary transition-transform active:scale-[0.98] disabled:opacity-60"
         >
           {recordConsent.isPending ? <Loader2 size={17} className="animate-spin" aria-hidden /> : <ShieldCheck size={17} aria-hidden />}
-          {recordConsent.isPending ? 'Registrando escolhas...' : 'Criar meu Perfil de Saúde'}
+          {recordConsent.isPending ? 'Registrando escolhas...' : 'Criar minha Ficha de saúde'}
         </button>
       </main>
     </HealthPageShell>
@@ -208,7 +208,7 @@ function HealthProfileContent({
   return (
     <HealthPageShell width="form">
       <HealthPageHeader
-        title="Perfil de Saúde"
+        title="Ficha de saúde"
         description="Declarações, registros clínicos e exames"
         backTo="/perfil"
         actions={

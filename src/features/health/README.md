@@ -1,6 +1,6 @@
-# Perfil de Saúde
+# Ficha de saúde
 
-Implementação autodeclarada acessada por `Perfil > Perfil de Saúde`.
+Implementação autodeclarada acessada por `Perfil > Ficha de saúde`.
 
 ## Limites do módulo
 

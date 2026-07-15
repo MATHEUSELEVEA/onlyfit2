@@ -2,32 +2,27 @@ import { useMemo, useState } from 'react';
 import { Loader2, Search, SlidersHorizontal } from 'lucide-react';
 import { clsx } from 'clsx';
 import { FEED_SPORTS } from '@/lib/sports';
-import { productTypeMeta } from '@/lib/products';
+import { MARKET_CATEGORIES, productCategory } from '@/lib/products';
 import { FilterChip } from '@/components/ui/FilterChip';
 import { ProductCard } from './ProductCard';
 import { useMarketProducts, type MarketProduct } from './useMarket';
 
+// Marketplace de saúde: vestuário, suplementos, acessórios e o digital pago
+// (conteúdos, treinos, dietas). Esta é a casca — o catálogo de verdade, com
+// carrinho, entrega e vitrine por vendedor, vem depois.
+
 // Um a cada seis produtos vira card em destaque (2 colunas), criando o ritmo
-// de caixas maiores e menores pedido para o Mercado.
+// de caixas maiores e menores pedido para o marketplace.
 function isFeatured(index: number): boolean {
   return index % 6 === 0;
 }
 
-// Opções fixas de tipo de produto pedidas para o Mercado (mesmo padrão de
-// lista fixa usado nas abas do Explorar), em vez de derivar dinamicamente do
-// catálogo.
-const TYPE_FILTERS: { key: string; label: string }[] = [
-  { key: 'ebook', label: 'Ebook' },
-  { key: 'training', label: 'Treino' },
-  { key: 'diet', label: 'Dieta' },
-];
-
 function filterProducts(
   products: MarketProduct[],
-  { term, type, sport, freeOnly }: { term: string; type: string | null; sport: string | null; freeOnly: boolean },
+  { term, category, sport, freeOnly }: { term: string; category: string | null; sport: string | null; freeOnly: boolean },
 ): MarketProduct[] {
   return products.filter((product) => {
-    if (type && productTypeMeta(product.type, product.marketItemType).key !== type) return false;
+    if (category && productCategory(product) !== category) return false;
     if (sport && !product.sports.includes(sport)) return false;
     if (freeOnly && product.price > 0) return false;
     if (term) {
@@ -38,9 +33,9 @@ function filterProducts(
   });
 }
 
-export function MarketPage() {
+export function ProductsPage() {
   const [search, setSearch] = useState('');
-  const [type, setType] = useState<string | null>(null);
+  const [category, setCategory] = useState<string | null>(null);
   const [sport, setSport] = useState<string | null>(null);
   const [freeOnly, setFreeOnly] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -49,28 +44,25 @@ export function MarketPage() {
 
   const isLoading = productsQuery.isLoading;
   const isError = productsQuery.isError;
-  const refetch = () => {
-    productsQuery.refetch();
-  };
 
   // Comunidades e desafios são ferramentas de engajamento (não vendáveis) e
-  // vivem no Explorar — o Mercado lista apenas produtos de verdade (tabela
+  // vivem no Explorar — o Produtos lista apenas produtos de verdade (tabela
   // products).
   const products = useMemo((): MarketProduct[] => productsQuery.data ?? [], [productsQuery.data]);
 
   const term = search.trim().toLowerCase();
   const visible = useMemo(
-    () => filterProducts(products, { term, type, sport, freeOnly }),
-    [products, term, type, sport, freeOnly],
+    () => filterProducts(products, { term, category, sport, freeOnly }),
+    [products, term, category, sport, freeOnly],
   );
-  const hasActiveFilters = type !== null || sport !== null || freeOnly;
+  const hasActiveFilters = sport !== null || freeOnly;
 
   return (
     <div className="h-full overflow-y-auto bg-background pb-8">
       <div className="mx-auto w-full max-w-[720px]">
         {/* Cabeçalho: título + busca global + atalho para os filtros */}
         <header className="sticky top-0 z-10 bg-background/95 px-4 pb-3 pt-safe-top backdrop-blur-md">
-          <h1 className="mt-3 font-sans text-title-lg text-on-surface">Mercado</h1>
+          <h1 className="mt-3 font-sans text-title-lg text-on-surface">Produtos</h1>
           <div className="relative mt-3 flex items-center gap-2">
             <div className="relative min-w-0 flex-1">
               <Search
@@ -82,8 +74,8 @@ export function MarketPage() {
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Buscar treinos, ebooks, dietas, creators..."
-                aria-label="Buscar produtos no mercado"
+                placeholder="Buscar suplementos, treinos, roupas..."
+                aria-label="Buscar produtos"
                 className="min-h-[44px] w-full rounded-xl border border-outline-variant/40 bg-surface py-2 pl-11 pr-4 font-sans text-body text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
             </div>
@@ -104,26 +96,45 @@ export function MarketPage() {
           </div>
         </header>
 
+        {/* Corredores do marketplace: entrada rápida por categoria */}
+        <div className="no-scrollbar flex gap-3 overflow-x-auto px-4 py-3" aria-label="Categorias">
+          {MARKET_CATEGORIES.map(({ key, label, icon: Icon }) => {
+            const active = category === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setCategory(active ? null : key)}
+                className="flex w-16 shrink-0 flex-col items-center gap-1.5"
+              >
+                <span
+                  className={clsx(
+                    'flex h-14 w-14 items-center justify-center rounded-2xl border transition-colors',
+                    active
+                      ? 'border-primary bg-primary text-on-primary'
+                      : 'border-outline-variant/30 bg-surface-container text-on-surface-variant',
+                  )}
+                >
+                  <Icon size={22} aria-hidden />
+                </span>
+                <span
+                  className={clsx(
+                    'text-center font-sans text-counter font-normal leading-tight',
+                    active ? 'text-primary' : 'text-on-surface-variant',
+                  )}
+                >
+                  {label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
         {filtersOpen && (
           <>
-            {/* Filtro por tipo de produto */}
-            <div
-              className="no-scrollbar mt-1 flex gap-2 overflow-x-auto px-4"
-              role="tablist"
-              aria-label="Tipo de produto"
-            >
-              <FilterChip active={type === null} onClick={() => setType(null)}>
-                Todos
-              </FilterChip>
-              {TYPE_FILTERS.map(({ key, label }) => (
-                <FilterChip key={key} active={type === key} onClick={() => setType(key)}>
-                  {label}
-                </FilterChip>
-              ))}
-            </div>
-
             {/* Filtro de preço */}
-            <div className="mt-4 px-4">
+            <div className="mt-1 px-4">
               <h2 className="font-sans text-eyebrow uppercase text-on-surface-variant">Preço</h2>
             </div>
             <div className="no-scrollbar mt-2 flex gap-2 overflow-x-auto px-4" role="tablist" aria-label="Preço">
@@ -171,11 +182,11 @@ export function MarketPage() {
         {isError && !isLoading && (
           <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
             <p className="font-sans text-body text-on-surface-variant">
-              Não foi possível carregar o Mercado.
+              Não foi possível carregar os produtos.
             </p>
             <button
               type="button"
-              onClick={() => refetch()}
+              onClick={() => productsQuery.refetch()}
               className="min-h-[44px] rounded-full bg-primary px-6 font-sans text-label text-on-primary"
             >
               Tentar novamente
@@ -193,7 +204,7 @@ export function MarketPage() {
         )}
 
         {!isLoading && !isError && visible.length > 0 && (
-          <div className="mt-5 grid grid-cols-2 gap-3 px-4">
+          <div className="mt-2 grid grid-cols-2 gap-3 px-4">
             {visible.map((product, index) => (
               <ProductCard key={product.id} product={product} featured={isFeatured(index)} />
             ))}

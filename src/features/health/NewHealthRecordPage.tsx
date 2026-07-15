@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Camera, Check, FileCheck2, FileText, Loader2, Mic, Paperclip, Square, Trash2, Upload } from 'lucide-react';
+import { Camera, Check, ChevronDown, FileCheck2, FileText, Loader2, Mic, Paperclip, Square, Trash2, Upload } from 'lucide-react';
 import { clsx } from 'clsx';
-import { SelectField, TextAreaField, TextField } from '@/components/ui/TextField';
+import { BottomSheet } from '@/components/ui/BottomSheet';
+import { TextAreaField, TextField } from '@/components/ui/TextField';
 import { FeedbackMessage, HealthPageHeader, HealthPageShell, LoadingRows } from './components/HealthPrimitives';
 import { extractHealthPhoto, transcribeHealthAudio, uploadAndProcessHealthPdf } from './healthCaptureApi';
 import { recordCategoryOptions, type HealthCaptureMethod, type HealthCategory, type HealthEvent, type HealthFactInput } from './types';
@@ -25,6 +26,7 @@ export function NewHealthRecordPage() {
 
 function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string; correctedEvent?: HealthEvent }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const appendEvent = useAppendHealthEvent();
   const recorder = useHealthAudioRecorder();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -43,6 +45,8 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
   const [photoPreview, setPhotoPreview] = useState('');
   const [photoReviewed, setPhotoReviewed] = useState(false);
   const [usedAi, setUsedAi] = useState(false);
+  const [showMyFitSuccess, setShowMyFitSuccess] = useState(false);
+  const openedFromMyFit = searchParams.get('origem') === 'meu-fit' && !correctsId;
 
   // A foto nunca sai do dispositivo depois da leitura: a prévia é um object URL
   // local e precisa ser revogada para não vazar memória entre trocas de modo.
@@ -182,7 +186,11 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
         provenance: { submitted_via: 'onlyfit-mobile', input_mode: mode, ai_used: mode === 'audio' || usedAi, user_reviewed: true },
         facts: usesExtractedFacts ? extractedFacts : [],
       });
-      navigate('/perfil/saude', { replace: true, state: { success: correctsId ? 'Correção adicionada ao histórico.' : 'Registro adicionado ao histórico.' } });
+      if (openedFromMyFit) {
+        setShowMyFitSuccess(true);
+      } else {
+        navigate('/perfil/saude', { replace: true, state: { success: correctsId ? 'Correção adicionada ao histórico.' : 'Registro adicionado ao histórico.' } });
+      }
     } catch {
       setError('Não foi possível salvar o registro. Tente novamente sem sair desta tela.');
     }
@@ -191,7 +199,7 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
   const canShowForm = mode === 'text' || mode === 'audio' || (mode === 'pdf' && Boolean(documentId)) || (mode === 'photo' && photoReviewed);
   return (
     <HealthPageShell width="form">
-      <HealthPageHeader title={correctsId ? 'Corrigir informação' : 'Adicionar registro'} description={correctsId ? 'A informação anterior continuará no histórico' : 'Você revisa tudo antes de salvar'} backTo={correctsId ? `/perfil/saude/eventos/${correctsId}` : '/perfil/saude'} />
+      <HealthPageHeader title={correctsId ? 'Corrigir informação' : 'Adicionar registro'} description={correctsId ? 'A informação anterior continuará no histórico' : 'Você revisa tudo antes de salvar'} backTo={correctsId ? `/perfil/saude/eventos/${correctsId}` : openedFromMyFit ? '/meu-fit' : '/perfil/saude'} />
       <main className="space-y-6 px-4 py-6">
         {!correctsId ? (
           <div className="grid grid-cols-4 gap-2" role="tablist" aria-label="Forma de entrada">
@@ -252,10 +260,10 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
         ) : null}
         {canShowForm ? (
           <section className="space-y-4">
-            <SelectField label="Categoria" value={category} onChange={(value) => setCategory(value as HealthCategory)} options={recordCategoryOptions} />
-            <TextField label="Título" hint="Exemplo: Dor no joelho direito" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} />
+            <CategoryPicker value={category} onChange={setCategory} />
+            <TextField label="Título" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} autoComplete="off" autoCapitalize="sentences" enterKeyHint="next" />
             <TextField label="Data da informação" type="date" max={todayInputValue()} value={effectiveDate} onChange={(event) => setEffectiveDate(event.target.value)} />
-            <TextAreaField label={correctsId ? 'Informação correta' : mode === 'audio' ? 'Transcrição revisada' : mode === 'pdf' ? 'Resumo revisado' : mode === 'photo' ? 'Leitura revisada' : 'Descrição'} hint={mode === 'text' ? 'Este texto será salvo diretamente, sem análise por IA.' : 'Edite qualquer informação antes de confirmar.'} value={narrative} onChange={(event) => setNarrative(event.target.value)} maxLength={5000} className="min-h-[160px]" />
+            <TextAreaField label={correctsId ? 'Informação correta' : mode === 'audio' ? 'Transcrição revisada' : mode === 'pdf' ? 'Resumo revisado' : mode === 'photo' ? 'Leitura revisada' : 'Descrição'} hint={mode === 'text' ? undefined : 'Edite qualquer informação antes de confirmar.'} value={narrative} onChange={(event) => setNarrative(event.target.value)} maxLength={5000} autoCapitalize="sentences" className="min-h-[180px]" />
             {usesExtractedFacts && extractedFacts.length ? <ExtractedFacts facts={extractedFacts} onChange={setExtractedFacts} /> : null}
           </section>
         ) : null}
@@ -268,7 +276,79 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
           </button>
         ) : null}
       </main>
+      <BottomSheet
+        open={showMyFitSuccess}
+        onClose={() => navigate('/meu-fit', { replace: true })}
+        title="Registro realizado com sucesso"
+        description="O registro foi salvo na sua ficha de saúde."
+      >
+        <div className="px-5 pb-5 pt-4">
+          <button
+            type="button"
+            onClick={() => navigate('/meu-fit', { replace: true })}
+            className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-primary px-5 font-sans text-label text-on-primary transition-transform active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            OK
+          </button>
+        </div>
+      </BottomSheet>
     </HealthPageShell>
+  );
+}
+
+function CategoryPicker({ value, onChange }: { value: HealthCategory; onChange: (category: HealthCategory) => void }) {
+  const [open, setOpen] = useState(false);
+  const selectedLabel = recordCategoryOptions.find((option) => option.value === value)?.label ?? 'Selecionar categoria';
+
+  return (
+    <>
+      <div className="space-y-1.5">
+        <span id="health-category-label" className="block font-sans text-body-sm font-medium text-on-surface-variant">
+          Categoria
+        </span>
+        <button
+          type="button"
+          aria-labelledby="health-category-label health-category-value"
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          onClick={() => setOpen(true)}
+          className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-outline-variant/50 bg-surface-container-low px-3.5 text-left font-sans text-body text-on-surface focus-visible:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
+        >
+          <span id="health-category-value">{selectedLabel}</span>
+          <ChevronDown size={19} className="shrink-0 text-on-surface-variant" aria-hidden />
+        </button>
+      </div>
+      <BottomSheet
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Escolha uma categoria"
+        description="Selecione a opção que melhor descreve este registro."
+      >
+        <div className="px-3 pb-4 pt-2">
+          {recordCategoryOptions.map((option) => {
+            const selected = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={selected}
+                onClick={() => {
+                  onChange(option.value);
+                  setOpen(false);
+                }}
+                className={clsx(
+                  'flex min-h-14 w-full items-center justify-between gap-3 rounded-xl px-3 text-left font-sans text-body transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                  selected ? 'bg-primary-container font-medium text-on-primary-container' : 'text-on-surface active:bg-surface-container',
+                )}
+              >
+                {option.label}
+                {selected ? <Check size={19} className="shrink-0" aria-hidden /> : null}
+              </button>
+            );
+          })}
+        </div>
+      </BottomSheet>
+    </>
   );
 }
 

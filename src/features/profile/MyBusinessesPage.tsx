@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -6,6 +6,7 @@ import {
   BriefcaseBusiness,
   Building2,
   Check,
+  ChevronDown,
   Loader2,
   Plus,
   ShieldCheck,
@@ -111,13 +112,13 @@ export function MyBusinessesPage() {
 
   return (
     <div className="h-full overflow-y-auto bg-background pb-10">
-      <div className="mx-auto min-h-full w-full max-w-[720px] bg-background md:my-6 md:overflow-hidden md:rounded-3xl md:border md:border-outline-variant/30 md:shadow-xl">
-        <header className="sticky top-0 z-10 border-b border-outline-variant/30 bg-surface-container-lowest/95 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-md">
+      <div className="mx-auto min-h-full w-full max-w-[640px] bg-background">
+        <header className="sticky top-0 z-10 bg-background/95 px-4 pb-3 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-md">
           <div className="flex items-center gap-3">
             <Link
               to="/perfil"
               aria-label={t('profile.business.back')}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-on-surface transition-colors active:bg-surface-container-high"
+              className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-on-surface transition-colors hover:bg-surface-container-low active:bg-surface-container-high"
             >
               <ArrowLeft size={21} aria-hidden />
             </Link>
@@ -130,56 +131,37 @@ export function MyBusinessesPage() {
               </p>
             </div>
           </div>
-
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <SummaryTile
-              label={t('profile.business.ownedShort')}
-              value={String(ownedBusinesses.length)}
-              icon={BriefcaseBusiness}
-            />
-            <SummaryTile
-              label={t('profile.business.invitedShort')}
-              value={String(invitedBusinesses.length)}
-              icon={UsersRound}
-            />
-          </div>
         </header>
 
-        <main className="space-y-5 px-4 py-5">
-          <BusinessSection
-            icon={BriefcaseBusiness}
-            title={t('profile.business.ownedTitle')}
-            count={ownedBusinesses.length}
-            description={t('profile.business.ownedDescription')}
-          >
-            {isProfessional && (
-              <div className="border-t border-outline-variant/25 px-4 py-4">
-                <AffinitySelector
-                  selected={selectedGroups}
-                  disabled={isSaving}
-                  onToggle={toggleProfessionalGroup}
-                  title={t('profile.affinity.title')}
-                  description={t('profile.business.affinityDescription')}
-                  pending={setAffinityGroupsMutation.isPending}
-                />
+        <main className="px-4 pb-8 pt-4">
+          <section aria-labelledby="owned-businesses-title">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h2 id="owned-businesses-title" className="font-sans text-title text-on-surface">
+                    {t('profile.business.ownedTitle')}
+                  </h2>
+                  {ownedBusinesses.length > 0 && (
+                    <span className="font-sans text-counter text-on-surface-variant">
+                      {ownedBusinesses.length}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 font-sans text-body-sm text-on-surface-variant">
+                  {t('profile.business.ownedDescription')}
+                </p>
               </div>
-            )}
-
-            {feedback && (
-              <p role="alert" className="border-t border-outline-variant/25 px-4 py-3 font-sans text-body-sm text-error">
-                {feedback}
-              </p>
-            )}
+            </div>
 
             {isProfessional && (
-              <div className="border-t border-outline-variant/25 px-4 py-4">
+              <div className="mt-4">
                 <button
                   type="button"
                   onClick={() => {
                     setCreateNotice(true);
                     setFeedback(null);
                   }}
-                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 font-sans text-label text-on-primary shadow-sm transition-transform active:scale-[0.98]"
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 font-sans text-label text-on-primary transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background active:bg-primary/80"
                 >
                   <Plus size={18} aria-hidden />
                   {t('profile.business.createBusiness')}
@@ -192,11 +174,11 @@ export function MyBusinessesPage() {
               </div>
             )}
 
-            <div className="border-t border-outline-variant/25">
+            <div className="mt-5">
               {isLoadingOwned ? (
                 <LoadingBlock />
               ) : ownedBusinesses.length > 0 ? (
-                <div className="divide-y divide-outline-variant/25">
+                <div className="divide-y divide-outline-variant/25 rounded-2xl bg-surface">
                   {ownedBusinesses.map((business) => (
                     <BusinessListItem
                       key={business.id}
@@ -217,17 +199,26 @@ export function MyBusinessesPage() {
                 />
               )}
             </div>
-          </BusinessSection>
+          </section>
 
-          <BusinessSection
-            icon={UsersRound}
-            title={t('profile.business.invitedTitle')}
-            count={invitedBusinesses.length}
-            description={t('profile.business.invitedDescription')}
-          >
-            <div className="border-t border-outline-variant/25">
+          <section aria-labelledby="invited-businesses-title" className="mt-8 border-t border-outline-variant/25 pt-6">
+            <div className="flex items-center gap-2">
+              <h2 id="invited-businesses-title" className="font-sans text-title text-on-surface">
+                {t('profile.business.invitedTitle')}
+              </h2>
+              {invitedBusinesses.length > 0 && (
+                <span className="font-sans text-counter text-on-surface-variant">
+                  {invitedBusinesses.length}
+                </span>
+              )}
+            </div>
+            <p className="mt-1 font-sans text-body-sm text-on-surface-variant">
+              {t('profile.business.invitedDescription')}
+            </p>
+
+            <div className="mt-4">
               {invitedBusinesses.length > 0 ? (
-                <div className="divide-y divide-outline-variant/25">
+                <div className="divide-y divide-outline-variant/25 rounded-2xl bg-surface">
                   {invitedBusinesses.map((business) => (
                     <InvitedBusinessListItem key={business.id} business={business} />
                   ))}
@@ -240,7 +231,40 @@ export function MyBusinessesPage() {
                 />
               )}
             </div>
-          </BusinessSection>
+          </section>
+
+          {isProfessional && (
+            <details className="group mt-8 border-t border-outline-variant/25 pt-2">
+              <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 rounded-xl px-2 text-on-surface transition-colors hover:bg-surface-container-low focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 [&::-webkit-details-marker]:hidden">
+                <BriefcaseBusiness size={19} className="shrink-0 text-on-surface-variant" aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-sans text-body font-medium">{t('profile.affinity.title')}</span>
+                  <span className="block font-sans text-body-sm text-on-surface-variant">
+                    {selectedGroups.length}/{MAX_GROUPS}
+                  </span>
+                </span>
+                <ChevronDown
+                  size={18}
+                  className="shrink-0 text-on-surface-variant transition-transform duration-200 group-open:rotate-180"
+                  aria-hidden
+                />
+              </summary>
+              <div className="px-2 pb-2 pt-3">
+                <AffinitySelector
+                  selected={selectedGroups}
+                  disabled={isSaving}
+                  onToggle={toggleProfessionalGroup}
+                  description={t('profile.business.affinityDescription')}
+                  pending={setAffinityGroupsMutation.isPending}
+                />
+                {feedback && (
+                  <p role="alert" className="mt-3 font-sans text-body-sm text-error">
+                    {feedback}
+                  </p>
+                )}
+              </div>
+            </details>
+          )}
         </main>
       </div>
     </div>
@@ -265,69 +289,28 @@ function useOwnedBusinesses(userId: string | undefined) {
   });
 }
 
-function BusinessSection({
-  icon: Icon,
-  title,
-  count,
-  description,
-  children,
-}: {
-  icon: LucideIcon;
-  title: string;
-  count: number;
-  description: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="overflow-hidden rounded-2xl border border-outline-variant/40 bg-surface shadow-sm">
-      <div className="flex items-start gap-3 px-4 py-4">
-        <IconChip icon={Icon} />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h2 className="font-sans text-body font-semibold text-on-surface">{title}</h2>
-            <span className="rounded-full bg-surface-container-low px-2 py-0.5 font-sans text-counter text-on-surface-variant">
-              {count}
-            </span>
-          </div>
-          <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{description}</p>
-        </div>
-      </div>
-      {children}
-    </section>
-  );
-}
-
 function AffinitySelector({
   selected,
   disabled,
   pending,
-  title,
   description,
   onToggle,
 }: {
   selected: string[];
   disabled: boolean;
   pending: boolean;
-  title: string;
   description: string;
   onToggle: (key: string) => void;
 }) {
   return (
     <div>
       <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="font-sans text-body font-medium text-on-surface">{title}</p>
-          <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{description}</p>
-        </div>
+        <p className="font-sans text-body-sm text-on-surface-variant">{description}</p>
         {pending ? (
           <Loader2 size={16} className="shrink-0 animate-spin text-on-surface-variant" aria-hidden />
-        ) : (
-          <span className="shrink-0 font-sans text-counter text-on-surface-variant">
-            {selected.length}/{MAX_GROUPS}
-          </span>
-        )}
+        ) : null}
       </div>
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap gap-2">
         {FEED_SPORTS.map((sport) => {
           const active = selected.includes(sport.key);
           return (
@@ -338,10 +321,10 @@ function AffinitySelector({
               disabled={disabled}
               aria-pressed={active}
               className={clsx(
-                'inline-flex min-h-[36px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 font-sans text-label transition-colors disabled:opacity-60',
+                'inline-flex min-h-[36px] shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-4 font-sans text-label transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 disabled:opacity-60',
                 active
-                  ? 'bg-primary text-on-primary shadow-sm'
-                  : 'border border-outline-variant/50 bg-surface text-on-surface-variant',
+                  ? 'bg-primary text-on-primary'
+                  : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container',
               )}
             >
               {active && <Check size={15} strokeWidth={3} aria-hidden />}
@@ -368,7 +351,7 @@ function BusinessListItem({
   const status = business.status ? businessStatusLabel[business.status] ?? business.status : null;
 
   return (
-    <article className="flex gap-3 px-4 py-4">
+    <article className="flex gap-3 px-3 py-4">
       {business.logo_url ? (
         <img
           src={business.logo_url}
@@ -399,7 +382,7 @@ function BusinessListItem({
 
 function InvitedBusinessListItem({ business }: { business: InvitedBusinessRow }) {
   return (
-    <article className="flex gap-3 px-4 py-4">
+    <article className="flex gap-3 px-3 py-4">
       <IconChip icon={UsersRound} />
       <div className="min-w-0 flex-1">
         <h3 className="truncate font-sans text-body font-semibold text-on-surface">
@@ -413,34 +396,25 @@ function InvitedBusinessListItem({ business }: { business: InvitedBusinessRow })
   );
 }
 
-function SummaryTile({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
-  return (
-    <div className="flex min-h-[66px] items-center gap-3 rounded-2xl bg-surface px-3 py-3 ring-1 ring-outline-variant/30">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <Icon size={18} aria-hidden />
-      </span>
-      <span className="min-w-0">
-        <span className="block font-sans text-title-lg leading-none text-on-surface">{value}</span>
-        <span className="mt-1 block truncate font-sans text-counter text-on-surface-variant">{label}</span>
-      </span>
-    </div>
-  );
-}
-
 function EmptyBlock({ icon: Icon, title, description }: { icon: LucideIcon; title: string; description: string }) {
   return (
-    <div className="flex min-h-[148px] flex-col items-center justify-center px-6 py-8 text-center">
-      <IconChip icon={Icon} />
-      <h3 className="mt-3 font-sans text-body font-semibold text-on-surface">{title}</h3>
-      <p className="mt-1 max-w-[34ch] font-sans text-body-sm text-on-surface-variant">{description}</p>
+    <div className="flex items-start gap-3 rounded-2xl bg-surface-container-low px-4 py-4">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-container text-on-surface-variant">
+        <Icon size={17} aria-hidden />
+      </span>
+      <div className="min-w-0">
+        <h3 className="font-sans text-body font-medium text-on-surface">{title}</h3>
+        <p className="mt-0.5 max-w-[46ch] font-sans text-body-sm text-on-surface-variant">{description}</p>
+      </div>
     </div>
   );
 }
 
 function LoadingBlock() {
   return (
-    <div className="flex min-h-[148px] items-center justify-center px-6 py-8">
-      <Loader2 size={22} className="animate-spin text-primary" aria-label="Carregando" />
+    <div className="space-y-3 rounded-2xl bg-surface px-3 py-4" aria-label="Carregando">
+      <div className="h-4 w-2/5 animate-pulse rounded bg-surface-container-high" />
+      <div className="h-3 w-3/4 animate-pulse rounded bg-surface-container" />
     </div>
   );
 }
