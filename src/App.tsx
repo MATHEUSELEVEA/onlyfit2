@@ -22,6 +22,8 @@ import { VisualPreferencesPage } from './features/profile/VisualPreferencesPage'
 import { InboxPage } from './features/messages/InboxPage';
 import { ChatPage } from './features/messages/ChatPage';
 import { MyBusinessesPage } from './features/profile/MyBusinessesPage';
+import { CreateBusinessPage } from './features/profile/CreateBusinessPage';
+import { BusinessWorkspacePage } from './features/profile/BusinessWorkspacePage';
 import { PrivacyTermsPage } from './features/legal/PrivacyTermsPage';
 import { CreatorProfilePage } from './features/creators/CreatorProfilePage';
 import { HealthProfilePage } from './features/health/HealthProfilePage';
@@ -87,6 +89,8 @@ function AuthenticatedApp() {
           <Route path="/mensagens" element={<InboxPage />} />
           <Route path="/mensagens/:peerId" element={<ChatPage />} />
           <Route path="/negocios" element={<MyBusinessesPage />} />
+          <Route path="/negocios/novo" element={<CreateBusinessPage />} />
+          <Route path="/negocios/:businessId" element={<BusinessWorkspacePage />} />
           <Route path="/creator/:username" element={<CreatorProfilePage />} />
           <Route path="*" element={<Navigate to="/feed" replace />} />
         </Route>
