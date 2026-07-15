@@ -21,7 +21,7 @@ export function IconChip({ icon: Icon, badge }: { icon: LucideIcon; badge?: numb
     <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
       <Icon size={19} aria-hidden />
       {badge && badge > 0 ? (
-        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1 font-sans text-eyebrow font-bold tabular-nums text-on-error ring-2 ring-surface">
+        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#ff1744] px-1 font-sans text-[10px] font-bold leading-none tabular-nums text-white ring-2 ring-surface">
           {badge > 99 ? '99+' : badge}
         </span>
       ) : null}

@@ -15,8 +15,6 @@ import { clsx } from 'clsx';
 import { FEED_SPORTS, sportLabel } from '@/lib/sports';
 import { formatCount } from '@/lib/format';
 import { FilterChip } from '@/components/ui/FilterChip';
-import { ProductCard } from '@/features/market/ProductCard';
-import { useMarketProducts } from '@/features/market/useMarket';
 import { useToggleCreatorFollow } from '@/features/creators/useCreatorFollow';
 import {
   useExploreCreators,
@@ -29,15 +27,25 @@ import {
   type ExploreChallenge,
 } from './useExplore';
 
-type ExploreTab = 'all' | 'people' | 'content' | 'products' | 'communities' | 'challenges';
+// O Explorar é para descobrir de graça: conteúdo gratuito primeiro, depois
+// pessoas, desafios e comunidades. Produto é venda e vive na aba Produtos.
+type ExploreTab = 'content' | 'people' | 'challenges' | 'communities';
 
 const TABS: { key: ExploreTab; label: string }[] = [
-  { key: 'all', label: 'Tudo' },
-  { key: 'people', label: 'Pessoas' },
   { key: 'content', label: 'Conteúdo' },
-  { key: 'products', label: 'Produtos' },
-  { key: 'communities', label: 'Comunidades' },
+  { key: 'people', label: 'Pessoas' },
   { key: 'challenges', label: 'Desafios' },
+  { key: 'communities', label: 'Comunidades' },
+];
+
+// Filtro de identidade das pessoas (ver docs/ECOSYSTEM.md): profissional é quem
+// tem a casca de profissional ligada; o resto é membro.
+type PeopleKind = 'all' | 'professionals' | 'members';
+
+const PEOPLE_KINDS: { key: PeopleKind; label: string }[] = [
+  { key: 'all', label: 'Todos' },
+  { key: 'professionals', label: 'Profissionais' },
+  { key: 'members', label: 'Membros' },
 ];
 
 function CreatorCard({ creator }: { creator: ExploreCreator }) {
@@ -241,7 +249,8 @@ function ChallengeTile({ challenge }: { challenge: ExploreChallenge }) {
 
 export function ExplorePage() {
   const [search, setSearch] = useState('');
-  const [tab, setTab] = useState<ExploreTab>('all');
+  const [tab, setTab] = useState<ExploreTab>('content');
+  const [peopleKind, setPeopleKind] = useState<PeopleKind>('all');
   const [sport, setSport] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -250,7 +259,6 @@ export function ExplorePage() {
   const debouncedSearch = useDebouncedValue(search, 300);
   const creatorsQuery = useExploreCreators(debouncedSearch);
   const contentQuery = useExploreContent();
-  const productsQuery = useMarketProducts();
   const communitiesQuery = useExploreCommunities();
   const challengesQuery = useExploreChallenges();
 
@@ -266,6 +274,10 @@ export function ExplorePage() {
 
   const creators = useMemo(() => {
     let list = creatorsQuery.data ?? [];
+    if (peopleKind !== 'all') {
+      const wantProfessional = peopleKind === 'professionals';
+      list = list.filter((creator) => creator.isProfessional === wantProfessional);
+    }
     if (sport) list = list.filter((creator) => creator.sports.includes(sport));
     if (term) {
       list = list.filter(
@@ -275,7 +287,7 @@ export function ExplorePage() {
       );
     }
     return list;
-  }, [creatorsQuery.data, sport, term]);
+  }, [creatorsQuery.data, peopleKind, sport, term]);
 
   const content = useMemo(() => {
     let list = contentQuery.data ?? [];
@@ -294,19 +306,6 @@ export function ExplorePage() {
     }
     return list;
   }, [contentQuery.data, sport, term, creatorSports]);
-
-  const products = useMemo(() => {
-    let list = productsQuery.data ?? [];
-    if (sport) list = list.filter((product) => product.sports.includes(sport));
-    if (term) {
-      list = list.filter((product) =>
-        `${product.name} ${product.description ?? ''} ${product.creatorName}`
-          .toLowerCase()
-          .includes(term),
-      );
-    }
-    return list;
-  }, [productsQuery.data, sport, term]);
 
   const communities = useMemo(() => {
     let list = communitiesQuery.data ?? [];
@@ -338,31 +337,25 @@ export function ExplorePage() {
     return list;
   }, [challengesQuery.data, sport, term, creatorSports]);
 
-  const showPeople = tab === 'all' || tab === 'people';
-  const showContent = tab === 'all' || tab === 'content';
-  const showProducts = tab === 'all' || tab === 'products';
-  const showCommunities = tab === 'all' || tab === 'communities';
-  const showChallenges = tab === 'all' || tab === 'challenges';
-  const isLoading =
-    (showPeople && creatorsQuery.isLoading) ||
-    (showContent && contentQuery.isLoading) ||
-    (showProducts && productsQuery.isLoading) ||
-    (showCommunities && communitiesQuery.isLoading) ||
-    (showChallenges && challengesQuery.isLoading);
-  const isEmpty =
-    !isLoading &&
-    (!showPeople || creators.length === 0) &&
-    (!showContent || content.length === 0) &&
-    (!showProducts || products.length === 0) &&
-    (!showCommunities || communities.length === 0) &&
-    (!showChallenges || challenges.length === 0);
-  const hasError =
-    (showPeople && creatorsQuery.isError) ||
-    (showContent && contentQuery.isError) ||
-    (showProducts && productsQuery.isError) ||
-    (showCommunities && communitiesQuery.isError) ||
-    (showChallenges && challengesQuery.isError);
-  const hasActiveFilters = tab !== 'all' || sport !== null;
+  // Cada aba responde por uma query só, então carregamento, erro e vazio saem
+  // da aba ativa — nada de spinner por causa de uma lista que nem está na tela.
+  const activeQuery = {
+    content: contentQuery,
+    people: creatorsQuery,
+    challenges: challengesQuery,
+    communities: communitiesQuery,
+  }[tab];
+  const activeCount = {
+    content: content.length,
+    people: creators.length,
+    challenges: challenges.length,
+    communities: communities.length,
+  }[tab];
+
+  const isLoading = activeQuery.isLoading;
+  const hasError = activeQuery.isError;
+  const isEmpty = !isLoading && !hasError && activeCount === 0;
+  const hasActiveFilters = sport !== null || peopleKind !== 'all';
 
   return (
     <div className="h-full overflow-y-auto bg-background pb-8">
@@ -381,8 +374,8 @@ export function ExplorePage() {
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Buscar pessoas, conteúdos e produtos..."
-                aria-label="Buscar creators, conteúdos, produtos, comunidades e desafios"
+                placeholder="Buscar conteúdos, pessoas, desafios..."
+                aria-label="Buscar conteúdos, pessoas, desafios e comunidades"
                 className="min-h-[44px] w-full rounded-xl border border-outline-variant/40 bg-surface py-2 pl-11 pr-4 font-sans text-body text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
             </div>
@@ -401,18 +394,60 @@ export function ExplorePage() {
               <SlidersHorizontal size={18} aria-hidden />
             </button>
           </div>
+
+          {/* Abas de texto: o que o usuário está procurando */}
+          <div
+            className="no-scrollbar -mx-4 mt-3 flex gap-5 overflow-x-auto px-4"
+            role="tablist"
+            aria-label="O que explorar"
+          >
+            {TABS.map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={tab === key}
+                onClick={() => setTab(key)}
+                className={clsx(
+                  'relative shrink-0 whitespace-nowrap pb-2 font-sans text-label transition-colors',
+                  tab === key ? 'text-on-surface' : 'text-on-surface-variant',
+                )}
+              >
+                {label}
+                {tab === key && (
+                  <span
+                    aria-hidden
+                    className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-primary"
+                  />
+                )}
+              </button>
+            ))}
+          </div>
         </header>
 
         {filtersOpen && (
           <>
-            {/* Filtros por tipo */}
-            <div className="no-scrollbar mt-1 flex gap-2 overflow-x-auto px-4" role="tablist" aria-label="Tipo de resultado">
-              {TABS.map(({ key, label }) => (
-                <FilterChip key={key} active={tab === key} onClick={() => setTab(key)}>
-                  {label}
-                </FilterChip>
-              ))}
-            </div>
+            {/* Identidade só filtra gente — aparece na aba Pessoas */}
+            {tab === 'people' && (
+              <>
+                <div className="mt-3 px-4">
+                  <h2 className="font-sans text-eyebrow uppercase text-on-surface-variant">
+                    Pessoas
+                  </h2>
+                </div>
+                <div
+                  className="no-scrollbar mt-2 flex gap-2 overflow-x-auto px-4"
+                  role="tablist"
+                  aria-label="Tipo de pessoa"
+                >
+                  {PEOPLE_KINDS.map(({ key, label }) => (
+                    <FilterChip key={key} active={peopleKind === key} onClick={() => setPeopleKind(key)}>
+                      {label}
+                    </FilterChip>
+                  ))}
+                </div>
+              </>
+            )}
 
             {/* Filtros por grupo de afinidade */}
             <div className="mt-4 px-4">
@@ -443,20 +478,14 @@ export function ExplorePage() {
           </div>
         )}
 
-        {hasError && !isLoading && (
+        {hasError && (
           <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
             <p className="font-sans text-body text-on-surface-variant">
               Não foi possível carregar o Explorar.
             </p>
             <button
               type="button"
-              onClick={() => {
-                creatorsQuery.refetch();
-                contentQuery.refetch();
-                productsQuery.refetch();
-                communitiesQuery.refetch();
-                challengesQuery.refetch();
-              }}
+              onClick={() => activeQuery.refetch()}
               className="min-h-[44px] rounded-full bg-primary px-6 font-sans text-label text-on-primary"
             >
               Tentar novamente
@@ -464,7 +493,7 @@ export function ExplorePage() {
           </div>
         )}
 
-        {isEmpty && !hasError && (
+        {isEmpty && (
           <div className="flex flex-col items-center gap-1 px-6 py-14 text-center">
             <p className="font-sans text-title text-on-surface">Nada encontrado</p>
             <p className="font-sans text-body-sm text-on-surface-variant">
@@ -473,78 +502,41 @@ export function ExplorePage() {
           </div>
         )}
 
-        {/* Pessoas */}
-        {showPeople && !isLoading && creators.length > 0 && (
-          <section className="mt-6" aria-labelledby="explore-people-title">
-            <h2 id="explore-people-title" className="px-4 font-sans text-title text-on-surface">
-              Pessoas
-            </h2>
-            <ul className="mt-2 divide-y divide-outline-variant/20">
-              {(tab === 'people' ? creators : creators.slice(0, 4)).map((creator) => (
-                <CreatorCard key={creator.id} creator={creator} />
-              ))}
-            </ul>
-          </section>
-        )}
+        {!isLoading && !hasError && (
+          <>
+            {/* Conteúdo gratuito em mosaico (padrão explore_hub) */}
+            {tab === 'content' && content.length > 0 && (
+              <section className="mt-4 grid grid-cols-2 gap-2 px-4" aria-label="Conteúdos">
+                {content.map((item, index) => (
+                  <ContentTile key={item.id} item={item} featured={index === 0} />
+                ))}
+              </section>
+            )}
 
-        {/* Conteúdo em mosaico (padrão explore_hub) */}
-        {showContent && !isLoading && content.length > 0 && (
-          <section className="mt-6 px-4" aria-labelledby="explore-content-title">
-            <h2 id="explore-content-title" className="font-sans text-title text-on-surface">
-              Em alta
-            </h2>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {content.map((item, index) => (
-                <ContentTile key={item.id} item={item} featured={index === 0} />
-              ))}
-            </div>
-          </section>
-        )}
+            {tab === 'people' && creators.length > 0 && (
+              <ul className="mt-2 divide-y divide-outline-variant/20" aria-label="Pessoas">
+                {creators.map((creator) => (
+                  <CreatorCard key={creator.id} creator={creator} />
+                ))}
+              </ul>
+            )}
 
-        {showProducts && !isLoading && products.length > 0 && (
-          <section className="mt-6 px-4" aria-labelledby="explore-products-title">
-            <div className="flex items-center justify-between gap-3">
-              <h2 id="explore-products-title" className="font-sans text-title text-on-surface">
-                Produtos em destaque
-              </h2>
-              {tab === 'all' && (
-                <Link to="/mercado" className="font-sans text-label text-primary">
-                  Ver todos
-                </Link>
-              )}
-            </div>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              {(tab === 'products' ? products : products.slice(0, 5)).map((product, index) => (
-                <ProductCard key={product.id} product={product} featured={index === 0} />
-              ))}
-            </div>
-          </section>
-        )}
+            {tab === 'challenges' && challenges.length > 0 && (
+              <section className="mt-4 grid grid-cols-2 gap-3 px-4" aria-label="Desafios">
+                {challenges.map((challenge) => (
+                  <ChallengeTile key={challenge.id} challenge={challenge} />
+                ))}
+              </section>
+            )}
 
-        {showCommunities && !isLoading && communities.length > 0 && (
-          <section className="mt-6 px-4" aria-labelledby="explore-communities-title">
-            <h2 id="explore-communities-title" className="font-sans text-title text-on-surface">
-              Comunidades
-            </h2>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              {(tab === 'communities' ? communities : communities.slice(0, 4)).map((community) => (
-                <CommunityTile key={community.id} community={community} />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {showChallenges && !isLoading && challenges.length > 0 && (
-          <section className="mt-6 px-4" aria-labelledby="explore-challenges-title">
-            <h2 id="explore-challenges-title" className="font-sans text-title text-on-surface">
-              Desafios
-            </h2>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              {(tab === 'challenges' ? challenges : challenges.slice(0, 4)).map((challenge) => (
-                <ChallengeTile key={challenge.id} challenge={challenge} />
-              ))}
-            </div>
-          </section>
+            {tab === 'communities' && communities.length > 0 && (
+              <section className="mt-4 grid grid-cols-2 gap-3 px-4" aria-label="Comunidades">
+                {communities.map((community) => (
+                  <CommunityTile key={community.id} community={community} />
+                ))}
+              </section>
+            )}
+          </>
         )}
       </div>
     </div>

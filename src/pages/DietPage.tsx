@@ -1,12 +1,14 @@
 import { PageTopBar } from '@/components/layout/PageTopBar';
 
-export function TrainingPage() {
+// Dieta: orientações de alimentação para o objetivo pessoal.
+// Estrutura preparada — conteúdo ainda será implementado.
+export function DietPage() {
   return (
     <div className="flex h-full flex-col bg-background">
-      <PageTopBar title="Treino" backFallback="/meu-fit" />
+      <PageTopBar title="Dieta" backFallback="/meu-fit" />
       <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
         <p className="max-w-xs font-sans text-body text-on-surface-variant">
-          Seus treinos e progresso. Em construção.
+          Orientações de alimentação para o seu objetivo. Em construção.
         </p>
       </div>
     </div>

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   BadgeCheck,
   Bookmark,
@@ -8,6 +8,7 @@ import {
   Heart,
   MessageCircle,
   Share2,
+  SquarePlus,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { ShareSheet } from '@/components/ui/ShareSheet';
@@ -19,6 +20,8 @@ import { CommentsSheet } from './CommentsSheet';
 import { useToggleLike } from './useToggleLike';
 import { useSavedPost } from './useSavedPost';
 import { useCreatorFollowState, useToggleCreatorFollow } from '@/features/creators/useCreatorFollow';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 interface RailButtonProps {
   label: string;
@@ -76,8 +79,24 @@ interface PostCardProps {
 }
 
 export function PostCard({ post }: PostCardProps) {
+  const { session } = useAuth();
+  const navigate = useNavigate();
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const articleRef = useRef<HTMLElement>(null);
+  const [inView, setInView] = useState(false);
+
+  // O feed mantém todos os posts carregados montados, então é a visibilidade —
+  // e não a montagem — que decide qual vídeo toca. Sem isso todos tocam juntos.
+  useEffect(() => {
+    const el = articleRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), {
+      threshold: 0.6,
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const toggleLike = useToggleLike();
   const { saved, toggleSaved } = useSavedPost(post.id);
@@ -86,9 +105,19 @@ export function PostCard({ post }: PostCardProps) {
   const shareUrl = `${window.location.origin}/video/${post.id}`;
 
   return (
-    <article className="relative h-full w-full overflow-hidden bg-surface-container-lowest">
+    // O palco tem a proporção de um celular (9:16) mesmo em tela grande: no
+    // celular ele ocupa a largura toda; em tablet/desktop vira uma coluna
+    // centrada, em vez de esticar o vídeo pela tela inteira.
+    <article
+      ref={articleRef}
+      className="relative mx-auto h-full w-full max-w-[56.25dvh] overflow-hidden bg-surface-container-lowest"
+    >
       {/* Mídia de fundo: vídeo, imagem única ou carrossel (imagem e/ou vídeo) */}
-      <PostMedia media={post.media} alt={post.caption || `Post de @${post.author.username}`} />
+      <PostMedia
+        media={post.media}
+        alt={post.caption || `Post de @${post.author.username}`}
+        active={inView}
+      />
 
       {/* Gradiente para legibilidade do texto sobre a mídia */}
       <div
@@ -121,6 +150,9 @@ export function PostCard({ post }: PostCardProps) {
         </RailButton>
         <RailButton label="Compartilhar" onClick={() => setShareOpen(true)}>
           <Share2 size={22} aria-hidden />
+        </RailButton>
+        <RailButton label="Criar post" onClick={() => navigate('/studio')}>
+          <SquarePlus size={22} aria-hidden />
         </RailButton>
       </div>
 
@@ -187,6 +219,14 @@ export function PostCard({ post }: PostCardProps) {
         onClose={() => setShareOpen(false)}
         url={shareUrl}
         text={`Veja este post de @${post.author.username} no OnlyFit`}
+        onShared={() => {
+          if (!session?.user.id) return;
+          void supabase.from('feed_post_events').insert({
+            user_id: session.user.id,
+            post_id: post.id,
+            event_type: 'share',
+          });
+        }}
       />
     </article>
   );

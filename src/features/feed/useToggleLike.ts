@@ -1,7 +1,12 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import type { FeedPost } from './types';
+import {
+  cancelPostCaches,
+  restorePostCaches,
+  snapshotPostCaches,
+  updatePostCaches,
+} from './useFeed';
 
 interface ToggleLikeVars {
   postId: string;
@@ -35,25 +40,19 @@ export function useToggleLike() {
       }
     },
     onMutate: async ({ postId, liked }) => {
-      await queryClient.cancelQueries({ queryKey: ['feed'] });
-      const snapshot = queryClient.getQueriesData<FeedPost[]>({ queryKey: ['feed'] });
+      await cancelPostCaches(queryClient);
+      const snapshot = snapshotPostCaches(queryClient);
 
-      queryClient.setQueriesData<FeedPost[]>({ queryKey: ['feed'] }, (posts) =>
-        posts?.map((post) =>
-          post.id === postId
-            ? {
-                ...post,
-                likedByMe: !liked,
-                likeCount: Math.max(0, post.likeCount + (liked ? -1 : 1)),
-              }
-            : post,
-        ),
-      );
+      updatePostCaches(queryClient, postId, (post) => ({
+        ...post,
+        likedByMe: !liked,
+        likeCount: Math.max(0, post.likeCount + (liked ? -1 : 1)),
+      }));
 
       return { snapshot };
     },
     onError: (_error, _vars, context) => {
-      context?.snapshot.forEach(([key, data]) => queryClient.setQueryData(key, data));
+      if (context) restorePostCaches(queryClient, context.snapshot);
     },
   });
 }

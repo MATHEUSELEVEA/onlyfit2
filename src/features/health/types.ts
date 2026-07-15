@@ -17,7 +17,8 @@ export type HealthCaptureMethod =
   | 'ai_conversation'
   | 'text'
   | 'audio_transcript'
-  | 'pdf';
+  | 'pdf'
+  | 'photo';
 
 export type HealthEventType =
   | 'questionnaire_response'
@@ -166,11 +167,26 @@ export const healthCategoryLabels: Record<HealthCategory, string> = {
   allergy: 'Alergia ou intolerância',
   vaccine: 'Vacina',
   symptom: 'Sintoma',
-  physical_assessment: 'Avaliação física',
+  physical_assessment: 'Avaliação corporal',
   habit: 'Hábito',
   other: 'Outro',
 };
 
-export const recordCategoryOptions = (Object.entries(healthCategoryLabels) as [HealthCategory, string][])
-  .filter(([category]) => category !== 'anamnesis')
-  .map(([value, label]) => ({ value, label }));
+const recordCategoryOrder: HealthCategory[] = [
+  'habit',
+  'physical_assessment',
+  'exam',
+  'condition',
+  'symptom',
+  'medication',
+  'injury',
+  'allergy',
+  'procedure',
+  'vaccine',
+  'other',
+];
+
+export const recordCategoryOptions = recordCategoryOrder.map((value) => ({
+  value,
+  label: healthCategoryLabels[value],
+}));

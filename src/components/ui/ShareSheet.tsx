@@ -8,6 +8,7 @@ interface ShareSheetProps {
   url: string;
   /** Texto que acompanha o link no WhatsApp. */
   text?: string;
+  onShared?: () => void;
 }
 
 // lucide não tem mais ícones de marca do WhatsApp; path oficial inline.
@@ -62,7 +63,7 @@ function ShareOption({ icon: Icon, title, description, onClick, highlighted }: S
   );
 }
 
-export function ShareSheet({ open, onClose, url, text }: ShareSheetProps) {
+export function ShareSheet({ open, onClose, url, text, onShared }: ShareSheetProps) {
   const [copied, setCopied] = useState<'link' | 'instagram' | 'error' | null>(null);
 
   // Limpa o feedback ao fechar para a próxima abertura começar zerada.
@@ -74,11 +75,13 @@ export function ShareSheet({ open, onClose, url, text }: ShareSheetProps) {
   async function handleCopyLink() {
     const ok = await copyToClipboard(url);
     setCopied(ok ? 'link' : 'error');
+    if (ok) onShared?.();
   }
 
   function handleWhatsApp() {
     const message = text ? `${text} ${url}` : url;
     window.open(`https://wa.me/?text=${encodeURIComponent(message)}`, '_blank', 'noopener');
+    onShared?.();
     handleClose();
   }
 
@@ -87,6 +90,7 @@ export function ShareSheet({ open, onClose, url, text }: ShareSheetProps) {
     // abrimos o app/site para a pessoa colar no story ou direct.
     const ok = await copyToClipboard(url);
     setCopied(ok ? 'instagram' : 'error');
+    if (ok) onShared?.();
     window.open('https://www.instagram.com/', '_blank', 'noopener');
   }
 

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import type { FeedPost } from './types';
+import { updatePostCaches } from './useFeed';
 
 export interface PostComment {
   id: string;
@@ -80,11 +80,12 @@ export function useAddPostComment(postId: string | null) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['post-comments', postId] });
       // Contador do feed: incrementa localmente sem refetch da página inteira.
-      queryClient.setQueriesData<FeedPost[]>({ queryKey: ['feed'] }, (posts) =>
-        posts?.map((post) =>
-          post.id === postId ? { ...post, commentCount: post.commentCount + 1 } : post,
-        ),
-      );
+      if (postId) {
+        updatePostCaches(queryClient, postId, (post) => ({
+          ...post,
+          commentCount: post.commentCount + 1,
+        }));
+      }
     },
   });
 }

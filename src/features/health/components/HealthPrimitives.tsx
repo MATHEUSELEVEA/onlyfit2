@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, type LucideIcon } from 'lucide-react';
+import { type LucideIcon } from 'lucide-react';
 import { clsx } from 'clsx';
+import { BackButton } from '@/components/ui/BackButton';
 
 export function HealthPageShell({ children, width = 'wide' }: { children: ReactNode; width?: 'wide' | 'form' }) {
   return (
@@ -32,13 +32,7 @@ export function HealthPageHeader({
   return (
     <header className="sticky top-0 z-20 border-b border-outline-variant/30 bg-surface-container-lowest/95 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-md">
       <div className="flex items-center gap-3">
-        <Link
-          to={backTo}
-          aria-label="Voltar"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-on-surface transition-colors active:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-        >
-          <ArrowLeft size={21} aria-hidden />
-        </Link>
+        <BackButton fallback={backTo} />
         <div className="min-w-0 flex-1">
           <h1 className="line-clamp-2 font-sans text-title-lg text-on-surface">{title}</h1>
           {description ? (

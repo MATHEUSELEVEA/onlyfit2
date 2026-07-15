@@ -34,11 +34,24 @@ const pt = {
   'profile.payment.title': 'Formas de Pagamento',
   'profile.payment.description': 'Cartões, PIX e endereços de cobrança',
 
-  'profile.health.title': 'Perfil de Saúde',
+  'profile.health.title': 'Ficha de saúde',
   'profile.health.description': 'Declarações, registros clínicos e exames',
 
-  'profile.market.title': 'Mercado',
-  'profile.market.description': 'Produtos e serviços à venda',
+  'profile.training.title': 'Treino',
+  'profile.training.description': 'Seus treinos e progresso',
+
+  'profile.diet.title': 'Dieta',
+  'profile.diet.description': 'Orientações de alimentação para o seu objetivo',
+
+  'meufit.title': 'Meu Fit',
+  'meufit.subtitle': 'Treino, dieta e saúde em um só lugar',
+  'meufit.training.title': 'Treino',
+  'meufit.training.description': 'Seus treinos e progresso',
+  'meufit.diet.title': 'Dieta',
+  'meufit.diet.description': 'Orientações de alimentação para o seu objetivo',
+  'meufit.health.title': 'Registro de saúde',
+  'meufit.health.description': 'Registre hábitos, resultados clínicos e exames',
+
 
   'profile.enrollments.title': 'Minhas compras',
   'profile.enrollments.description': 'Gerencie suas inscrições e veja seu histórico de compras',
@@ -113,6 +126,9 @@ const pt = {
 
   'profile.financialManagement.title': 'Gestão Financeira',
   'profile.financialManagement.description': 'Acompanhe e gerencie o financeiro dos seus negócios',
+
+  'profile.customerManagement.title': 'Gestão de Clientes',
+  'profile.customerManagement.description': 'CRM para acompanhar clientes, leads e relacionamento',
 
   'profile.business.title': 'Meus negócios',
   'profile.business.description': 'Negócios próprios e convites de gestão',
@@ -206,11 +222,24 @@ const en: Record<keyof typeof pt, string> = {
   'profile.payment.title': 'Payment Methods',
   'profile.payment.description': 'Cards, PIX and billing addresses',
 
-  'profile.health.title': 'Health Profile',
+  'profile.health.title': 'Health record',
   'profile.health.description': 'Declarations, medical records and exams',
 
-  'profile.market.title': 'Market',
-  'profile.market.description': 'Products and services for sale',
+  'profile.training.title': 'Training',
+  'profile.training.description': 'Your workouts and progress',
+
+  'profile.diet.title': 'Diet',
+  'profile.diet.description': 'Nutrition guidance for your goal',
+
+  'meufit.title': 'My Fit',
+  'meufit.subtitle': 'Training, diet and health in one place',
+  'meufit.training.title': 'Training',
+  'meufit.training.description': 'Your workouts and progress',
+  'meufit.diet.title': 'Diet',
+  'meufit.diet.description': 'Nutrition guidance for your goal',
+  'meufit.health.title': 'Health entry',
+  'meufit.health.description': 'Record habits, clinical results and exams',
+
 
   'profile.enrollments.title': 'My purchases',
   'profile.enrollments.description': 'Manage your enrollments and view purchase history',
@@ -285,6 +314,9 @@ const en: Record<keyof typeof pt, string> = {
 
   'profile.financialManagement.title': 'Financial Management',
   'profile.financialManagement.description': 'Track and manage your business finances',
+
+  'profile.customerManagement.title': 'Client Management',
+  'profile.customerManagement.description': 'CRM to track clients, leads and relationships',
 
   'profile.business.title': 'My businesses',
   'profile.business.description': 'Owned businesses and management invites',

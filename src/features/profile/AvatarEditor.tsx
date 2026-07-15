@@ -86,7 +86,7 @@ export function AvatarEditor({ file, onCancel, onUploaded }: AvatarEditorProps) 
           crop={crop}
           zoom={zoom}
           aspect={1}
-          cropShape="round"
+          cropShape="rect"
           showGrid={false}
           onCropChange={setCrop}
           onZoomChange={setZoom}
