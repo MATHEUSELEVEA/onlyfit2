@@ -13,6 +13,7 @@ import {
 import { clsx } from 'clsx';
 import { ShareSheet } from '@/components/ui/ShareSheet';
 import { formatCount } from '@/lib/format';
+import { publicAppUrl } from '@/lib/publicUrl';
 import type { FeedPost } from './types';
 import { PostMedia } from './PostMedia';
 import { PostCaption } from './PostCaption';
@@ -105,7 +106,7 @@ export function PostCard({ post }: PostCardProps) {
   const { saved, toggleSaved } = useSavedPost(post.id);
 
   const profileTo = `/creator/${encodeURIComponent(post.author.username)}`;
-  const shareUrl = `${window.location.origin}/video/${post.id}`;
+  const shareUrl = publicAppUrl(`/video/${post.id}`);
 
   return (
     <article

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { formatCount } from '@/lib/format';
+import { publicAppOrigin, publicAppUrl } from '@/lib/publicUrl';
 import { useTranslation } from '@/i18n/I18nProvider';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { ShareSheet } from '@/components/ui/ShareSheet';
@@ -151,7 +152,7 @@ export function MyPostsTab({ username }: { username: string | null }) {
       <ShareSheet
         open={Boolean(currentPost && mode === 'share')}
         onClose={closeAll}
-        url={currentPost ? `${window.location.origin}/video/${currentPost.id}` : window.location.origin}
+        url={currentPost ? publicAppUrl(`/video/${currentPost.id}`) : publicAppOrigin()}
         text={username ? `Veja este post de @${username} no OnlyFit` : 'Veja este post no OnlyFit'}
       />
     </>

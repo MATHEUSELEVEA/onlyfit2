@@ -18,6 +18,7 @@ import {
 import { clsx } from 'clsx';
 import type { LucideIcon } from 'lucide-react';
 import { formatCount, formatPrice } from '@/lib/format';
+import { publicAppUrl } from '@/lib/publicUrl';
 import { productTypeMeta } from '@/lib/products';
 import { useAffinityGroups } from '@/lib/sports';
 import { CopyHandle } from '@/components/ui/CopyHandle';
@@ -108,7 +109,7 @@ export function CreatorProfilePage() {
   }
 
   const subPrice = creator.subscriptionPrice;
-  const shareUrl = `${window.location.origin}/creator/${encodeURIComponent(creator.username)}`;
+  const shareUrl = publicAppUrl(`/creator/${encodeURIComponent(creator.username)}`);
   const shareText = `Veja o perfil de ${creator.displayName ?? `@${creator.username}`} no OnlyFit`;
 
   return (

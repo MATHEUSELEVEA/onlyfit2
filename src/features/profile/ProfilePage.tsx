@@ -13,6 +13,7 @@ import {
 import { clsx } from 'clsx';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { publicAppOrigin, publicAppUrl } from '@/lib/publicUrl';
 import { useTranslation } from '@/i18n/I18nProvider';
 import { CopyHandle } from '@/components/ui/CopyHandle';
 import { ProfileHero } from '@/components/ui/ProfileHero';
@@ -47,8 +48,8 @@ export function ProfilePage() {
   const initial = displayName.trim().slice(0, 1).toUpperCase() || 'M';
   // Link público do perfil (rota de creator); sem username compartilha o app.
   const shareUrl = profile?.username
-    ? `${window.location.origin}/creator/${encodeURIComponent(profile.username)}`
-    : window.location.origin;
+    ? publicAppUrl(`/creator/${encodeURIComponent(profile.username)}`)
+    : publicAppOrigin();
   const isProfessional = profile?.isProfessional ?? false;
 
   const tabs: { key: TabKey; label: string; icon: LucideIcon }[] = [

@@ -6,12 +6,35 @@ import { supabase } from '@/lib/supabase';
 
 type Bucket = 'onlyfit-media' | 'onlyfit-thumbnails' | 'onlyfit-avatar';
 
+function shouldUploadThroughFunction(file: Blob): boolean {
+  if (typeof window === 'undefined') return false;
+  const protocol = window.location.protocol;
+  return (protocol === 'capacitor:' || protocol === 'ionic:') && file.size <= 20 * 1024 * 1024;
+}
+
 export async function uploadAsset(
   file: Blob,
   filename: string,
   contentType: string,
   bucket: Bucket,
 ): Promise<string> {
+  if (shouldUploadThroughFunction(file)) {
+    const form = new FormData();
+    form.append('file', file, filename);
+    form.append('filename', filename);
+    form.append('content_type', contentType);
+    form.append('target_bucket', bucket);
+    form.append('content_length', String(file.size));
+
+    const { data, error } = await supabase.functions.invoke('create-r2-upload-url', {
+      body: form,
+    });
+    if (error) throw error;
+
+    const { publicUrl } = data as { publicUrl: string };
+    return publicUrl;
+  }
+
   const { data, error } = await supabase.functions.invoke('create-r2-upload-url', {
     body: {
       filename,

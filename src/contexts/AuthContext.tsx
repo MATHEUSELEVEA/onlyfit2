@@ -8,6 +8,7 @@ import {
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { normalizeEmail } from '@/lib/auth';
+import { publicAppOrigin } from '@/lib/publicUrl';
 
 /**
  * Extrai a mensagem de erro de uma resposta de `supabase.functions.invoke`,
@@ -95,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * allowlist antes de usar — nunca confia cegamente na URL do cliente.
    */
   function appBaseUrl(): string | undefined {
-    return import.meta.env.VITE_APP_BASE_URL?.trim() || undefined;
+    return publicAppOrigin();
   }
 
   /**
