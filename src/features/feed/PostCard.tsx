@@ -1,17 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   BadgeCheck,
   Bookmark,
   ChevronRight,
-  CirclePlus,
   Dumbbell,
   Heart,
   MessageCircle,
+  MoreHorizontal,
   Share2,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { ShareSheet } from '@/components/ui/ShareSheet';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 import { formatCount } from '@/lib/format';
 import { publicAppUrl } from '@/lib/publicUrl';
 import type { FeedPost } from './types';
@@ -83,9 +84,9 @@ interface PostCardProps {
 
 export function PostCard({ post }: PostCardProps) {
   const { session } = useAuth();
-  const navigate = useNavigate();
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const articleRef = useRef<HTMLElement>(null);
   const [inView, setInView] = useState(false);
   const [captionLift, setCaptionLift] = useState(0);
@@ -153,14 +154,8 @@ export function PostCard({ post }: PostCardProps) {
             <MessageCircle size={22} aria-hidden />
           </RailButton>
         )}
-        <RailButton label="Salvar" active={saved} onClick={toggleSaved}>
-          <Bookmark size={22} fill={saved ? 'currentColor' : 'none'} aria-hidden />
-        </RailButton>
-        <RailButton label="Compartilhar" onClick={() => setShareOpen(true)}>
-          <Share2 size={22} aria-hidden />
-        </RailButton>
-        <RailButton label="Criar post" onClick={() => navigate('/studio')}>
-          <CirclePlus size={22} aria-hidden />
+        <RailButton label="Mais opções" onClick={() => setOptionsOpen(true)}>
+          <MoreHorizontal size={24} aria-hidden />
         </RailButton>
       </div>
 
@@ -222,6 +217,34 @@ export function PostCard({ post }: PostCardProps) {
       </div>
 
       <CommentsSheet postId={commentsPostId} onClose={() => setCommentsPostId(null)} />
+      <BottomSheet open={optionsOpen} onClose={() => setOptionsOpen(false)} title="Opções do post">
+        <div className="px-5 pb-6 pt-1">
+          <div className="overflow-hidden rounded-xl border border-outline-variant/30 bg-surface/40">
+            <button
+              type="button"
+              onClick={() => {
+                toggleSaved();
+                setOptionsOpen(false);
+              }}
+              className="flex min-h-[52px] w-full items-center gap-3 px-4 text-left transition-colors active:bg-surface-container-high"
+            >
+              <Bookmark size={20} fill={saved ? 'currentColor' : 'none'} className="text-on-surface" aria-hidden />
+              <span className="font-sans text-body text-on-surface">{saved ? 'Remover dos salvos' : 'Salvar post'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setOptionsOpen(false);
+                setShareOpen(true);
+              }}
+              className="flex min-h-[52px] w-full items-center gap-3 px-4 text-left transition-colors active:bg-surface-container-high"
+            >
+              <Share2 size={20} className="text-on-surface" aria-hidden />
+              <span className="font-sans text-body text-on-surface">Compartilhar</span>
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
       <ShareSheet
         open={shareOpen}
         onClose={() => setShareOpen(false)}

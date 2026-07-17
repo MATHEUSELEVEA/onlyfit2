@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { CirclePlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAvailableFeedSports, useFeed } from './useFeed';
 import { PostCard } from './PostCard';
 import { FeedSportsBar } from './FeedSportsBar';
@@ -17,6 +19,7 @@ function FeedSkeleton() {
 }
 
 export function FeedPage() {
+  const navigate = useNavigate();
   const [sportSelection, setSportSelection] = useState<string | null>(null);
   const { data: availableSports = [] } = useAvailableFeedSports();
   const selectedSport =
@@ -46,8 +49,7 @@ export function FeedPage() {
 
   return (
     <div className="feed-viewport relative">
-      {/* Topo: barra de grupos de afinidade (rolagem lateral, estilo TikTok).
-          Acompanha a largura do palco do post (ver PostCard). */}
+      {/* O filtro ocupa um único ponto central; as opções ficam no sheet. */}
       <header className="absolute inset-x-0 top-0 z-20 mx-auto feed-stage pb-2 pt-safe-top">
         <div className="mt-2">
           <FeedSportsBar
@@ -95,6 +97,15 @@ export function FeedPage() {
           </div>
         ))}
       </div>
+
+      <button
+        type="button"
+        onClick={() => navigate('/studio')}
+        aria-label="Criar post"
+        className="feed-create-button absolute right-4 z-20 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-on-primary ring-4 ring-primary/15 transition-transform active:scale-95"
+      >
+        <CirclePlus size={26} aria-hidden />
+      </button>
     </div>
   );
 }

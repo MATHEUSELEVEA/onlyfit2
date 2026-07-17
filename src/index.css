@@ -58,6 +58,10 @@
     bottom: calc(168px + env(safe-area-inset-bottom));
   }
 
+  .feed-create-button {
+    bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+
   @media (max-width: 360px) {
     .feed-actions-rail {
       bottom: calc(154px + env(safe-area-inset-bottom));
