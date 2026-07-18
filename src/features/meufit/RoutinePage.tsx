@@ -207,8 +207,62 @@ function TimingChoice({ active, title, description, onClick }: { active: boolean
 
 function GoalButton({ label, onClick }: { label: string; onClick: () => void }) { return <button type="button" onClick={onClick} className="flex h-12 w-12 items-center justify-center rounded-full border border-outline-variant/50 font-sans text-title text-on-surface">{label}</button>; }
 
-function SpecificTimes({ times, onChange }: { times: string[]; onChange: (times: string[]) => void }) { const { t } = useTranslation(); return <div className="mt-7 flex flex-wrap gap-2">{times.map((time) => <button key={time} type="button" onClick={() => onChange(times.filter((item) => item !== time))} className="min-h-[44px] rounded-full border border-primary bg-primary/10 px-4 font-sans text-label text-primary">{time} ×</button>)}<input type="time" aria-label={t('meufit.routine.addTime')} onChange={(event) => { if (event.target.value && !times.includes(event.target.value)) onChange([...times, event.target.value]); event.target.value = ''; }} className="min-h-[44px] rounded-full border border-outline-variant/50 bg-surface px-3 font-sans text-label text-on-surface" /></div>; }
+function SpecificTimes({ times, onChange }: { times: string[]; onChange: (times: string[]) => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="mt-7">
+      <span className="font-sans text-label text-on-surface">{t('meufit.routine.times')}</span>
+      <div className="mt-3 space-y-2">
+        {times.map((time, index) => (
+          <div key={`${time}-${index}`} className="flex items-center gap-2 rounded-xl border border-outline-variant/40 bg-surface-container p-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 font-sans text-counter text-primary">{index + 1}</span>
+            <input
+              type="time"
+              value={time}
+              onChange={(event) => onChange(times.map((item, itemIndex) => itemIndex === index ? event.target.value : item))}
+              className="min-h-[40px] min-w-0 flex-1 bg-transparent font-sans text-body text-on-surface focus:outline-none"
+            />
+            {times.length > 1 && (
+              <button type="button" onClick={() => onChange(times.filter((_, itemIndex) => itemIndex !== index))} aria-label={t('meufit.routine.removeTime')} className="flex h-10 w-10 items-center justify-center text-on-surface-variant">
+                <X size={18} aria-hidden />
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      <button type="button" onClick={() => onChange([...times, suggestedTime(times)])} className="mt-3 flex min-h-[44px] items-center gap-2 rounded-lg border border-dashed border-outline-variant/60 px-3 font-sans text-label text-primary">
+        <Plus size={18} aria-hidden />
+        {t('meufit.routine.addTime')}
+      </button>
+    </div>
+  );
+}
 
-function IntervalTimes({ start, end, everyHours, onStart, onEnd, onEvery }: { start: string; end: string; everyHours: number; onStart: (value: string) => void; onEnd: (value: string) => void; onEvery: (value: number) => void }) { const { t } = useTranslation(); return <div className="mt-7 space-y-5"><div className="grid grid-cols-2 gap-3"><label className="font-sans text-label text-on-surface">{t('meufit.routine.from')}<input type="time" value={start} onChange={(event) => onStart(event.target.value)} className="mt-2 min-h-[48px] w-full rounded-lg border border-outline-variant/50 bg-surface px-3 font-sans text-body text-on-surface" /></label><label className="font-sans text-label text-on-surface">{t('meufit.routine.until')}<input type="time" value={end} onChange={(event) => onEnd(event.target.value)} className="mt-2 min-h-[48px] w-full rounded-lg border border-outline-variant/50 bg-surface px-3 font-sans text-body text-on-surface" /></label></div><div><span className="font-sans text-label text-on-surface">{t('meufit.routine.every')}</span><div className="mt-2 flex gap-2">{[1, 2, 3, 4].map((hours) => <button key={hours} type="button" onClick={() => onEvery(hours)} className={clsx('min-h-[40px] rounded-full border px-3 font-sans text-label', everyHours === hours ? 'border-primary bg-primary/10 text-primary' : 'border-outline-variant/50 text-on-surface-variant')}>{hours}h</button>)}</div></div></div>; }
+function IntervalTimes({ start, end, everyHours, onStart, onEnd, onEvery }: { start: string; end: string; everyHours: number; onStart: (value: string) => void; onEnd: (value: string) => void; onEvery: (value: number) => void }) {
+  const { t } = useTranslation();
+  const preview = intervalTimes(start, end, everyHours);
+  return (
+    <div className="mt-7 space-y-5">
+      <div className="grid grid-cols-2 gap-3">
+        <label className="font-sans text-label text-on-surface">{t('meufit.routine.from')}<input type="time" value={start} onChange={(event) => onStart(event.target.value)} className="mt-2 min-h-[48px] w-full rounded-lg border border-outline-variant/50 bg-surface px-3 font-sans text-body text-on-surface" /></label>
+        <label className="font-sans text-label text-on-surface">{t('meufit.routine.until')}<input type="time" value={end} onChange={(event) => onEnd(event.target.value)} className="mt-2 min-h-[48px] w-full rounded-lg border border-outline-variant/50 bg-surface px-3 font-sans text-body text-on-surface" /></label>
+      </div>
+      <div>
+        <span className="font-sans text-label text-on-surface">{t('meufit.routine.every')}</span>
+        <div className="mt-2 flex gap-2">{[1, 2, 3, 4].map((hours) => <button key={hours} type="button" onClick={() => onEvery(hours)} className={clsx('min-h-[40px] rounded-full border px-3 font-sans text-label', everyHours === hours ? 'border-primary bg-primary/10 text-primary' : 'border-outline-variant/50 text-on-surface-variant')}>{hours}h</button>)}</div>
+      </div>
+      <div className="rounded-xl bg-surface-container p-4">
+        <span className="font-sans text-counter text-on-surface-variant">{t('meufit.routine.schedulePreview')}</span>
+        <div className="mt-2 flex flex-wrap gap-2">{preview.slice(0, 6).map((time) => <span key={time} className="rounded-full bg-primary/10 px-3 py-1 font-sans text-counter text-primary">{time}</span>)}{preview.length > 6 && <span className="rounded-full bg-surface-container-high px-3 py-1 font-sans text-counter text-on-surface-variant">+{preview.length - 6}</span>}</div>
+      </div>
+    </div>
+  );
+}
+
+function suggestedTime(times: string[]): string {
+  const latest = [...times].sort().at(-1) ?? '08:00';
+  const [hours, minutes] = latest.split(':').map(Number);
+  return `${String((hours + 2) % 24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+}
 
 function RoutineDetail({ routine, onToggle }: { routine: Routine; onToggle: (routineId: number, time: string) => void }) { const progress = routine.kind === 'water' && routine.goalMl ? Math.min(100, (routine.checked.length / routine.times.length) * 100) : 0; return <div className="px-5 pb-6 pt-2">{routine.kind === 'water' && <div className="rounded-xl bg-primary/10 p-4"><p className="font-sans text-title text-on-surface">{Math.round((routine.goalMl ?? 0) * progress / 100)} / {routine.goalMl} ml</p><div className="mt-3 h-2 overflow-hidden rounded-full bg-surface-container-high"><span className="block h-full rounded-full bg-primary" style={{ width: `${progress}%` }} /></div></div>}<ul className="mt-4 overflow-hidden rounded-xl border border-outline-variant/40 bg-surface">{routine.times.map((time) => { const done = routine.checked.includes(time); return <li key={time} className="flex min-h-[60px] items-center gap-3 border-t border-outline-variant/25 px-4 first:border-t-0"><button type="button" onClick={() => onToggle(routine.id, time)} aria-pressed={done} className={clsx('flex h-8 w-8 items-center justify-center rounded-full', done ? 'bg-primary text-on-primary' : 'border border-outline text-on-surface-variant')}>{done && <Check size={18} aria-hidden />}</button><span className="font-sans text-body text-on-surface">{time}</span></li>; })}</ul></div>; }

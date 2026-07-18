@@ -130,6 +130,7 @@ const pt = {
   'meufit.routine.notificationsOn': 'Lembretes ativados',
   'meufit.routine.notificationsOff': 'Somente check manual',
   'meufit.routine.notificationHint': 'As notificações serão configuradas quando esta rotina estiver pronta.',
+  'meufit.routine.schedulePreview': 'Sua rotina ficará assim',
 
 
   'profile.enrollments.title': 'Minhas compras',
@@ -843,6 +844,7 @@ const en: Record<keyof typeof pt, string> = {
   'meufit.routine.notificationsOn': 'Reminders on',
   'meufit.routine.notificationsOff': 'Manual check only',
   'meufit.routine.notificationHint': 'Notifications will be configured when this routine is ready.',
+  'meufit.routine.schedulePreview': 'Your routine will look like this',
 
 
   'profile.enrollments.title': 'My purchases',
