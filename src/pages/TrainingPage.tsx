@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Play, Plus, RotateCcw, TrendingUp } from 'lucide-react';
+import { useMemo, useState, type ReactNode } from 'react';
+import { Activity, Bike, CalendarDays, ChevronLeft, ChevronRight, Dumbbell, Footprints, Play, Plus, Radio, RotateCcw, TrendingUp, Watch } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { PageTopBar } from '@/components/layout/PageTopBar';
-import { type ScheduledWorkout, type TrainingStatus, useTraining } from '@/features/training/TrainingProvider';
+import { type ActivitySource, type ScheduledWorkout, type TrainingStatus, type TrainingSurface, useTraining } from '@/features/training/TrainingProvider';
 
 type Tab = 'agenda' | 'history' | 'progress';
 const dateKey = (date: Date) => date.toISOString().slice(0, 10);
@@ -21,16 +21,17 @@ function TrainingContent() {
   const selectedItems = scheduled.filter((item) => item.date === selectedDate);
   const selectedImported = imported.filter((item) => item.date === selectedDate);
   const activeItem = activeSession ? scheduled.find((item) => item.id === activeSession.scheduledId) : null;
-  return <div className="flex h-full flex-col overflow-y-auto bg-background pb-8">
-    <PageTopBar title="Treinos" backFallback="/meu-fit" actions={<div className="flex gap-1"><button type="button" aria-label="Adicionar registro" onClick={() => setRecordOpen(true)} className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-container text-on-surface"><Plus size={20} aria-hidden /></button><button type="button" aria-label="Abrir calendário mensal" onClick={() => setCalendarOpen(true)} className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-container text-on-surface"><CalendarDays size={20} aria-hidden /></button></div>} />
+  return <div className="relative flex h-full flex-col overflow-y-auto bg-background pb-8">
+    <PageTopBar title="Treinos" backFallback="/meu-fit" actions={<button type="button" aria-label="Abrir calendário mensal" onClick={() => setCalendarOpen(true)} className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-container text-on-surface"><CalendarDays size={20} aria-hidden /></button>} />
     <main className="mx-auto w-full max-w-[720px] px-5 pb-6 pt-5">
       <div className="grid grid-cols-3 rounded-xl bg-surface-container p-1" role="tablist" aria-label="Seções de treino">{([['agenda', 'Agenda'], ['history', 'Histórico'], ['progress', 'Progresso']] as [Tab, string][]).map(([value, label]) => <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={clsx('min-h-[40px] rounded-lg font-sans text-counter transition-colors', tab === value ? 'bg-surface-container-lowest text-on-surface' : 'text-on-surface-variant')}>{label}</button>)}</div>
       {tab === 'agenda' && <Agenda selectedDate={selectedDate} onDate={setSelectedDate} items={selectedItems} imported={selectedImported} active={activeItem ?? null} onCalendar={() => setCalendarOpen(true)} />}
       {tab === 'history' && <History />}
       {tab === 'progress' && <Progress />}
     </main>
+    <button type="button" onClick={() => setRecordOpen(true)} className="absolute bottom-5 right-5 z-20 flex min-h-12 items-center gap-2 rounded-full border border-primary/40 bg-primary px-4 font-sans text-label text-on-primary shadow-lg shadow-black/20 active:scale-[0.98]" aria-label="Adicionar registro de atividade"><Plus size={18} aria-hidden />Registrar</button>
     <MonthlyCalendar open={calendarOpen} onClose={() => setCalendarOpen(false)} selectedDate={selectedDate} onSelect={(value) => { setSelectedDate(value); setCalendarOpen(false); }} />
-    <BottomSheet open={recordOpen} onClose={() => setRecordOpen(false)} title="Adicionar registro" description="Registre uma atividade feita fora do Player."><div className="px-5 pb-6"><button type="button" onClick={() => { addActivity({ date: selectedDate, title: 'Treino registrado', durationMin: 60, surface: 'strength', source: 'manual' }); setRecordOpen(false); }} className="flex min-h-14 w-full items-center gap-3 rounded-xl border border-outline-variant/40 bg-surface-container px-4 text-left"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-on-primary"><Plus size={18} /></span><span><span className="block font-sans text-label text-on-surface">Registrar atividade</span><span className="mt-0.5 block font-sans text-body-sm text-on-surface-variant">Musculação, corrida ou outra modalidade.</span></span></button><button type="button" className="mt-3 flex min-h-14 w-full items-center gap-3 rounded-xl border border-outline-variant/40 bg-surface-container px-4 text-left"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-tertiary-container text-on-tertiary-container"><CalendarDays size={18} /></span><span><span className="block font-sans text-label text-on-surface">Importar de wearable</span><span className="mt-0.5 block font-sans text-body-sm text-on-surface-variant">Apple Health, Garmin, Strava e outros — em breve.</span></span></button></div></BottomSheet>
+    <AddActivitySheet open={recordOpen} onClose={() => setRecordOpen(false)} selectedDate={selectedDate} onAdd={(activity) => { addActivity(activity); setRecordOpen(false); }} />
   </div>;
 }
 
@@ -44,7 +45,7 @@ function Agenda({ selectedDate, onDate, items, imported, active, onCalendar }: {
   </section>;
 }
 
-function History() { const { scheduled, imported } = useTraining(); const entries = [...scheduled.filter((item) => ['completed', 'partial', 'missed'].includes(item.status)).map((item) => ({ id: item.id, date: item.date, title: item.title, meta: item.summary ?? statusLabel[item.status], status: item.status })), ...imported.map((item) => ({ id: item.id, date: item.date, title: item.title, meta: `${item.durationMin} min · Apple Health`, status: 'imported' as TrainingStatus }))].sort((a, b) => b.date.localeCompare(a.date)); return <section className="mt-6"><h2 className="font-sans text-title text-on-surface">Histórico</h2><p className="mt-1 font-sans text-body-sm text-on-surface-variant">Treinos e atividades registrados.</p><div className="mt-4 space-y-2">{entries.map((item) => <HistoryRow key={item.id} {...item} />)}</div></section>; }
+function History() { const { scheduled, imported } = useTraining(); const entries = [...scheduled.filter((item) => ['completed', 'partial', 'missed'].includes(item.status)).map((item) => ({ id: item.id, date: item.date, title: item.title, meta: item.summary ?? statusLabel[item.status], status: item.status })), ...imported.map((item) => ({ id: item.id, date: item.date, title: item.title, meta: `${item.durationMin} min · ${sourceLabel(item.source)}`, status: 'imported' as TrainingStatus }))].sort((a, b) => b.date.localeCompare(a.date)); return <section className="mt-6"><h2 className="font-sans text-title text-on-surface">Histórico</h2><p className="mt-1 font-sans text-body-sm text-on-surface-variant">Treinos e atividades registrados.</p><div className="mt-4 space-y-2">{entries.map((item) => <HistoryRow key={item.id} {...item} />)}</div></section>; }
 function HistoryRow({ date, title, meta, status }: { date: string; title: string; meta: string; status: TrainingStatus }) { return <div className="flex items-center gap-3 rounded-xl border border-outline-variant/40 bg-surface-container p-3"><span className={clsx('h-2.5 w-2.5 rounded-full', statusTone[status])} /><div><p className="font-sans text-label text-on-surface">{title}</p><p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} · {meta}</p></div></div>; }
 function Progress() { const { scheduled } = useTraining(); const completed = scheduled.filter((item) => item.status === 'completed').length; return <section className="mt-6"><h2 className="font-sans text-title text-on-surface">Progresso</h2><p className="mt-1 font-sans text-body-sm text-on-surface-variant">Leitura simples da sua consistência.</p><div className="mt-5 grid grid-cols-2 gap-3"><Metric icon="✓" value={`${completed}`} label="treinos concluídos" /><Metric icon="↗" value="8.4 t" label="volume recente" /><Metric icon="3" value="3 dias" label="sequência atual" /><Metric icon="+" value="2" label="PRs simulados" /></div><div className="mt-5 rounded-2xl border border-outline-variant/40 bg-surface-container p-4"><div className="flex items-center gap-2 text-primary"><TrendingUp size={18} aria-hidden /><span className="font-sans text-label">Supino reto</span></div><p className="mt-4 font-sans text-title-lg text-on-surface">60 kg</p><p className="mt-1 font-sans text-body-sm text-on-surface-variant">Última carga registrada · evolução preparada para o histórico real.</p></div></section>; }
 function Metric({ icon, value, label }: { icon: string; value: string; label: string }) { return <div className="rounded-2xl border border-outline-variant/40 bg-surface-container p-4"><span className="font-sans text-label text-primary">{icon}</span><p className="mt-3 font-sans text-title text-on-surface">{value}</p><p className="mt-1 font-sans text-body-sm text-on-surface-variant">{label}</p></div>; }
@@ -59,4 +60,178 @@ function MonthlyCalendar({ open, onClose, selectedDate, onSelect }: { open: bool
       <button type="button" onClick={() => { setCursor(new Date()); onSelect(today()); }} className="mt-5 min-h-11 font-sans text-label text-primary">Ir para hoje</button>
     </div>
   </BottomSheet>;
+}
+
+const surfaces: { value: TrainingSurface; label: string; icon: ReactNode }[] = [
+  { value: 'strength', label: 'Musculação', icon: <Dumbbell size={18} /> },
+  { value: 'running', label: 'Corrida', icon: <Activity size={18} /> },
+  { value: 'cycling', label: 'Bike', icon: <Bike size={18} /> },
+  { value: 'walking', label: 'Caminhada', icon: <Footprints size={18} /> },
+  { value: 'hiit', label: 'HIIT', icon: <TrendingUp size={18} /> },
+  { value: 'other', label: 'Outro', icon: <Plus size={18} /> },
+];
+
+const importSources: { value: ActivitySource; label: string; icon: ReactNode }[] = [
+  { value: 'apple_health', label: 'Apple Health', icon: <Watch size={18} /> },
+  { value: 'garmin', label: 'Garmin', icon: <Radio size={18} /> },
+  { value: 'strava', label: 'Strava', icon: <Activity size={18} /> },
+];
+
+function AddActivitySheet({
+  open,
+  onClose,
+  selectedDate,
+  onAdd,
+}: {
+  open: boolean;
+  onClose: () => void;
+  selectedDate: string;
+  onAdd: (activity: { date: string; title: string; durationMin: number; surface: TrainingSurface; source: ActivitySource; distanceKm?: number }) => void;
+}) {
+  const [mode, setMode] = useState<'manual' | 'import'>('manual');
+  const [surface, setSurface] = useState<TrainingSurface>('strength');
+  const [duration, setDuration] = useState(55);
+  const [source, setSource] = useState<ActivitySource>('apple_health');
+
+  const selectedSurface = surfaces.find((item) => item.value === surface) ?? surfaces[0];
+  const selectedSource = importSources.find((item) => item.value === source) ?? importSources[0];
+
+  const addManual = () => {
+    onAdd({
+      date: selectedDate,
+      title: selectedSurface.value === 'strength' ? 'Musculação registrada' : `${selectedSurface.label} registrada`,
+      durationMin: duration,
+      surface,
+      source: 'manual',
+      distanceKm: ['running', 'cycling', 'walking'].includes(surface) ? 5 : undefined,
+    });
+  };
+
+  const addImportedMock = () => {
+    onAdd({
+      date: selectedDate,
+      title: `${selectedSurface.label} importada`,
+      durationMin: duration,
+      surface,
+      source,
+      distanceKm: ['running', 'cycling', 'walking'].includes(surface) ? 5.2 : undefined,
+    });
+  };
+
+  return (
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title="Adicionar registro"
+      description="Atividade feita fora do Player. Não cria prescrição de treino."
+      panelClassName="max-h-[92%]"
+    >
+      <div className="space-y-5 px-5 pb-6">
+        <div className="grid grid-cols-2 rounded-xl bg-surface-container p-1" role="tablist" aria-label="Tipo de registro">
+          {([
+            ['manual', 'Manual'],
+            ['import', 'Importar'],
+          ] as const).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={mode === value}
+              onClick={() => setMode(value)}
+              className={clsx(
+                'min-h-10 rounded-lg font-sans text-counter',
+                mode === value ? 'bg-surface-container-lowest text-on-surface' : 'text-on-surface-variant',
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div>
+          <p className="font-sans text-label text-on-surface">Modalidade</p>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {surfaces.map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                onClick={() => setSurface(item.value)}
+                className={clsx(
+                  'flex min-h-[76px] flex-col items-center justify-center gap-2 rounded-xl border font-sans text-counter',
+                  surface === item.value
+                    ? 'border-primary bg-primary-container text-on-primary-container'
+                    : 'border-outline-variant/35 bg-surface-container text-on-surface-variant',
+                )}
+              >
+                <span className={surface === item.value ? 'text-primary' : 'text-on-surface-variant'}>{item.icon}</span>
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-outline-variant/35 bg-surface-container p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-sans text-counter text-on-surface-variant">Duração</p>
+              <p className="mt-1 font-sans text-title-lg text-on-surface">{duration} min</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setDuration((value) => Math.max(5, value - 5))}
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-container-high text-on-surface"
+                aria-label="Diminuir duração"
+              >
+                <ChevronLeft size={19} />
+              </button>
+              <button
+                type="button"
+                onClick={() => setDuration((value) => value + 5)}
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-primary text-on-primary"
+                aria-label="Aumentar duração"
+              >
+                <ChevronRight size={19} />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {mode === 'import' ? (
+          <div>
+            <p className="font-sans text-label text-on-surface">Origem</p>
+            <div className="mt-3 space-y-2">
+              {importSources.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => setSource(item.value)}
+                  className={clsx(
+                    'flex min-h-12 w-full items-center gap-3 rounded-xl border px-4 text-left font-sans text-label',
+                    source === item.value
+                      ? 'border-primary bg-primary-container text-on-primary-container'
+                      : 'border-outline-variant/35 bg-surface-container text-on-surface',
+                  )}
+                >
+                  <span className="text-primary">{item.icon}</span>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+            <p className="mt-3 font-sans text-body-sm text-on-surface-variant">
+              Integração real fica para HealthKit e conectores. Este mock já separa origem externa dos treinos OnlyFit.
+            </p>
+          </div>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={mode === 'manual' ? addManual : addImportedMock}
+          className="min-h-12 w-full rounded-xl bg-primary font-sans text-label text-on-primary"
+        >
+          {mode === 'manual' ? 'Salvar registro' : `Simular importação de ${selectedSource.label}`}
+        </button>
+      </div>
+    </BottomSheet>
+  );
 }
