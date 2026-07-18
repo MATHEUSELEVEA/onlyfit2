@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Camera, Check, ChevronDown, FileCheck2, FileText, Loader2, Mic, Paperclip, Square, Trash2, Upload } from 'lucide-react';
+import { Activity, AlertCircle, ArrowLeft, Bandage, Camera, FileCheck2, FileHeart, FileText, HeartPulse, Loader2, Mic, Moon, Paperclip, Pill, Plus, Square, Stethoscope, Syringe, Trash2, Upload } from 'lucide-react';
 import { clsx } from 'clsx';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { TextAreaField, TextField } from '@/components/ui/TextField';
 import { FeedbackMessage, HealthPageHeader, HealthPageShell, LoadingRows } from './components/HealthPrimitives';
 import { extractHealthPhoto, transcribeHealthAudio, uploadAndProcessHealthPdf } from './healthCaptureApi';
-import { defaultRecordCategory, recordCategoryOptions, type HealthCaptureMethod, type HealthCategory, type HealthEvent, type HealthFactInput } from './types';
+import { healthCategoryLabels, type HealthCaptureMethod, type HealthCategory, type HealthEvent, type HealthFactInput } from './types';
 import { useHealthAudioRecorder } from './useHealthAudioRecorder';
 import { useAppendHealthEvent, useHealthEvent } from './useHealthProfile';
 
@@ -31,8 +31,9 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
   const recorder = useHealthAudioRecorder();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const [step, setStep] = useState(correctsId ? 3 : 1);
   const [mode, setMode] = useState<EntryMode>('text');
-  const [category, setCategory] = useState<HealthCategory>(correctedEvent?.category === 'anamnesis' ? 'other' : correctedEvent?.category ?? defaultRecordCategory);
+  const [category, setCategory] = useState<HealthCategory | null>(correctedEvent?.category === 'anamnesis' ? 'other' : correctedEvent?.category ?? null);
   const [title, setTitle] = useState(correctedEvent ? `Correção: ${correctedEvent.title}` : '');
   const [narrative, setNarrative] = useState(correctedEvent?.narrative ?? '');
   const [effectiveDate, setEffectiveDate] = useState(todayInputValue());
@@ -46,7 +47,12 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
   const [photoReviewed, setPhotoReviewed] = useState(false);
   const [usedAi, setUsedAi] = useState(false);
   const [showMyFitSuccess, setShowMyFitSuccess] = useState(false);
+  const [sleepHours, setSleepHours] = useState(7);
+  const [sleepQuality, setSleepQuality] = useState(3);
+  const [hungerScore, setHungerScore] = useState(5);
+  const [energyScore, setEnergyScore] = useState(3);
   const openedFromMyFit = searchParams.get('origem') === 'meu-fit' && !correctsId;
+  const isHabit = category === 'habit';
 
   // A foto nunca sai do dispositivo depois da leitura: a prévia é um object URL
   // local e precisa ser revogada para não vazar memória entre trocas de modo.
@@ -61,7 +67,6 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
     setError('');
     setTitle('');
     setNarrative('');
-    setCategory(defaultRecordCategory);
     setDocumentId(null);
     setExtractedFacts([]);
     setDocumentName('');
@@ -104,7 +109,6 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
     try {
       const proposal = await extractHealthPhoto(file);
       setTitle(proposal.title);
-      setCategory(proposal.category);
       setNarrative(proposal.narrative);
       setEffectiveDate(proposal.effective_date || todayInputValue());
       setExtractedFacts(proposal.facts);
@@ -158,8 +162,9 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
   async function saveRecord() {
     const cleanTitle = title.trim();
     const cleanNarrative = narrative.trim();
-    if (!cleanTitle) return setError('Dê um título curto para identificar este registro.');
-    if (!cleanNarrative) return setError('Descreva a informação clínica que deseja registrar.');
+    if (!category) return setError('Escolha o tipo de registro.');
+    if (!isHabit && !cleanTitle) return setError('Dê um título curto para identificar este registro.');
+    if (!isHabit && !cleanNarrative) return setError('Descreva a informação clínica que deseja registrar.');
     if (!effectiveDate) return setError('Informe quando essa informação aconteceu ou passou a valer.');
     if (mode === 'pdf' && !documentId) return setError('Envie e revise um PDF antes de confirmar.');
     if (mode === 'photo' && !photoReviewed) return setError('Envie e revise uma foto antes de confirmar.');
@@ -174,17 +179,18 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
       await appendEvent.mutateAsync({
         category,
         eventType: correctsId ? 'correction' : mode === 'pdf' ? 'document_record' : category === 'exam' ? 'exam_result' : 'clinical_record',
-        title: cleanTitle,
-        narrative: cleanNarrative,
+        title: isHabit ? 'Check-in do dia' : cleanTitle,
+        narrative: isHabit ? (cleanNarrative || null) : cleanNarrative,
         effectiveAt: new Date(`${effectiveDate}T12:00:00`).toISOString(),
         captureMethod: modeToCaptureMethod(mode),
         correctsEventId: correctsId,
         documentId,
-        content: mode === 'pdf' ? { original_filename: documentName, extracted_facts: extractedFacts }
+        content: isHabit ? { checkin: { sleep_hours: sleepHours, sleep_quality: sleepQuality, hunger_score: hungerScore, energy_score: energyScore } }
+          : mode === 'pdf' ? { original_filename: documentName, extracted_facts: extractedFacts }
           : mode === 'photo' ? { extracted_facts: extractedFacts, photo_saved: false }
           : correctsId ? { correction_reason: 'user_correction' } : {},
         provenance: { submitted_via: 'onlyfit-mobile', input_mode: mode, ai_used: mode === 'audio' || usedAi, user_reviewed: true },
-        facts: usesExtractedFacts ? extractedFacts : [],
+        facts: isHabit ? habitFacts({ sleepHours, sleepQuality, hungerScore, energyScore, effectiveDate }) : usesExtractedFacts ? extractedFacts : [],
       });
       if (openedFromMyFit) {
         setShowMyFitSuccess(true);
@@ -201,7 +207,11 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
     <HealthPageShell width="form">
       <HealthPageHeader title={correctsId ? 'Corrigir informação' : 'Adicionar registro'} description={correctsId ? 'A informação anterior continuará no histórico' : 'Você revisa tudo antes de salvar'} backTo={correctsId ? `/perfil/saude/eventos/${correctsId}` : openedFromMyFit ? '/meu-fit' : '/perfil/saude'} />
       <main className="space-y-6 px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-6">
-        {!correctsId ? (
+        {!correctsId ? <WizardProgress step={step} /> : null}
+        {step > 1 && !correctsId ? <button type="button" onClick={() => setStep((current) => current - 1)} className="-ml-2 flex min-h-11 items-center gap-1 px-2 font-sans text-label text-on-surface-variant"><ArrowLeft size={18} aria-hidden /> Voltar</button> : null}
+        {step === 1 ? <RecordTypeStep category={category} onSelect={(value) => { setCategory(value); setError(''); }} /> : null}
+        {step === 2 && isHabit ? <DailyCheckinStep sleepHours={sleepHours} sleepQuality={sleepQuality} hungerScore={hungerScore} energyScore={energyScore} onSleepHours={setSleepHours} onSleepQuality={setSleepQuality} onHungerScore={setHungerScore} onEnergyScore={setEnergyScore} /> : null}
+        {step === 2 && !isHabit && !correctsId ? (
           <div className="grid grid-cols-4 gap-2" role="tablist" aria-label="Forma de entrada">
             <ModeButton icon={FileText} label="Escrever" selected={mode === 'text'} onClick={() => changeMode('text')} />
             <ModeButton icon={Mic} label="Gravar" selected={mode === 'audio'} onClick={() => changeMode('audio')} />
@@ -210,7 +220,7 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
           </div>
         ) : null}
 
-        {mode === 'audio' ? (
+        {step === 2 && !isHabit && mode === 'audio' ? (
           <section className="rounded-2xl border border-outline-variant/40 bg-surface px-4 py-5 text-center">
             <span className={clsx('mx-auto flex h-14 w-14 items-center justify-center rounded-full', recorder.isRecording ? 'bg-error-container text-on-error-container' : 'bg-primary-container text-on-primary-container')}><Mic size={24} aria-hidden /></span>
             <h2 className="mt-3 font-sans text-title text-on-surface">{recorder.isRecording ? formatDuration(recorder.elapsedMs) : narrative ? 'Transcrição pronta para revisão' : 'Gravar informação de saúde'}</h2>
@@ -225,7 +235,7 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
           </section>
         ) : null}
 
-        {mode === 'photo' ? (
+        {step === 2 && !isHabit && mode === 'photo' ? (
           <section className="rounded-2xl border border-outline-variant/40 bg-surface px-4 py-5 text-center">
             {photoPreview ? (
               <img src={photoPreview} alt="Foto enviada para leitura" className="mx-auto max-h-56 w-auto rounded-xl object-contain" />
@@ -243,7 +253,7 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
           </section>
         ) : null}
 
-        {mode === 'pdf' ? (
+        {step === 2 && !isHabit && mode === 'pdf' ? (
           <section className="rounded-2xl border border-outline-variant/40 bg-surface px-4 py-5 text-center">
             {documentId ? <FileCheck2 size={26} className="mx-auto text-primary" aria-hidden /> : <Paperclip size={26} className="mx-auto text-primary" aria-hidden />}
             <h2 className="mt-3 font-sans text-title text-on-surface">{documentId ? 'PDF pronto para revisão' : 'Adicionar documento PDF'}</h2>
@@ -255,26 +265,22 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
           </section>
         ) : null}
 
-        {captureWarnings.length ? (
+        {step === 2 && captureWarnings.length ? (
           <div className="space-y-2">{captureWarnings.map((warning) => <FeedbackMessage key={warning} type="info">{warning}</FeedbackMessage>)}</div>
         ) : null}
-        {canShowForm ? (
+        {step === 3 && canShowForm ? (
           <section className="space-y-4">
-            <CategoryPicker value={category} onChange={setCategory} />
-            <TextField label="Título" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} autoComplete="off" autoCapitalize="sentences" enterKeyHint="next" />
+            {isHabit ? <DailyCheckinReview sleepHours={sleepHours} sleepQuality={sleepQuality} hungerScore={hungerScore} energyScore={energyScore} /> : <TextField label="Título" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} autoComplete="off" autoCapitalize="sentences" enterKeyHint="next" />}
             <TextField label="Data da informação" type="date" max={todayInputValue()} value={effectiveDate} onChange={(event) => setEffectiveDate(event.target.value)} />
-            <TextAreaField label={correctsId ? 'Informação correta' : mode === 'audio' ? 'Transcrição revisada' : mode === 'pdf' ? 'Resumo revisado' : mode === 'photo' ? 'Leitura revisada' : 'Descrição'} hint={mode === 'text' ? undefined : 'Edite qualquer informação antes de confirmar.'} value={narrative} onChange={(event) => setNarrative(event.target.value)} maxLength={5000} autoCapitalize="sentences" className="min-h-[180px]" />
+            <TextAreaField label={isHabit ? 'Observação (opcional)' : correctsId ? 'Informação correta' : mode === 'audio' ? 'Transcrição revisada' : mode === 'pdf' ? 'Resumo revisado' : mode === 'photo' ? 'Leitura revisada' : 'Descrição'} hint={isHabit ? 'Algo que queira lembrar sobre hoje?' : mode === 'text' ? undefined : 'Edite qualquer informação antes de confirmar.'} value={narrative} onChange={(event) => setNarrative(event.target.value)} maxLength={5000} autoCapitalize="sentences" className="min-h-[180px]" />
             {usesExtractedFacts && extractedFacts.length ? <ExtractedFacts facts={extractedFacts} onChange={setExtractedFacts} /> : null}
           </section>
         ) : null}
 
         {error ? <FeedbackMessage type="error">{error}</FeedbackMessage> : null}
-        {canShowForm ? (
-          <button type="button" onClick={() => void saveRecord()} disabled={appendEvent.isPending || captureBusy || recorder.isRecording} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 font-sans text-label text-on-primary transition-transform active:scale-[0.98] disabled:opacity-60">
-            {appendEvent.isPending ? <Loader2 size={17} className="animate-spin" aria-hidden /> : <Check size={18} aria-hidden />}
-            {appendEvent.isPending ? 'Salvando...' : correctsId ? 'Adicionar correção' : 'Confirmar registro'}
-          </button>
-        ) : null}
+        {step === 1 ? <WizardAction disabled={!category} onClick={() => setStep(2)}>Continuar</WizardAction> : null}
+        {step === 2 ? <WizardAction disabled={(!isHabit && !canShowForm) || captureBusy || recorder.isRecording} onClick={() => setStep(3)}>Continuar</WizardAction> : null}
+        {step === 3 && canShowForm ? <WizardAction disabled={appendEvent.isPending || captureBusy || recorder.isRecording} onClick={() => void saveRecord()}>{appendEvent.isPending ? 'Salvando...' : correctsId ? 'Adicionar correção' : 'Confirmar registro'}</WizardAction> : null}
       </main>
       <BottomSheet
         open={showMyFitSuccess}
@@ -296,60 +302,51 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
   );
 }
 
-function CategoryPicker({ value, onChange }: { value: HealthCategory; onChange: (category: HealthCategory) => void }) {
-  const [open, setOpen] = useState(false);
-  const selectedLabel = recordCategoryOptions.find((option) => option.value === value)?.label ?? 'Selecionar categoria';
+const recordTypes = [
+  { value: 'habit', icon: Moon, description: 'Sono, fome, energia e como foi o dia.' },
+  { value: 'exam', icon: FileHeart, description: 'Exame, laudo ou resultado.' },
+  { value: 'symptom', icon: Activity, description: 'Mal-estar, dor ou outro sintoma.' },
+  { value: 'injury', icon: Bandage, description: 'Lesão ou desconforto físico.' },
+  { value: 'condition', icon: HeartPulse, description: 'Condição ou diagnóstico.' },
+  { value: 'procedure', icon: Stethoscope, description: 'Consulta, cirurgia ou procedimento.' },
+  { value: 'physical_assessment', icon: Plus, description: 'Peso, medida ou avaliação corporal.' },
+  { value: 'medication', icon: Pill, description: 'Medicamento, vitamina ou suplemento.' },
+  { value: 'allergy', icon: AlertCircle, description: 'Alergia ou intolerância.' },
+  { value: 'vaccine', icon: Syringe, description: 'Vacina ou dose de reforço.' },
+  { value: 'other', icon: FileText, description: 'Outra informação de saúde.' },
+] as const satisfies ReadonlyArray<{ value: HealthCategory; icon: typeof Activity; description: string }>;
 
-  return (
-    <>
-      <div className="space-y-1.5">
-        <span id="health-category-label" className="block font-sans text-body-sm font-medium text-on-surface-variant">
-          Categoria
-        </span>
-        <button
-          type="button"
-          aria-labelledby="health-category-label health-category-value"
-          aria-haspopup="dialog"
-          aria-expanded={open}
-          onClick={() => setOpen(true)}
-          className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-outline-variant/50 bg-surface-container-low px-3.5 text-left font-sans text-body text-on-surface focus-visible:border-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
-        >
-          <span id="health-category-value">{selectedLabel}</span>
-          <ChevronDown size={19} className="shrink-0 text-on-surface-variant" aria-hidden />
-        </button>
-      </div>
-      <BottomSheet
-        open={open}
-        onClose={() => setOpen(false)}
-        title="Escolha uma categoria"
-        description="Selecione a opção que melhor descreve este registro."
-      >
-        <div className="px-3 pb-4 pt-2">
-          {recordCategoryOptions.map((option) => {
-            const selected = option.value === value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => {
-                  onChange(option.value);
-                  setOpen(false);
-                }}
-                className={clsx(
-                  'flex min-h-14 w-full items-center justify-between gap-3 rounded-xl px-3 text-left font-sans text-body transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                  selected ? 'bg-primary-container font-medium text-on-primary-container' : 'text-on-surface active:bg-surface-container',
-                )}
-              >
-                {option.label}
-                {selected ? <Check size={19} className="shrink-0" aria-hidden /> : null}
-              </button>
-            );
-          })}
-        </div>
-      </BottomSheet>
-    </>
-  );
+function WizardProgress({ step }: { step: number }) {
+  return <div><div className="flex items-center justify-between"><span className="font-sans text-body-sm text-on-surface-variant">{step} de 3</span><span className="font-sans text-body-sm text-on-surface-variant">Adicionar registro</span></div><div className="mt-2 h-1 overflow-hidden rounded-full bg-surface-container-high"><span className="block h-full rounded-full bg-primary transition-all" style={{ width: `${step / 3 * 100}%` }} /></div></div>;
+}
+
+function RecordTypeStep({ category, onSelect }: { category: HealthCategory | null; onSelect: (value: HealthCategory) => void }) {
+  return <section><h2 className="font-sans text-title-lg text-on-surface">O que você quer registrar?</h2><p className="mt-1 font-sans text-body-sm text-on-surface-variant">Escolha o tipo primeiro. Você adiciona texto ou anexos depois.</p><div className="mt-6 grid grid-cols-2 gap-3">{recordTypes.map(({ value, icon: Icon, description }) => { const selected = category === value; return <button key={value} type="button" aria-pressed={selected} onClick={() => onSelect(value)} className={clsx('flex min-h-[148px] flex-col items-start rounded-2xl border p-4 text-left transition-colors', selected ? 'border-primary bg-primary/10' : 'border-outline-variant/40 bg-surface-container')}><Icon size={26} className="text-primary" aria-hidden /><span className="mt-auto font-sans text-label text-on-surface">{healthCategoryLabels[value]}</span><span className="mt-1 font-sans text-body-sm text-on-surface-variant">{description}</span></button>; })}</div></section>;
+}
+
+function DailyCheckinStep({ sleepHours, sleepQuality, hungerScore, energyScore, onSleepHours, onSleepQuality, onHungerScore, onEnergyScore }: { sleepHours: number; sleepQuality: number; hungerScore: number; energyScore: number; onSleepHours: (value: number) => void; onSleepQuality: (value: number) => void; onHungerScore: (value: number) => void; onEnergyScore: (value: number) => void }) {
+  return <section><h2 className="font-sans text-title-lg text-on-surface">Como foi seu dia?</h2><p className="mt-1 font-sans text-body-sm text-on-surface-variant">Um check-in rápido para perceber seus padrões com o tempo.</p><div className="mt-7 space-y-5"><RangeQuestion label="Quanto você dormiu?" value={sleepHours} min={0} max={12} step={0.5} suffix="h" onChange={onSleepHours} /><RangeQuestion label="Como foi seu sono?" value={sleepQuality} min={1} max={5} suffix="/5" onChange={onSleepQuality} /><RangeQuestion label="Quanta fome sentiu hoje?" value={hungerScore} min={0} max={10} suffix="/10" onChange={onHungerScore} /><RangeQuestion label="Como estava sua energia?" value={energyScore} min={1} max={5} suffix="/5" onChange={onEnergyScore} /></div></section>;
+}
+
+function RangeQuestion({ label, value, min, max, step = 1, suffix, onChange }: { label: string; value: number; min: number; max: number; step?: number; suffix: string; onChange: (value: number) => void }) {
+  return <label className="block rounded-2xl border border-outline-variant/40 bg-surface-container p-4"><span className="flex items-baseline justify-between gap-3 font-sans text-label text-on-surface"><span>{label}</span><strong className="text-title text-primary">{value}{suffix}</strong></span><input className="mt-4 w-full accent-primary" type="range" min={min} max={max} step={step} value={value} onChange={(event) => onChange(Number(event.target.value))} /></label>;
+}
+
+function DailyCheckinReview({ sleepHours, sleepQuality, hungerScore, energyScore }: { sleepHours: number; sleepQuality: number; hungerScore: number; energyScore: number }) {
+  return <div className="grid grid-cols-2 gap-2 rounded-2xl bg-surface-container p-4 font-sans text-body-sm text-on-surface-variant"><span>Sono <strong className="block font-sans text-title text-on-surface">{sleepHours}h</strong></span><span>Qualidade <strong className="block font-sans text-title text-on-surface">{sleepQuality}/5</strong></span><span>Fome <strong className="block font-sans text-title text-on-surface">{hungerScore}/10</strong></span><span>Energia <strong className="block font-sans text-title text-on-surface">{energyScore}/5</strong></span></div>;
+}
+
+function WizardAction({ children, disabled, onClick }: { children: string; disabled?: boolean; onClick: () => void }) {
+  return <button type="button" disabled={disabled} onClick={onClick} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 font-sans text-label text-on-primary transition-transform active:scale-[0.98] disabled:opacity-60">{children}</button>;
+}
+
+function habitFacts({ sleepHours, sleepQuality, hungerScore, energyScore, effectiveDate }: { sleepHours: number; sleepQuality: number; hungerScore: number; energyScore: number; effectiveDate: string }): HealthFactInput[] {
+  return [
+    { fact_type: 'daily_checkin', canonical_key: 'sleep_hours', display: 'Horas de sono', value_numeric: sleepHours, unit: 'h', effective_at: effectiveDate },
+    { fact_type: 'daily_checkin', canonical_key: 'sleep_quality', display: 'Qualidade do sono', value_numeric: sleepQuality, unit: '/5', effective_at: effectiveDate },
+    { fact_type: 'daily_checkin', canonical_key: 'hunger_score', display: 'Fome', value_numeric: hungerScore, unit: '/10', effective_at: effectiveDate },
+    { fact_type: 'daily_checkin', canonical_key: 'energy_score', display: 'Energia', value_numeric: energyScore, unit: '/5', effective_at: effectiveDate },
+  ];
 }
 
 function ExtractedFacts({ facts, onChange }: { facts: HealthFactInput[]; onChange: (facts: HealthFactInput[]) => void }) {
