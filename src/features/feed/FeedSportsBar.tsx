@@ -4,9 +4,9 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { useAffinityGroups } from '@/lib/sports';
 
 interface FeedSportsBarProps {
-  selected: string | null;
+  selected: string[];
   availableSports: string[];
-  onSelect: (key: string | null) => void;
+  onSelect: (keys: string[]) => void;
 }
 
 export function FeedSportsBar({ selected, availableSports, onSelect }: FeedSportsBarProps) {
@@ -15,12 +15,18 @@ export function FeedSportsBar({ selected, availableSports, onSelect }: FeedSport
 
   // `availableSports` já vem do banco (feed_home_available_sports) na ordem da
   // taxonomia, e é ele quem manda: mostra só grupo com conteúdo pro usuário.
-  const tabs: { key: string | null; label: string }[] = [
-    { key: null, label: 'Tudo' },
-    ...availableSports.filter(Boolean).map((key) => ({ key, label: labelFor(key) })),
-  ];
+  const tabs = availableSports.filter(Boolean).map((key) => ({ key, label: labelFor(key) }));
+  const allSelected = selected.length === 0;
+  const selectedLabel =
+    selected.length === 1
+      ? tabs.find((tab) => tab.key === selected[0])?.label ?? 'Tudo'
+      : selected.length > 1
+        ? `${selected.length} modalidades`
+        : 'Tudo';
 
-  const selectedLabel = tabs.find((tab) => tab.key === selected)?.label ?? 'Tudo';
+  function toggleSport(key: string) {
+    onSelect(selected.includes(key) ? selected.filter((sport) => sport !== key) : [...selected, key]);
+  }
 
   return (
     <>
@@ -41,20 +47,25 @@ export function FeedSportsBar({ selected, availableSports, onSelect }: FeedSport
         open={open}
         onClose={() => setOpen(false)}
         title="Filtrar feed"
-        description="Escolha uma modalidade para ver conteúdos relacionados."
+        description="Você pode escolher mais de uma modalidade."
       >
         <div className="px-5 pb-6 pt-1">
           <div className="overflow-hidden rounded-xl border border-outline-variant/30 bg-surface/40">
+            <button
+              type="button"
+              onClick={() => onSelect([])}
+              className="flex min-h-[52px] w-full items-center justify-between px-4 text-left transition-colors active:bg-surface-container-high"
+            >
+              <span className="font-sans text-body text-on-surface">Tudo</span>
+              {allSelected && <Check size={20} className="text-primary" aria-label="Selecionado" />}
+            </button>
             {tabs.map((tab) => {
-              const active = selected === tab.key;
+              const active = selected.includes(tab.key);
               return (
                 <button
-                  key={tab.key ?? 'all'}
+                  key={tab.key}
                   type="button"
-                  onClick={() => {
-                    onSelect(tab.key);
-                    setOpen(false);
-                  }}
+                  onClick={() => toggleSport(tab.key)}
                   className="flex min-h-[52px] w-full items-center justify-between px-4 text-left transition-colors active:bg-surface-container-high"
                 >
                   <span className="font-sans text-body text-on-surface">{tab.label}</span>

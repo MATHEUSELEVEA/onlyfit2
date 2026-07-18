@@ -20,11 +20,12 @@ function FeedSkeleton() {
 
 export function FeedPage() {
   const navigate = useNavigate();
-  const [sportSelection, setSportSelection] = useState<string | null>(null);
+  const [sportSelection, setSportSelection] = useState<string[]>([]);
   const { data: availableSports = [] } = useAvailableFeedSports();
-  const selectedSport =
-    sportSelection && availableSports.includes(sportSelection) ? sportSelection : null;
-  const sports = useMemo(() => (selectedSport ? [selectedSport] : []), [selectedSport]);
+  const sports = useMemo(
+    () => sportSelection.filter((sport) => availableSports.includes(sport)),
+    [sportSelection, availableSports],
+  );
   const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useFeed(sports);
 
@@ -53,7 +54,7 @@ export function FeedPage() {
       <header className="absolute inset-x-0 top-0 z-20 mx-auto feed-stage pb-2 pt-safe-top">
         <div className="mt-2">
           <FeedSportsBar
-            selected={selectedSport}
+            selected={sports}
             availableSports={availableSports}
             onSelect={setSportSelection}
           />
