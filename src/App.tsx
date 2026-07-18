@@ -33,6 +33,7 @@ import { ChatPage } from './features/messages/ChatPage';
 import { MyBusinessesPage } from './features/profile/MyBusinessesPage';
 import { CreateBusinessPage } from './features/profile/CreateBusinessPage';
 import { BusinessWorkspacePage } from './features/profile/BusinessWorkspacePage';
+import { OfferingManagementPage } from './features/profile/OfferingManagementPage';
 import { PrivacyTermsPage } from './features/legal/PrivacyTermsPage';
 import { CreatorProfilePage } from './features/creators/CreatorProfilePage';
 import { HealthProfilePage } from './features/health/HealthProfilePage';
@@ -110,6 +111,7 @@ function AuthenticatedApp() {
           <Route path="/negocios" element={<MyBusinessesPage />} />
           <Route path="/negocios/novo" element={<CreateBusinessPage />} />
           <Route path="/negocios/:businessId" element={<BusinessWorkspacePage />} />
+          <Route path="/negocios/:businessId/ofertas/:offeringId" element={<OfferingManagementPage />} />
           <Route path="/creator/:username" element={<CreatorProfilePage />} />
           <Route path="*" element={<Navigate to="/feed" replace />} />
         </Route>

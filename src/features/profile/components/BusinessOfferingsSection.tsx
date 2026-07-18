@@ -1,55 +1,19 @@
 import { useState, type FormEvent } from 'react';
-import {
-  ChevronRight,
-  Crown,
-  Dumbbell,
-  HeartPulse,
-  Loader2,
-  Plus,
-  ShoppingBag,
-  Sparkles,
-  Utensils,
-} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { ChevronRight, Loader2, Plus } from 'lucide-react';
 import { useTranslation } from '@/i18n/I18nProvider';
 import type { TranslationKey } from '@/i18n/translations';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { TextAreaField, TextField } from '@/components/ui/TextField';
+import { offeringIcon, STATUS_LABEL_KEYS, STATUS_STYLES } from '../offerings/offeringVisuals';
 import {
   useBusinessOfferings,
   useCreateOffering,
   useOfferingTypes,
-  useUpdateOffering,
   type BusinessOffering,
   type OfferingStatus,
   type OfferingType,
 } from '../useBusinessOfferings';
-
-// O catálogo guarda o nome do ícone (lucide); tipos futuros sem mapeamento
-// caem no genérico em vez de quebrar a lista.
-const OFFERING_ICONS: Record<string, typeof Sparkles> = {
-  crown: Crown,
-  'heart-pulse': HeartPulse,
-  dumbbell: Dumbbell,
-  utensils: Utensils,
-  'shopping-bag': ShoppingBag,
-};
-
-function offeringIcon(icon: string | null) {
-  return (icon && OFFERING_ICONS[icon]) || Sparkles;
-}
-
-const STATUS_STYLES: Record<Exclude<OfferingStatus, 'archived'>, string> = {
-  draft: 'bg-surface-container-high text-on-surface-variant',
-  active: 'bg-primary-container text-on-primary-container',
-  paused: 'bg-tertiary-container text-on-tertiary-container',
-};
-
-const STATUS_LABEL_KEYS = {
-  draft: 'profile.business.offers.status.draft',
-  active: 'profile.business.offers.status.active',
-  paused: 'profile.business.offers.status.paused',
-  archived: 'profile.business.offers.status.draft',
-} as const;
 
 function mapOfferingError(error: unknown, t: (key: TranslationKey) => string): string {
   const message = error instanceof Error ? error.message : '';
@@ -68,12 +32,12 @@ export function BusinessOfferingsSection({
   canManage: boolean;
 }) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { data: types = [] } = useOfferingTypes();
   const { data: offerings = [], isLoading, isError } = useBusinessOfferings(businessId);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedType, setSelectedType] = useState<OfferingType | null>(null);
-  const [managed, setManaged] = useState<BusinessOffering | null>(null);
 
   const typeBySlug = new Map(types.map((type) => [type.slug, type]));
 
@@ -130,7 +94,7 @@ export function BusinessOfferingsSection({
                 <button
                   key={offering.id}
                   type="button"
-                  onClick={() => setManaged(offering)}
+                  onClick={() => navigate(`/negocios/${businessId}/ofertas/${offering.id}`)}
                   className="flex w-full items-center gap-3 border-b border-outline-variant/15 px-4 py-3.5 text-left transition-colors last:border-b-0 hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary active:bg-surface-container-high"
                 >
                   {row}
@@ -179,12 +143,6 @@ export function BusinessOfferingsSection({
         selectedType={selectedType}
         onSelectType={setSelectedType}
         onClose={() => setCreateOpen(false)}
-      />
-      <ManageOfferingSheet
-        businessId={businessId}
-        offering={managed}
-        typeName={managed ? (typeBySlug.get(managed.offering_type)?.name ?? managed.offering_type) : ''}
-        onClose={() => setManaged(null)}
       />
     </section>
   );
@@ -327,135 +285,6 @@ function CreateOfferingSheet({
           </div>
         </form>
       )}
-    </BottomSheet>
-  );
-}
-
-function ManageOfferingSheet({
-  businessId,
-  offering,
-  typeName,
-  onClose,
-}: {
-  businessId: string;
-  offering: BusinessOffering | null;
-  typeName: string;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [confirmArchive, setConfirmArchive] = useState(false);
-  // O sheet abre com os dados da oferta escolhida; a key remonta o estado
-  // quando outra oferta é selecionada.
-  const [loadedId, setLoadedId] = useState<string | null>(null);
-  const updateMutation = useUpdateOffering(businessId);
-
-  if (offering && loadedId !== offering.id) {
-    setLoadedId(offering.id);
-    setName(offering.name);
-    setDescription(offering.description ?? '');
-    setError(null);
-    setConfirmArchive(false);
-  }
-
-  function close() {
-    if (updateMutation.isPending) return;
-    onClose();
-    setLoadedId(null);
-  }
-
-  function save(event: FormEvent) {
-    event.preventDefault();
-    if (!offering) return;
-    setError(null);
-    if (name.trim().length < 3) {
-      setError(t('profile.business.offers.error.invalidName'));
-      return;
-    }
-    updateMutation.mutate(
-      { offeringId: offering.id, name: name.trim(), description: description.trim() },
-      {
-        onSuccess: close,
-        onError: (mutationError) => setError(mapOfferingError(mutationError, t)),
-      },
-    );
-  }
-
-  function setStatus(status: OfferingStatus) {
-    if (!offering) return;
-    setError(null);
-    updateMutation.mutate(
-      { offeringId: offering.id, status },
-      {
-        onSuccess: close,
-        onError: (mutationError) => setError(mapOfferingError(mutationError, t)),
-      },
-    );
-  }
-
-  const statusAction: { label: string; status: OfferingStatus } | null = offering
-    ? offering.status === 'draft'
-      ? { label: t('profile.business.offers.activate'), status: 'active' }
-      : offering.status === 'active'
-        ? { label: t('profile.business.offers.pause'), status: 'paused' }
-        : { label: t('profile.business.offers.reactivate'), status: 'active' }
-    : null;
-
-  return (
-    <BottomSheet
-      open={Boolean(offering)}
-      onClose={close}
-      title={t('profile.business.offers.manage')}
-      description={typeName}
-    >
-      <form onSubmit={save} className="space-y-4 px-5 pb-6 pt-4">
-        <TextField
-          label={t('profile.business.offers.name')}
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          maxLength={96}
-          disabled={updateMutation.isPending}
-          error={error ?? undefined}
-        />
-        <TextAreaField
-          label={t('profile.business.offers.description')}
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-          rows={3}
-          maxLength={400}
-          disabled={updateMutation.isPending}
-        />
-        <button
-          type="submit"
-          disabled={updateMutation.isPending}
-          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 font-sans text-label text-on-primary transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-60"
-        >
-          {updateMutation.isPending && <Loader2 size={16} className="animate-spin" aria-hidden />}
-          {updateMutation.isPending ? t('profile.business.offers.saving') : t('profile.business.offers.save')}
-        </button>
-        <div className="flex gap-2">
-          {statusAction && (
-            <button
-              type="button"
-              disabled={updateMutation.isPending}
-              onClick={() => setStatus(statusAction.status)}
-              className="min-h-11 flex-1 rounded-xl bg-surface-container px-4 font-sans text-label text-on-surface transition-colors hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-60"
-            >
-              {statusAction.label}
-            </button>
-          )}
-          <button
-            type="button"
-            disabled={updateMutation.isPending}
-            onClick={() => (confirmArchive ? setStatus('archived') : setConfirmArchive(true))}
-            className="min-h-11 flex-1 rounded-xl bg-error-container px-4 font-sans text-label text-on-error-container transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-60"
-          >
-            {confirmArchive ? t('profile.business.offers.archiveConfirm') : t('profile.business.offers.archive')}
-          </button>
-        </div>
-      </form>
     </BottomSheet>
   );
 }
