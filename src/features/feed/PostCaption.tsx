@@ -2,21 +2,18 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 
 interface PostCaptionProps {
   text: string;
-  // Quanto a legenda cresceu ao expandir, em px. O PostCard usa esse valor para
-  // empurrar o trilho de ações para cima na mesma medida.
-  onLiftChange?: (lift: number) => void;
 }
 
 // Legenda do criador no estilo TikTok:
 // - colapsada mostra 2 linhas; se o texto passar disso, corta com "… mais";
 // - ao tocar em "mais", expande o texto inteiro (com rolagem se for muito grande);
 // - fundo sempre transparente (o texto vive sobre a mídia, só com sombra).
-export function PostCaption({ text, onLiftChange }: PostCaptionProps) {
+// A legenda vive numa coluna flex ancorada no rodapé: expandir cresce para
+// cima e o trilho de ações, alinhado pelo fundo, acompanha sozinho.
+export function PostCaption({ text }: PostCaptionProps) {
   const [expanded, setExpanded] = useState(false);
   const [clamped, setClamped] = useState(false);
   const paragraphRef = useRef<HTMLParagraphElement>(null);
-  const rootRef = useRef<HTMLDivElement>(null);
-  const collapsedHeightRef = useRef(0);
 
   const measure = useCallback(() => {
     const el = paragraphRef.current;
@@ -35,43 +32,27 @@ export function PostCaption({ text, onLiftChange }: PostCaptionProps) {
     return () => window.removeEventListener('resize', measure);
   }, [expanded, measure]);
 
-  // A legenda cresce para cima (o bloco é ancorado no rodapé), então o delta de
-  // altura entre colapsada e expandida é exatamente o quanto o trilho de ações
-  // precisa subir para não ficar embaixo do texto.
-  useLayoutEffect(() => {
-    const el = rootRef.current;
-    if (!el) return;
-    if (!expanded) {
-      collapsedHeightRef.current = el.offsetHeight;
-      onLiftChange?.(0);
-      return;
-    }
-    onLiftChange?.(Math.max(0, el.offsetHeight - collapsedHeightRef.current));
-  }, [expanded, text, onLiftChange]);
-
   if (!text) return null;
 
   if (expanded) {
     return (
-      <div ref={rootRef} className="max-w-[88%]">
-        <div className="no-scrollbar max-h-40 overflow-y-auto">
-          <p className="whitespace-pre-wrap font-sans text-body-sm text-white drop-shadow">
-            {text}{' '}
-            <button
-              type="button"
-              onClick={() => setExpanded(false)}
-              className="font-sans text-body-sm font-semibold text-white/70"
-            >
-              menos
-            </button>
-          </p>
-        </div>
+      <div className="no-scrollbar max-h-40 overflow-y-auto">
+        <p className="whitespace-pre-wrap font-sans text-body-sm text-white drop-shadow">
+          {text}{' '}
+          <button
+            type="button"
+            onClick={() => setExpanded(false)}
+            className="font-sans text-body-sm font-semibold text-white/70"
+          >
+            menos
+          </button>
+        </p>
       </div>
     );
   }
 
   return (
-    <div ref={rootRef} className="relative max-w-[88%]">
+    <div className="relative">
       <p
         ref={paragraphRef}
         className="line-clamp-2 font-sans text-body-sm text-white drop-shadow"

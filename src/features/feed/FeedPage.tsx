@@ -1,9 +1,20 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CirclePlus } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Loader2, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAvailableFeedSports, useFeed } from './useFeed';
 import { PostCard } from './PostCard';
 import { FeedSportsBar } from './FeedSportsBar';
+
+// Quantos vizinhos do post visível ficam montados de verdade. Como no TikTok,
+// só o atual e os adjacentes existem — o resto vira palco vazio, senão cada
+// <video> da lista bufferiza junto e o scroll engasga em aparelho modesto.
+const MOUNT_WINDOW = 1;
+
+// Arrasto (px) além do qual soltar dispara o refresh.
+const PULL_THRESHOLD = 56;
+// O dedo anda mais que o indicador, como nos pull-to-refresh nativos.
+const PULL_DRAG_FACTOR = 0.4;
+const PULL_MAX = 88;
 
 function FeedSkeleton() {
   return (
@@ -26,10 +37,25 @@ export function FeedPage() {
     () => sportSelection.filter((sport) => availableSports.includes(sport)),
     [sportSelection, availableSports],
   );
-  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useFeed(sports);
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    isRefetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useFeed(sports);
 
   const posts = useMemo(() => data?.pages.flatMap((page) => page.posts) ?? [], [data]);
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  // Pull-to-refresh: distância atual do arrasto (0 = solto).
+  const [pull, setPull] = useState(0);
+  const pullStartY = useRef<number | null>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
 
   const loadMore = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
@@ -42,18 +68,78 @@ export function FeedPage() {
   }, [isLoading, posts.length, hasNextPage, loadMore]);
 
   // Busca a próxima página com dois posts de antecedência, para a rolagem não
-  // esbarrar no fim da lista.
+  // esbarrar no fim da lista — e acompanha qual post está visível para a
+  // janela de montagem.
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const el = event.currentTarget;
     if (el.scrollHeight - el.scrollTop - el.clientHeight < el.clientHeight * 2) loadMore();
+    const next = Math.round(el.scrollTop / el.clientHeight);
+    setCurrentIndex((prev) => (prev === next ? prev : next));
   };
 
+  // Pull-to-refresh manual: o container tem snap obrigatório e overscroll
+  // desligado, então o gesto nativo não existe — o arrasto no topo é medido
+  // na mão e o feed desce junto com o dedo.
+  const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    const el = scrollerRef.current;
+    if (el && el.scrollTop <= 0 && !isRefetching) {
+      pullStartY.current = event.touches[0].clientY;
+    }
+  };
+
+  const handleTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+    const start = pullStartY.current;
+    const el = scrollerRef.current;
+    if (start === null || !el) return;
+    const delta = event.touches[0].clientY - start;
+    if (delta <= 0 || el.scrollTop > 0) {
+      pullStartY.current = null;
+      setPull(0);
+      return;
+    }
+    setPull(Math.min(delta * PULL_DRAG_FACTOR, PULL_MAX));
+  };
+
+  const handleTouchEnd = () => {
+    if (pullStartY.current !== null && pull >= PULL_THRESHOLD) void refetch();
+    pullStartY.current = null;
+    setPull(0);
+  };
+
+  const pulling = pull > 0;
+
   return (
-    <div className="feed-viewport relative">
+    <div className="relative h-full">
+      {/* Indicador do pull-to-refresh, atrás do feed que desce junto do dedo */}
+      {(pulling || isRefetching) && (
+        <div
+          className="pointer-events-none absolute inset-x-0 z-0 flex justify-center"
+          style={{ top: 'calc(var(--feed-inset-t) + 16px)' }}
+        >
+          <Loader2
+            size={26}
+            className={isRefetching ? 'animate-spin text-white' : 'text-white/80'}
+            style={
+              isRefetching ? undefined : { transform: `rotate(${pull * 3}deg)`, opacity: pull / PULL_THRESHOLD }
+            }
+            aria-label={isRefetching ? 'Atualizando feed' : undefined}
+            aria-hidden={!isRefetching}
+          />
+        </div>
+      )}
+
       {/* Feed vertical com snap por post */}
       <div
+        ref={scrollerRef}
         onScroll={handleScroll}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         className="no-scrollbar h-full snap-y snap-mandatory overflow-y-auto bg-surface-container-lowest"
+        style={{
+          transform: pulling ? `translateY(${pull}px)` : undefined,
+          transition: pulling ? undefined : 'transform 0.25s cubic-bezier(0.22, 1, 0.36, 1)',
+        }}
       >
         {isLoading && <FeedSkeleton />}
 
@@ -81,14 +167,14 @@ export function FeedPage() {
           </div>
         )}
 
-        {posts.map((post) => (
+        {posts.map((post, index) => (
           <div key={post.id} className="h-full snap-start snap-always">
-            <PostCard post={post} />
+            {Math.abs(index - currentIndex) <= MOUNT_WINDOW && <PostCard post={post} />}
           </div>
         ))}
       </div>
 
-      {/* Filtros acompanham os controles flutuantes da mídia, abaixo do som. */}
+      {/* Cluster de controles do topo: som (no PostCard) → filtro → criar */}
       <FeedSportsBar
         selected={sports}
         availableSports={availableSports}
@@ -99,9 +185,9 @@ export function FeedPage() {
         type="button"
         onClick={() => navigate('/studio')}
         aria-label="Criar post"
-        className="feed-create-button absolute right-4 z-20 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-on-primary ring-4 ring-primary/15 transition-transform active:scale-95"
+        className="feed-ctrl-create absolute right-3 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/25 text-white backdrop-blur-sm transition-transform active:scale-95"
       >
-        <CirclePlus size={26} aria-hidden />
+        <Plus size={22} aria-hidden />
       </button>
     </div>
   );

@@ -33,16 +33,19 @@
     scrollbar-width: none;
   }
 
+  /* Feed imersivo. `dvh` acompanha a altura visível real (barra do navegador
+   * mostrada/escondida) — com `lvh` os controles inferiores ficavam atrás dela.
+   * Todas as zonas derivam de duas variáveis: `--feed-nav-h` (altura real da
+   * BottomNav, medida pelo AppShell) e as safe areas do aparelho. Nada de
+   * posição em pixel fixo — funciona de iPhone SE a tablet. */
   .feed-viewport {
     height: 100vh;
     height: 100dvh;
     background: #000;
-  }
-
-  @supports (height: 100lvh) {
-    .feed-viewport {
-      height: 100lvh;
-    }
+    --feed-nav-h: 56px; /* fallback até a primeira medição */
+    /* A BottomNav já inclui pb-safe-bottom na própria altura medida. */
+    --feed-inset-b: var(--feed-nav-h);
+    --feed-inset-t: env(safe-area-inset-top);
   }
 
   .feed-stage {
@@ -50,27 +53,38 @@
     max-width: 100%;
   }
 
-  .feed-post-meta {
-    bottom: calc(64px + env(safe-area-inset-bottom));
+  /* Zona inferior: meta (creator + legenda + produto) e rail lado a lado,
+   * alinhados pelo fundo. A legenda expande e o rail sobe junto — sem JS. */
+  .feed-bottom-zone {
+    bottom: calc(var(--feed-inset-b) + 8px);
   }
 
   .feed-actions-rail {
-    bottom: calc(168px + env(safe-area-inset-bottom));
+    gap: clamp(0.875rem, 2.2vh, 1.375rem);
   }
 
-  .feed-create-button {
-    bottom: calc(80px + env(safe-area-inset-bottom));
+  .feed-rail-icon {
+    width: clamp(26px, 7vw, 30px);
+    height: clamp(26px, 7vw, 30px);
   }
 
-  .feed-filter-control {
-    top: calc(env(safe-area-inset-top) + 96px);
+  /* Cluster de controles do topo (som → filtro → criar), ancorado na safe
+   * area. Slots fixos de 52px: as posições não pulam entre posts. */
+  .feed-ctrl-sound {
+    top: calc(var(--feed-inset-t) + 8px);
   }
 
-  @media (max-width: 360px) {
-    .feed-actions-rail {
-      bottom: calc(154px + env(safe-area-inset-bottom));
-      gap: 1rem;
-    }
+  .feed-ctrl-filter {
+    top: calc(var(--feed-inset-t) + 60px);
+  }
+
+  .feed-ctrl-create {
+    top: calc(var(--feed-inset-t) + 112px);
+  }
+
+  /* Barra fina de progresso do vídeo, encostada na nav translúcida. */
+  .feed-progress {
+    bottom: var(--feed-inset-b);
   }
 }
 
@@ -105,10 +119,52 @@
     animation: login-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
+  /* Coração do double-tap no feed: cresce, segura e some, como no TikTok. */
+  @keyframes heart-burst {
+    0% {
+      opacity: 0;
+      transform: scale(0.4);
+    }
+    18% {
+      opacity: 1;
+      transform: scale(1.15);
+    }
+    30% {
+      transform: scale(1);
+    }
+    70% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1.25);
+    }
+  }
+
+  .animate-heart-burst {
+    animation: heart-burst 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-kenburns,
     .animate-login-rise {
       animation: none;
+    }
+
+    /* Sem escala: aparece e some por opacidade, feedback preservado. */
+    .animate-heart-burst {
+      animation-name: heart-burst-fade;
+    }
+  }
+
+  @keyframes heart-burst-fade {
+    0%,
+    70% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
     }
   }
 }

@@ -10,10 +10,21 @@ const items = [
   { to: '/perfil', label: 'Perfil', icon: CircleUserRound },
 ];
 
-export function BottomNav() {
+interface BottomNavProps {
+  // No feed a nav é translúcida sobre a mídia (estilo TikTok): fundo escuro
+  // com blur e itens em branco, para o vídeo passar por trás.
+  immersive?: boolean;
+}
+
+export function BottomNav({ immersive = false }: BottomNavProps) {
   return (
     <nav
-      className="relative isolate z-[var(--z-nav)] flex shrink-0 items-stretch justify-around border-t border-outline-variant/40 bg-surface-container-lowest/95 pb-safe-bottom backdrop-blur-md"
+      className={clsx(
+        'relative isolate z-[var(--z-nav)] flex shrink-0 items-stretch justify-around pb-safe-bottom backdrop-blur-md',
+        immersive
+          ? 'bg-black/35'
+          : 'border-t border-outline-variant/40 bg-surface-container-lowest/95',
+      )}
       aria-label="Navegação principal"
     >
       {items.map(({ to, label, icon: Icon, featured }) => (
@@ -25,7 +36,13 @@ export function BottomNav() {
               'flex min-h-[52px] flex-1 flex-col items-center justify-center transition-colors',
               featured && 'relative z-[var(--z-nav-featured)]',
               featured ? 'gap-0.5 py-0.5' : 'gap-0.5 py-1.5',
-              isActive ? 'text-on-surface' : 'text-on-surface-variant',
+              immersive
+                ? isActive
+                  ? 'text-white'
+                  : 'text-white/60'
+                : isActive
+                  ? 'text-on-surface'
+                  : 'text-on-surface-variant',
             )
           }
         >
@@ -35,7 +52,8 @@ export function BottomNav() {
                 className={clsx(
                   'flex items-center justify-center transition-all',
                   featured &&
-                    'relative z-[var(--z-nav-featured)] -translate-y-2 rounded-full border border-primary/40 bg-surface-container-lowest text-primary ring-4 ring-primary/10',
+                    'relative z-[var(--z-nav-featured)] -translate-y-2 rounded-full border border-primary/40 text-primary ring-4 ring-primary/10',
+                  featured && (immersive ? 'bg-black/40' : 'bg-surface-container-lowest'),
                 )}
               >
                 <Icon
