@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
-import { Loader2, Search, SlidersHorizontal } from 'lucide-react';
+import { Check, Loader2, Search, SlidersHorizontal } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAffinityGroups } from '@/lib/sports';
 import { MARKET_CATEGORIES, productCategory } from '@/lib/products';
-import { FilterChip } from '@/components/ui/FilterChip';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 import { PageTopBar } from '@/components/layout/PageTopBar';
 import { ProductCard } from './ProductCard';
 import { useMarketProducts, type MarketProduct } from './useMarket';
@@ -65,6 +65,7 @@ export function ProductsPage() {
         title="Mercado"
         description="Suplementos, treinos, roupas e mais"
         showBackButton={false}
+        inlineDescription
       />
       <div className="mx-auto w-full max-w-[720px]">
         <div className="px-4 pt-4">
@@ -86,9 +87,9 @@ export function ProductsPage() {
             </div>
             <button
               type="button"
-              onClick={() => setFiltersOpen((open) => !open)}
+              onClick={() => setFiltersOpen(true)}
               aria-expanded={filtersOpen}
-              aria-label="Mostrar filtros"
+              aria-label="Abrir filtros"
               className={clsx(
                 'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-colors',
                 filtersOpen || hasActiveFilters
@@ -100,79 +101,6 @@ export function ProductsPage() {
             </button>
           </div>
         </div>
-
-        {/* Corredores do marketplace: entrada rápida por categoria */}
-        <div className="no-scrollbar flex gap-3 overflow-x-auto px-4 py-3" aria-label="Categorias">
-          {MARKET_CATEGORIES.map(({ key, label, icon: Icon }) => {
-            const active = category === key;
-            return (
-              <button
-                key={key}
-                type="button"
-                aria-pressed={active}
-                onClick={() => setCategory(active ? null : key)}
-                className="flex w-16 shrink-0 flex-col items-center gap-1.5"
-              >
-                <span
-                  className={clsx(
-                    'flex h-14 w-14 items-center justify-center rounded-2xl border transition-colors',
-                    active
-                      ? 'border-primary bg-primary text-on-primary'
-                      : 'border-outline-variant/30 bg-surface-container text-on-surface-variant',
-                  )}
-                >
-                  <Icon size={22} aria-hidden />
-                </span>
-                <span
-                  className={clsx(
-                    'text-center font-sans text-counter font-normal leading-tight',
-                    active ? 'text-primary' : 'text-on-surface-variant',
-                  )}
-                >
-                  {label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {filtersOpen && (
-          <>
-            {/* Filtro de preço */}
-            <div className="mt-1 px-4">
-              <h2 className="font-sans text-eyebrow uppercase text-on-surface-variant">Preço</h2>
-            </div>
-            <div className="no-scrollbar mt-2 flex gap-2 overflow-x-auto px-4" role="tablist" aria-label="Preço">
-              <FilterChip active={!freeOnly} onClick={() => setFreeOnly(false)}>
-                Todos
-              </FilterChip>
-              <FilterChip active={freeOnly} onClick={() => setFreeOnly(true)}>
-                Grátis
-              </FilterChip>
-            </div>
-
-            {/* Filtro por grupo de afinidade */}
-            <div className="mt-4 px-4">
-              <h2 className="font-sans text-eyebrow uppercase text-on-surface-variant">
-                Grupos de afinidade
-              </h2>
-            </div>
-            <div
-              className="no-scrollbar mt-2 flex gap-2 overflow-x-auto px-4"
-              role="tablist"
-              aria-label="Grupos de afinidade"
-            >
-              <FilterChip active={sport === null} onClick={() => setSport(null)}>
-                Todos
-              </FilterChip>
-              {groups.map(({ key, label }) => (
-                <FilterChip key={key} active={sport === key} onClick={() => setSport(key)}>
-                  {label}
-                </FilterChip>
-              ))}
-            </div>
-          </>
-        )}
 
         {isLoading && (
           <div className="flex justify-center py-16">
@@ -216,6 +144,92 @@ export function ProductsPage() {
           </div>
         )}
       </div>
+
+      <BottomSheet
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        title="Filtros"
+        description="Encontre produtos do seu jeito."
+      >
+        <div className="space-y-6 px-5 pb-6 pt-1">
+          <section>
+            <h2 className="font-sans text-eyebrow uppercase text-on-surface-variant">Categoria</h2>
+            <div className="mt-3 grid grid-cols-3 gap-3">
+              {MARKET_CATEGORIES.map(({ key, label, icon: Icon }) => {
+                const active = category === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setCategory(active ? null : key)}
+                    className={clsx(
+                      'flex min-h-[76px] flex-col items-center justify-center gap-1.5 rounded-xl border px-2 transition-colors',
+                      active
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-outline-variant/30 bg-surface-container text-on-surface-variant',
+                    )}
+                  >
+                    <Icon size={22} aria-hidden />
+                    <span className="font-sans text-counter">{label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+
+          <section>
+            <h2 className="font-sans text-eyebrow uppercase text-on-surface-variant">Preço</h2>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <FilterOption active={!freeOnly} onClick={() => setFreeOnly(false)}>Todos</FilterOption>
+              <FilterOption active={freeOnly} onClick={() => setFreeOnly(true)}>Grátis</FilterOption>
+            </div>
+          </section>
+
+          <section>
+            <h2 className="font-sans text-eyebrow uppercase text-on-surface-variant">Modalidade</h2>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <FilterOption active={sport === null} onClick={() => setSport(null)}>Todas</FilterOption>
+              {groups.map(({ key, label }) => (
+                <FilterOption key={key} active={sport === key} onClick={() => setSport(sport === key ? null : key)}>
+                  {label}
+                </FilterOption>
+              ))}
+            </div>
+          </section>
+
+          <button
+            type="button"
+            onClick={() => {
+              setCategory(null);
+              setSport(null);
+              setFreeOnly(false);
+            }}
+            className="min-h-[44px] w-full rounded-lg border border-outline-variant/50 font-sans text-label text-on-surface transition-colors active:bg-surface-container-high"
+          >
+            Limpar filtros
+          </button>
+        </div>
+      </BottomSheet>
     </div>
+  );
+}
+
+function FilterOption({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={clsx(
+        'flex min-h-[40px] items-center gap-1.5 rounded-full border px-3 font-sans text-label transition-colors',
+        active
+          ? 'border-primary bg-primary/10 text-primary'
+          : 'border-outline-variant/40 bg-surface text-on-surface-variant',
+      )}
+    >
+      {active && <Check size={16} aria-hidden />}
+      {children}
+    </button>
   );
 }
