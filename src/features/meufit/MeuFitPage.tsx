@@ -44,7 +44,7 @@ export function MeuFitPage() {
               onPointerUp={() => setPressedDestination(null)}
               onPointerCancel={() => setPressedDestination(null)}
               onBlur={() => setPressedDestination(null)}
-              className={`relative flex aspect-square w-full max-w-[160px] flex-col items-center justify-center gap-4 rounded-full border border-outline-variant/40 bg-surface-container p-4 text-center transition-[transform,background-color,border-color] duration-200 ease-out ${pressedDestination === to ? 'z-10 scale-110 border-primary bg-primary/10' : pressedDestination ? 'scale-95' : 'active:scale-110 active:border-primary active:bg-primary/10'}`}
+              className={`relative flex aspect-square w-full max-w-[160px] flex-col items-center justify-center gap-4 rounded-2xl border border-outline-variant/40 bg-surface-container p-4 text-center transition-[transform,background-color,border-color] duration-200 ease-out ${pressedDestination === to ? 'z-10 scale-110 border-primary bg-primary/10' : pressedDestination ? 'scale-95' : 'active:scale-110 active:border-primary active:bg-primary/10'}`}
             >
               <Icon size={52} className="text-primary" aria-hidden />
               <span className="font-sans text-label text-on-surface">{title}</span>

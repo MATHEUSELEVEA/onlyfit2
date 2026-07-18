@@ -4,6 +4,7 @@ import { BottomNav } from './BottomNav';
 export function AppShell() {
   const { pathname } = useLocation();
   const immersiveFeed = pathname === '/feed' || pathname.startsWith('/video/');
+  const immersiveTraining = pathname.startsWith('/meu-fit/treino/player');
 
   if (immersiveFeed) {
     return (
@@ -17,6 +18,14 @@ export function AppShell() {
           </div>
         </div>
       </div>
+    );
+  }
+
+  if (immersiveTraining) {
+    return (
+      <main className="h-full min-h-0">
+        <Outlet />
+      </main>
     );
   }
 

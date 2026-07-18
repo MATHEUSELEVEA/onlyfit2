@@ -9,6 +9,8 @@ import { FeedPage } from './features/feed/FeedPage';
 import { VideoViewPage } from './features/feed/VideoViewPage';
 import { ExplorePage } from './features/explore/ExplorePage';
 import { TrainingPage } from './pages/TrainingPage';
+import { TrainingPlayerPage } from './pages/TrainingPlayerPage';
+import { TrainingProvider } from './features/training/TrainingProvider';
 import { DietPage } from './pages/DietPage';
 import { MeuFitPage } from './features/meufit/MeuFitPage';
 import { RoutinePage } from './features/meufit/RoutinePage';
@@ -77,6 +79,7 @@ function AuthenticatedApp() {
           <Route path="/meu-fit" element={<MeuFitPage />} />
           <Route path="/meu-fit/rotina" element={<RoutinePage />} />
           <Route path="/meu-fit/treino" element={<TrainingPage />} />
+          <Route path="/meu-fit/treino/player" element={<TrainingPlayerPage />} />
           <Route path="/meu-fit/dieta" element={<DietPage />} />
           <Route path="/treino" element={<Navigate to="/meu-fit" replace />} />
           <Route path="/produtos" element={<ProductsPage />} />
@@ -124,7 +127,9 @@ export default function App() {
         <I18nProvider>
           <AuthProvider>
             <BrowserRouter>
-              <AuthenticatedApp />
+              <TrainingProvider>
+                <AuthenticatedApp />
+              </TrainingProvider>
             </BrowserRouter>
           </AuthProvider>
         </I18nProvider>
