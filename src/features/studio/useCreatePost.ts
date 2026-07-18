@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
 import { captureVideoPoster, uploadAsset } from './upload';
 import { fileExtension, type DraftMedia } from './media';
 
@@ -17,6 +16,44 @@ interface UploadedMedia {
   kind: 'image' | 'video';
   url: string;
   thumbnailUrl: string | null;
+}
+
+type SupabasePostError = {
+  code?: string;
+  message?: string;
+};
+
+function errorCode(error: unknown): string {
+  if (!error || typeof error !== 'object') return '';
+  return String((error as SupabasePostError).code ?? '');
+}
+
+/** Mensagens orientadas à ação, sem expor o payload bruto do PostgREST. */
+export function getCreatePostErrorMessage(error: unknown): string {
+  const code = errorCode(error);
+  const message = error && typeof error === 'object'
+    ? String((error as SupabasePostError).message ?? '').toLowerCase()
+    : '';
+
+  if (code === '42501' || message.includes('row-level security')) {
+    return 'Sua sessão ou seu perfil não tem permissão para publicar este conteúdo. Entre novamente e tente de novo.';
+  }
+  if (code === '23503') {
+    return 'Seu perfil ainda não está pronto para publicar. Atualize seus dados e tente novamente.';
+  }
+  if (code === '23514' || code === '22023' || code === '22P02') {
+    return 'Alguma informação do post está inválida. Revise a mídia e tente novamente.';
+  }
+  if (code === 'PGRST202') {
+    return 'O servidor ainda não terminou de atualizar o fluxo de publicação. Tente novamente em instantes.';
+  }
+  if (message.includes('failed to fetch') || message.includes('network') || message.includes('timeout')) {
+    return 'Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.';
+  }
+  if (message.includes('session') || message.includes('jwt') || message.includes('token')) {
+    return 'Sua sessão expirou. Entre novamente para publicar.';
+  }
+  return 'Não foi possível publicar agora. Tente novamente.';
 }
 
 async function uploadDraft(draft: DraftMedia, index: number): Promise<UploadedMedia> {
@@ -42,12 +79,16 @@ async function uploadDraft(draft: DraftMedia, index: number): Promise<UploadedMe
 // mídia única fica no formato do v1 (video_url/thumbnail_url), que o feed lê
 // pelo fallback — assim o v1 e os grids de perfil continuam enxergando o post.
 export function useCreatePost() {
-  const { session } = useAuth();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (input: CreatePostInput): Promise<string> => {
-      const userId = session?.user.id;
+      // A sessão em memória pode estar desatualizada após refresh/retorno do
+      // app. O RLS valida auth.uid(), então confirme o usuário no servidor
+      // antes de subir arquivos e mantenha o mesmo ID no payload.
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError || !authData.user) throw new Error('Sua sessão expirou. Entre novamente.');
+      const userId = authData.user.id;
       if (!userId) throw new Error('Sua sessão expirou. Entre novamente.');
       if (input.media.length === 0) throw new Error('Escolha ao menos uma mídia.');
 
@@ -55,9 +96,19 @@ export function useCreatePost() {
       const cover = uploaded[0];
       const isCarousel = uploaded.length > 1;
 
-      const { data: post, error: postError } = await supabase
-        .from('posts')
-        .insert({
+      const rows = isCarousel
+        ? uploaded.map((media, position) => ({
+          position,
+          kind: media.kind,
+          url: media.url,
+          thumbnail_url: media.thumbnailUrl,
+        }))
+        : [];
+
+      // O RPC grava `posts` e `post_media` na mesma transação, preservando as
+      // políticas RLS existentes e evitando post órfão quando uma mídia falha.
+      const { data: postId, error: postError } = await supabase.rpc('create_post_with_media', {
+        p_post: {
           creator_id: userId,
           description: input.caption.trim() || null,
           sports: input.sports,
@@ -67,24 +118,12 @@ export function useCreatePost() {
           video_url: cover.kind === 'video' ? cover.url : null,
           thumbnail_url: cover.kind === 'video' ? cover.thumbnailUrl : cover.url,
           metadata: { media_kind: isCarousel ? 'carousel' : cover.kind },
-        })
-        .select('id')
-        .single();
+        },
+        p_media: rows,
+      });
       if (postError) throw postError;
 
-      if (isCarousel) {
-        const rows = uploaded.map((media, position) => ({
-          post_id: post.id,
-          position,
-          kind: media.kind,
-          url: media.url,
-          thumbnail_url: media.thumbnailUrl,
-        }));
-        const { error: mediaError } = await supabase.from('post_media').insert(rows);
-        if (mediaError) throw mediaError;
-      }
-
-      return post.id as string;
+      return String(postId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feed'] });
