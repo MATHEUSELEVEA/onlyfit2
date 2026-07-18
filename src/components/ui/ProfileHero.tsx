@@ -47,7 +47,7 @@ export function ProfileHero({
       {/* Legibilidade dos controles flutuantes no topo */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/55 to-transparent"
+        className="pointer-events-none absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-black/55 to-transparent"
       />
       {/* A imagem termina em fade antes do nome */}
       <div
