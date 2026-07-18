@@ -28,6 +28,8 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
   const stageRef = useRef<HTMLDivElement>(null);
   const aspectRef = useRef(0);
   const [fit, setFit] = useState<MediaFit>('cover');
+  // Fração assistida do vídeo (0..1), para a barra fina sobre a nav.
+  const [progress, setProgress] = useState(0);
   const muted = useVideoMuted();
 
   const applyFit = useCallback((mediaAspect?: number) => {
@@ -86,9 +88,16 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
           className={mediaClass}
           loop
           playsInline
+          // Só o slide visível baixa vídeo — os vizinhos esperam a vez, senão
+          // todos bufferizam juntos e o scroll engasga em aparelho modesto.
+          preload={active ? 'auto' : 'none'}
           onLoadedMetadata={(event) =>
             applyFit(event.currentTarget.videoWidth / event.currentTarget.videoHeight)
           }
+          onTimeUpdate={(event) => {
+            const { currentTime, duration } = event.currentTarget;
+            setProgress(duration > 0 ? currentTime / duration : 0);
+          }}
         />
       ) : (
         <img
@@ -100,6 +109,17 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
             applyFit(event.currentTarget.naturalWidth / event.currentTarget.naturalHeight)
           }
         />
+      )}
+
+      {/* Barra fina de progresso, encostada na nav (só no vídeo visível).
+          `timeupdate` pulsa ~4x/s; a transição linear preenche os degraus. */}
+      {media.kind === 'video' && active && (
+        <div className="feed-progress absolute inset-x-0 z-10 h-0.5 bg-white/20" aria-hidden>
+          <div
+            className="h-full bg-white/80 transition-[width] duration-300 ease-linear motion-reduce:transition-none"
+            style={{ width: `${progress * 100}%` }}
+          />
+        </div>
       )}
     </div>
   );
@@ -124,21 +144,19 @@ export function PostMedia({ media, alt, active }: PostMediaProps) {
     return <div className="absolute inset-0 bg-surface-container" />;
   }
 
-  // Botão flutuante de som, presente sempre que o post tem vídeo. A faixa que o
-  // posiciona cobre a barra de grupos de afinidade do feed, então só o botão
-  // recebe clique — sem isto a faixa engole os toques na barra.
+  // Botão de som no primeiro slot do cluster de controles do topo (filtro e
+  // criar post, do feed, ocupam os slots seguintes). Presente sempre que o
+  // post tem vídeo; só o botão recebe clique.
   const soundToggle = media.some((item) => item.kind === 'video') && (
-    <div className="pointer-events-none absolute inset-x-0 top-0 z-20 flex justify-end pt-safe-top">
-      <button
-        type="button"
-        onClick={() => setVideoMuted(!muted)}
-        aria-label={muted ? 'Ativar som' : 'Desativar som'}
-        aria-pressed={!muted}
-        className="pointer-events-auto mr-3 mt-12 flex h-11 w-11 items-center justify-center text-white drop-shadow-lg transition-transform active:scale-95"
-      >
-        {muted ? <VolumeX size={22} aria-hidden /> : <Volume2 size={22} aria-hidden />}
-      </button>
-    </div>
+    <button
+      type="button"
+      onClick={() => setVideoMuted(!muted)}
+      aria-label={muted ? 'Ativar som' : 'Desativar som'}
+      aria-pressed={!muted}
+      className="feed-ctrl-sound absolute right-3 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/25 text-white backdrop-blur-sm transition-transform active:scale-95"
+    >
+      {muted ? <VolumeX size={20} aria-hidden /> : <Volume2 size={20} aria-hidden />}
+    </button>
   );
 
   if (media.length === 1) {
@@ -178,9 +196,13 @@ export function PostMedia({ media, alt, active }: PostMediaProps) {
         ))}
       </div>
 
-      {/* Pontinhos flutuantes sobre a mídia indicando a página do carrossel */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex justify-center pt-safe-top">
-        <div className="mt-14 flex items-center gap-1.5 rounded-full bg-black/25 px-2 py-1 backdrop-blur-sm">
+      {/* Pontinhos flutuantes sobre a mídia indicando a página do carrossel,
+          centralizados na altura do cluster de controles. */}
+      <div
+        className="pointer-events-none absolute inset-x-0 z-10 flex justify-center"
+        style={{ top: 'calc(var(--feed-inset-t) + 22px)' }}
+      >
+        <div className="flex items-center gap-1.5 rounded-full bg-black/25 px-2 py-1 backdrop-blur-sm">
           {media.map((_, i) => (
             <span
               key={i}

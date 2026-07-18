@@ -30,7 +30,7 @@ export function FeedSportsBar({ selected, availableSports, onSelect }: FeedSport
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label="Filtrar modalidades"
-        className="feed-filter-control absolute right-3 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/25 text-white backdrop-blur-sm transition-transform active:scale-95"
+        className="feed-ctrl-filter absolute right-3 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/25 text-white backdrop-blur-sm transition-transform active:scale-95"
       >
         <SlidersHorizontal size={20} aria-hidden />
         {!allSelected && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary ring-2 ring-black/40" aria-hidden />}
