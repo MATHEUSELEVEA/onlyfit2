@@ -96,45 +96,38 @@ export function SettingsMenuPage() {
           <div className="overflow-hidden rounded-2xl border border-outline-variant/40 bg-surface shadow-sm">
             <ProfileLink
               icon={Stethoscope}
-              title={t('profile.health.title')}
-              description={t('profile.health.description')}
+              title={t('profile.settings.health')}
               to="/perfil/saude"
             />
             <ProfileLink
               icon={Dumbbell}
-              title={t('profile.training.title')}
-              description={t('profile.training.description')}
+              title={t('profile.settings.training')}
               to="/meu-fit/treino"
             />
             <ProfileLink
               icon={Salad}
-              title={t('profile.diet.title')}
-              description={t('profile.diet.description')}
+              title={t('profile.settings.diet')}
               to="/meu-fit/dieta"
             />
             <ProfileLink
               icon={Inbox}
-              title={t('profile.messages.title')}
-              description={t('profile.messages.description')}
+              title={t('profile.settings.messages')}
               to="/mensagens"
               badge={unreadCount}
             />
             <ProfileLink
               icon={UsersRound}
-              title={t('profile.communities.title')}
-              description={t('profile.communities.description')}
+              title={t('profile.settings.communities')}
               to="/comunidades"
             />
             <ProfileLink
               icon={Target}
-              title={t('profile.challenges.title')}
-              description={t('profile.challenges.description')}
+              title={t('profile.settings.challenges')}
               to="/desafios"
             />
             <ProfileLink
               icon={CalendarCheck}
-              title={t('profile.enrollments.title')}
-              description={t('profile.enrollments.description')}
+              title={t('profile.settings.purchases')}
               to="/meus-produtos"
             />
           </div>
@@ -147,25 +140,21 @@ export function SettingsMenuPage() {
           <div className="overflow-hidden rounded-2xl border border-outline-variant/40 bg-surface shadow-sm">
             <ProfileLink
               icon={PencilLine}
-              title={t('profile.editProfile.title')}
-              description={t('profile.editProfile.description')}
+              title={t('profile.settings.personalData')}
               to="/perfil/editar"
             />
             <ProfileLink
               icon={WalletCards}
-              title={t('profile.payment.title')}
-              description={t('profile.payment.description')}
+              title={t('profile.settings.payment')}
             />
             <ProfileLink
               icon={Palette}
-              title={t('profile.visual.title')}
-              description={t('profile.visual.description')}
+              title={t('profile.settings.appearance')}
               to="/perfil/visual"
             />
             <ProfileLink
               icon={Gavel}
-              title={t('profile.terms.title')}
-              description={t('profile.terms.description')}
+              title={t('profile.settings.privacyTerms')}
               to="/perfil/privacidade-termos"
             />
           </div>
@@ -182,26 +171,23 @@ export function SettingsMenuPage() {
               pending={setProfessionalMutation.isPending}
               onToggle={toggleProfessional}
               icon={ShieldCheck}
-              title={t('profile.becomeProfessional.title')}
+              title={t('profile.settings.professionalAccount')}
               description={t('profile.business.professionalToggleDescription')}
             />
             {isProfessional && (
               <>
                 <ProfileLink
                   icon={Building2}
-                  title={t('profile.business.title')}
-                  description={t('profile.business.description')}
+                  title={t('profile.settings.businesses')}
                   to="/negocios"
                 />
                 <ProfileLink
                   icon={UsersRound}
-                  title={t('profile.customerManagement.title')}
-                  description={t('profile.customerManagement.description')}
+                  title={t('profile.settings.customers')}
                 />
                 <ProfileLink
                   icon={ReceiptText}
-                  title={t('profile.financialManagement.title')}
-                  description={t('profile.financialManagement.description')}
+                  title={t('profile.settings.finance')}
                 />
               </>
             )}
@@ -223,7 +209,7 @@ export function SettingsMenuPage() {
               type="button"
               onClick={handleSignOut}
               disabled={signingOut}
-              className="flex min-h-[72px] w-full items-center gap-4 border-t border-outline-variant/25 px-4 py-4 text-left transition-colors first:border-t-0 active:bg-error-container/30 disabled:opacity-60"
+              className="flex min-h-[64px] w-full items-center gap-4 border-t border-outline-variant/25 px-4 py-3 text-left transition-colors first:border-t-0 active:bg-error-container/30 disabled:opacity-60"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-error-container text-on-error-container">
                 <LogOut size={19} aria-hidden />
@@ -231,9 +217,6 @@ export function SettingsMenuPage() {
               <span className="min-w-0 flex-1">
                 <span className="block font-sans text-body font-medium text-error">
                   {signingOut ? t('profile.signOut.titleLoading') : t('profile.signOut.title')}
-                </span>
-                <span className="mt-0.5 block font-sans text-body-sm text-on-surface-variant">
-                  {t('profile.signOut.description')}
                 </span>
               </span>
             </button>
