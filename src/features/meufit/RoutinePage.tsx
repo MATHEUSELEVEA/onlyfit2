@@ -148,7 +148,7 @@ function RoutineWizard({ nextId, onClose, onCreate }: { nextId: number; onClose:
       </header>
       <div className="h-0.5 bg-surface-container-high"><span className="block h-full bg-primary transition-all" style={{ width: `${step * 25}%` }} /></div>
 
-      <main className="mx-auto flex w-full max-w-[720px] flex-1 flex-col px-6 py-8">
+      <main className="mx-auto flex min-h-0 w-full max-w-[720px] flex-1 flex-col overflow-y-auto px-6 py-8">
         {step === 1 && (
           <section>
             <p className="font-sans text-title-lg text-on-surface">{t('meufit.routine.step1Title')}</p>
