@@ -160,7 +160,7 @@ export interface AppendHealthEventInput {
 export const healthCategoryLabels: Record<HealthCategory, string> = {
   anamnesis: 'Anamnese',
   condition: 'Condição ou diagnóstico',
-  procedure: 'Cirurgia ou procedimento',
+  procedure: 'Consulta, cirurgia ou procedimento',
   injury: 'Lesão',
   exam: 'Exame ou laudo',
   medication: 'Medicamento',
