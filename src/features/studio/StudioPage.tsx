@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, X } from 'lucide-react';
 import { createDraftMedia, moveItem, type DraftMedia } from './media';
-import { useCreatePost, type PostVisibility } from './useCreatePost';
+import { getCreatePostErrorMessage, useCreatePost, type PostVisibility } from './useCreatePost';
 import { useMyProfile } from '@/features/profile/useMyProfile';
 import { PickMediaStep } from './steps/PickMediaStep';
 import { DetailsStep } from './steps/DetailsStep';
@@ -113,7 +113,7 @@ export function StudioPage() {
             canPublishToMembers={isProfessional}
             onPublish={publish}
             isPublishing={createPost.isPending}
-            error={createPost.isError ? 'Não foi possível publicar. Tente novamente.' : null}
+            error={createPost.isError ? getCreatePostErrorMessage(createPost.error) : null}
           />
         )}
       </div>
