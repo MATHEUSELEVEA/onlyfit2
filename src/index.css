@@ -62,6 +62,10 @@
     bottom: calc(80px + env(safe-area-inset-bottom));
   }
 
+  .feed-filter-control {
+    top: calc(env(safe-area-inset-top) + 96px);
+  }
+
   @media (max-width: 360px) {
     .feed-actions-rail {
       bottom: calc(154px + env(safe-area-inset-bottom));
