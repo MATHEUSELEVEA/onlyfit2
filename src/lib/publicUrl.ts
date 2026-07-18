@@ -1,4 +1,5 @@
 const DEFAULT_PUBLIC_ORIGIN = 'https://mobile.onlyfitapp.com';
+const LEGACY_PUBLIC_ORIGINS = new Set(['https://onlyfit2.vercel.app']);
 
 function normalizeHttpOrigin(value: string | undefined): string | null {
   const trimmed = value?.trim();
@@ -8,6 +9,7 @@ function normalizeHttpOrigin(value: string | undefined): string | null {
     const url = new URL(trimmed);
     if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
     if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') return null;
+    if (LEGACY_PUBLIC_ORIGINS.has(url.origin)) return null;
     return url.origin;
   } catch {
     return null;
