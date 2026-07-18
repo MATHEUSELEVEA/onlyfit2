@@ -557,12 +557,7 @@ export function ExplorePage() {
 
   return (
     <div className="h-full overflow-y-auto bg-background pb-8">
-      <PageTopBar
-        title="Explorar"
-        description="Conteúdos, pessoas, desafios e comunidades"
-        showBackButton={false}
-        inlineDescription
-      />
+      <PageTopBar title="Explorar" showBackButton={false} />
       <div className="mx-auto w-full max-w-[720px]">
         <div className="px-4 pt-4">
           <div className="relative flex items-center gap-2">

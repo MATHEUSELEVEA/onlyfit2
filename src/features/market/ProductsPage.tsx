@@ -1,12 +1,20 @@
 import { useMemo, useState } from 'react';
 import { Check, Loader2, Search, SlidersHorizontal } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useSearchParams } from 'react-router-dom';
 import { useAffinityGroups } from '@/lib/sports';
 import { MARKET_CATEGORIES, productCategory } from '@/lib/products';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { PageTopBar } from '@/components/layout/PageTopBar';
 import { ProductCard } from './ProductCard';
+import { PurchasedProducts } from './PurchasedProducts';
 import { useMarketProducts, type MarketProduct } from './useMarket';
+
+// Duas abas: a vitrine ("mercado", padrão) e o histórico de compras
+// ("compras"). A aba ativa vive na URL (?aba=compras) para dar deep-link —
+// é como o menu de configurações e a aba "Minhas compras" chegam direto ao
+// histórico.
+type MarketTab = 'mercado' | 'compras';
 
 // Marketplace de saúde: vestuário, suplementos, acessórios e o digital pago
 // (conteúdos, treinos, dietas). Esta é a casca — o catálogo de verdade, com
@@ -35,6 +43,12 @@ function filterProducts(
 }
 
 export function ProductsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab: MarketTab = searchParams.get('aba') === 'compras' ? 'compras' : 'mercado';
+  const setTab = (next: MarketTab) => {
+    setSearchParams(next === 'compras' ? { aba: 'compras' } : {}, { replace: true });
+  };
+
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState<string | null>(null);
   const [sport, setSport] = useState<string | null>(null);
@@ -59,15 +73,47 @@ export function ProductsPage() {
   );
   const hasActiveFilters = sport !== null || freeOnly;
 
+  const TABS: { key: MarketTab; label: string }[] = [
+    { key: 'mercado', label: 'Mercado' },
+    { key: 'compras', label: 'Minhas compras' },
+  ];
+
   return (
     <div className="h-full overflow-y-auto bg-background pb-8">
-      <PageTopBar
-        title="Mercado"
-        description="Suplementos, treinos, roupas e mais"
-        showBackButton={false}
-        inlineDescription
-      />
+      <PageTopBar title="Mercado" showBackButton={false} />
       <div className="mx-auto w-full max-w-[720px]">
+        <div
+          className="grid grid-cols-2 px-4 pt-3"
+          role="tablist"
+          aria-label="Mercado e compras"
+        >
+          {TABS.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={tab === key}
+              onClick={() => setTab(key)}
+              className={clsx(
+                'relative min-h-[40px] whitespace-nowrap pb-2 font-sans text-label transition-colors',
+                tab === key ? 'text-on-surface' : 'text-on-surface-variant',
+              )}
+            >
+              {label}
+              {tab === key && (
+                <span
+                  aria-hidden
+                  className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-primary"
+                />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'compras' && <PurchasedProducts onBrowse={() => setTab('mercado')} />}
+
+        {tab === 'mercado' && (
+          <>
         <div className="px-4 pt-4">
           <div className="relative flex items-center gap-2">
             <div className="relative min-w-0 flex-1">
@@ -143,8 +189,11 @@ export function ProductsPage() {
             ))}
           </div>
         )}
+          </>
+        )}
       </div>
 
+      {tab === 'mercado' && (
       <BottomSheet
         open={filtersOpen}
         onClose={() => setFiltersOpen(false)}
@@ -211,6 +260,7 @@ export function ProductsPage() {
           </button>
         </div>
       </BottomSheet>
+      )}
     </div>
   );
 }

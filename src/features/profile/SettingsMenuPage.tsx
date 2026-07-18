@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Building2,
-  CalendarCheck,
   Dumbbell,
   Gavel,
   Inbox,
@@ -124,11 +123,6 @@ export function SettingsMenuPage() {
               icon={Target}
               title={t('profile.settings.challenges')}
               to="/desafios"
-            />
-            <ProfileLink
-              icon={CalendarCheck}
-              title={t('profile.settings.purchases')}
-              to="/meus-produtos"
             />
           </div>
         </div>

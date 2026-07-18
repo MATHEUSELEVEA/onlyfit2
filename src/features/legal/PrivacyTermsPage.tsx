@@ -8,12 +8,9 @@ import {
   ExternalLink,
   FileText,
   Loader2,
-  LockKeyhole,
   ShieldCheck,
   TriangleAlert,
-  type LucideIcon,
 } from 'lucide-react';
-import { clsx } from 'clsx';
 import { useTranslation } from '@/i18n/I18nProvider';
 import type { LegalDocument } from './legalDocuments';
 import {
@@ -69,8 +66,16 @@ export function PrivacyTermsPage() {
     [acceptances, legalDocuments],
   );
 
+  // Pendências primeiro: o que exige ação fica no topo, já assinados descem.
+  const orderedDocuments = useMemo(() => {
+    const pending = documents.filter((item) => item.status !== 'accepted');
+    const accepted = documents.filter((item) => item.status === 'accepted');
+    return [...pending, ...accepted];
+  }, [documents]);
+
+  const total = documents.length;
   const pendingCount = documents.filter((item) => item.status !== 'accepted').length;
-  const acceptedCount = documents.length - pendingCount;
+  const acceptedCount = total - pendingCount;
   const isLoading = isLoadingDocuments || isLoadingAcceptances;
   const isError = isDocumentsError || isAcceptancesError;
 
@@ -80,8 +85,6 @@ export function PrivacyTermsPage() {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
       }),
     [language],
   );
@@ -100,13 +103,13 @@ export function PrivacyTermsPage() {
 
   return (
     <div className="h-full overflow-y-auto bg-background pb-10">
-      <div className="mx-auto min-h-full w-full max-w-[920px] bg-background md:my-6 md:overflow-hidden md:rounded-3xl md:border md:border-outline-variant/30 md:shadow-xl">
-        <header className="sticky top-0 z-20 border-b border-outline-variant/30 bg-surface-container-lowest/95 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-md">
-          <div className="flex items-center gap-3">
+      <div className="mx-auto min-h-full w-full max-w-[720px] bg-background md:my-6 md:overflow-hidden md:rounded-3xl md:border md:border-outline-variant/25">
+        <header className="sticky top-0 z-20 border-b border-outline-variant/25 bg-background/90 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-md">
+          <div className="flex items-center gap-2.5">
             <Link
               to="/perfil"
               aria-label="Voltar para o perfil"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-on-surface transition-colors active:bg-surface-container-high"
+              className="-ml-1.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-on-surface transition-colors active:bg-surface-container-high"
             >
               <ArrowLeft size={21} aria-hidden />
             </Link>
@@ -114,93 +117,125 @@ export function PrivacyTermsPage() {
               <h1 className="truncate font-sans text-title-lg text-on-surface">
                 Privacidade e Termos
               </h1>
-              <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">
-                Consulte os documentos vigentes e registre os aceites obrigatórios.
+              <p className="font-sans text-body-sm text-on-surface-variant">
+                Documentos vigentes e aceites obrigatórios.
               </p>
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <SummaryTile icon={Clock3} label="Pendentes" value={String(pendingCount)} />
-            <SummaryTile icon={ShieldCheck} label="Assinados" value={String(acceptedCount)} />
-          </div>
+          {!isLoading && !isError && total > 0 && (
+            <ProgressSummary accepted={acceptedCount} total={total} pending={pendingCount} />
+          )}
         </header>
 
-        <main className="px-4 py-5">
-          <section className="overflow-hidden rounded-2xl border border-outline-variant/40 bg-surface shadow-sm">
-            <div className="flex items-start gap-3 px-4 py-4">
-              <IconChip icon={FileText} />
-              <div className="min-w-0">
-                <h2 className="font-sans text-body font-semibold text-on-surface">
-                  Documentos vigentes
-                </h2>
-                <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">
-                  Um novo PDF ou versão exige novo aceite.
-                </p>
-              </div>
-            </div>
-
-            {isError && (
-              <div className="border-t border-outline-variant/25 px-4 py-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    void refetchDocuments();
-                    void refetchAcceptances();
-                  }}
-                  className="inline-flex min-h-10 items-center gap-2 rounded-full bg-error-container px-4 font-sans text-label text-on-error-container"
-                >
-                  <TriangleAlert size={16} aria-hidden />
-                  Tentar carregar novamente
-                </button>
-              </div>
-            )}
-
-            <div className="divide-y divide-outline-variant/25 border-t border-outline-variant/25">
-              {isLoading ? (
-                <LoadingBlock />
-              ) : documents.length === 0 ? (
-                <EmptyBlock />
-              ) : (
-                documents.map((item) => (
-                  <DocumentItem
-                    key={item.document.key}
-                    item={item}
-                    checked={checkedByKey[item.document.key] === true}
-                    accepting={
-                      acceptMutation.isPending &&
-                      acceptMutation.variables?.key === item.document.key
-                    }
-                    acceptError={
-                      acceptMutation.isError &&
-                      acceptMutation.variables?.key === item.document.key
-                    }
-                    acceptedAtLabel={
-                      item.currentAcceptance
-                        ? dateFormatter.format(new Date(item.currentAcceptance.acceptedAt))
-                        : null
-                    }
-                    onCheckedChange={(next) =>
-                      setCheckedByKey((current) => ({ ...current, [item.document.key]: next }))
-                    }
-                    onAccept={() => acceptDocument(item)}
-                  />
-                ))
-              )}
-            </div>
-          </section>
+        <main className="px-4 py-4">
+          {isError ? (
+            <ErrorBlock
+              onRetry={() => {
+                void refetchDocuments();
+                void refetchAcceptances();
+              }}
+            />
+          ) : isLoading ? (
+            <SkeletonList />
+          ) : documents.length === 0 ? (
+            <EmptyBlock />
+          ) : (
+            <ul className="space-y-3">
+              {orderedDocuments.map((item) => (
+                <li key={item.document.key}>
+                  {item.status === 'accepted' ? (
+                    <AcceptedCard
+                      item={item}
+                      acceptedAtLabel={
+                        item.currentAcceptance
+                          ? dateFormatter.format(new Date(item.currentAcceptance.acceptedAt))
+                          : null
+                      }
+                    />
+                  ) : (
+                    <PendingCard
+                      item={item}
+                      checked={checkedByKey[item.document.key] === true}
+                      accepting={
+                        acceptMutation.isPending &&
+                        acceptMutation.variables?.key === item.document.key
+                      }
+                      acceptError={
+                        acceptMutation.isError &&
+                        acceptMutation.variables?.key === item.document.key
+                      }
+                      onCheckedChange={(next) =>
+                        setCheckedByKey((current) => ({ ...current, [item.document.key]: next }))
+                      }
+                      onAccept={() => acceptDocument(item)}
+                    />
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
         </main>
       </div>
     </div>
   );
 }
 
-function DocumentItem({
+function ProgressSummary({
+  accepted,
+  total,
+  pending,
+}: {
+  accepted: number;
+  total: number;
+  pending: number;
+}) {
+  const pct = total > 0 ? Math.round((accepted / total) * 100) : 0;
+  const allDone = pending === 0;
+
+  return (
+    <div className="mt-4 rounded-2xl bg-surface-container p-3.5">
+      <div className="flex items-center justify-between gap-3">
+        <span className="font-sans text-label text-on-surface-variant">Aceites registrados</span>
+        {allDone ? (
+          <span className="inline-flex items-center gap-1 font-sans text-label text-primary">
+            <ShieldCheck size={15} aria-hidden />
+            Tudo em dia
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary-container px-2.5 py-0.5 font-sans text-counter text-on-secondary-container">
+            <Clock3 size={13} aria-hidden />
+            {pending} pendente{pending > 1 ? 's' : ''}
+          </span>
+        )}
+      </div>
+      <div className="mt-3 flex items-center gap-3">
+        <div
+          className="h-2 flex-1 overflow-hidden rounded-full bg-surface-container-highest"
+          role="progressbar"
+          aria-valuenow={accepted}
+          aria-valuemin={0}
+          aria-valuemax={total}
+          aria-label={`${accepted} de ${total} documentos assinados`}
+        >
+          <div
+            className="h-full rounded-full bg-primary transition-[width] duration-500 ease-out motion-reduce:transition-none"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <span className="shrink-0 font-sans text-label tabular-nums text-on-surface">
+          {accepted}/{total}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function PendingCard({
   item,
   checked,
   accepting,
   acceptError,
-  acceptedAtLabel,
   onCheckedChange,
   onAccept,
 }: {
@@ -208,190 +243,206 @@ function DocumentItem({
   checked: boolean;
   accepting: boolean;
   acceptError: boolean;
-  acceptedAtLabel: string | null;
   onCheckedChange: (next: boolean) => void;
   onAccept: () => void;
 }) {
-  const { document, status } = item;
-  const isAccepted = status === 'accepted';
+  const { document, status, latestAcceptance } = item;
 
   return (
-    <div>
-      <div className="flex items-start gap-3 px-4 py-4">
-        <StatusIcon status={status} />
-        <span className="min-w-0 flex-1">
-          <span className="flex min-w-0 flex-wrap items-center gap-2">
-            <span className="font-sans text-body font-semibold text-on-surface">
-              {document.title}
-            </span>
-            <StatusPill status={status} />
+    <div className="overflow-hidden rounded-2xl bg-surface-container-low ring-1 ring-secondary/25">
+      <div className="p-4">
+        <div className="flex items-start gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-secondary-container text-on-secondary-container">
+            <Clock3 size={18} aria-hidden />
           </span>
-          <span className="mt-1 block font-sans text-body-sm text-on-surface-variant">
-            Versão {document.version}
-          </span>
-        </span>
-      </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <h2 className="font-sans text-body font-semibold text-on-surface">{document.title}</h2>
+              <span className="inline-flex items-center rounded-full bg-secondary-container px-2 py-0.5 font-sans text-counter text-on-secondary-container">
+                {status === 'new_version' ? 'Nova versão' : 'Pendente'}
+              </span>
+            </div>
+            <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">
+              Versão {document.version}
+            </p>
+          </div>
+        </div>
 
-      <div className="px-4 pb-4">
-        <p className="max-w-[68ch] font-sans text-body text-on-surface-variant">
+        <p className="mt-3 max-w-[62ch] font-sans text-body-sm text-on-surface-variant">
           {document.description}
         </p>
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          <a
-            href={document.pdfPath}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-full border border-outline-variant/50 px-4 font-sans text-label text-on-surface transition-colors active:bg-surface-container-low sm:flex-none"
-          >
-            <ExternalLink size={16} aria-hidden />
+        {status === 'new_version' && latestAcceptance && (
+          <p className="mt-3 rounded-xl bg-surface-container-high px-3 py-2 font-sans text-body-sm text-on-surface-variant">
+            Você aceitou uma versão anterior — esta atualização exige nova confirmação.
+          </p>
+        )}
+
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+          <DocLink icon={ExternalLink} href={document.pdfPath} download={false}>
             Abrir PDF
-          </a>
-          <a
-            href={document.pdfPath}
-            download
-            className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-full border border-outline-variant/50 px-4 font-sans text-label text-on-surface transition-colors active:bg-surface-container-low sm:flex-none"
-          >
-            <Download size={16} aria-hidden />
+          </DocLink>
+          <DocLink icon={Download} href={document.pdfPath} download>
             Baixar
-          </a>
+          </DocLink>
         </div>
+      </div>
 
-        <div className="mt-4">
-          {isAccepted && acceptedAtLabel ? (
-            <AcceptedNotice acceptedAt={acceptedAtLabel} />
+      <div className="border-t border-outline-variant/20 bg-surface-container px-4 py-3.5">
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={(event) => onCheckedChange(event.target.checked)}
+            className="mt-0.5 h-5 w-5 shrink-0 rounded border-outline-variant accent-primary"
+          />
+          <span className="font-sans text-body-sm text-on-surface">{document.checkboxLabel}</span>
+        </label>
+
+        {acceptError && (
+          <p role="alert" className="mt-2.5 flex items-center gap-1.5 font-sans text-body-sm text-error">
+            <TriangleAlert size={15} aria-hidden />
+            Não foi possível registrar agora. Tente novamente.
+          </p>
+        )}
+
+        <button
+          type="button"
+          onClick={onAccept}
+          disabled={!checked || accepting}
+          className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 font-sans text-label text-on-primary transition-[transform,opacity] active:scale-[0.98] disabled:opacity-45 motion-reduce:active:scale-100"
+        >
+          {accepting ? (
+            <Loader2 size={17} className="animate-spin" aria-hidden />
           ) : (
-            <div className="space-y-3">
-              {status === 'new_version' && item.latestAcceptance && (
-                <p className="rounded-xl bg-surface-container-low px-3 py-3 font-sans text-body-sm text-on-surface-variant">
-                  Você já havia registrado uma versão anterior. Esta versão exige nova confirmação.
-                </p>
-              )}
-
-              <label className="flex items-start gap-3 rounded-xl border border-outline-variant/40 px-3 py-3">
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={(event) => onCheckedChange(event.target.checked)}
-                  className="mt-1 h-5 w-5 shrink-0 rounded border-outline-variant accent-primary"
-                />
-                <span className="font-sans text-body text-on-surface">{document.checkboxLabel}</span>
-              </label>
-
-              {acceptError && (
-                <p role="alert" className="font-sans text-body-sm text-error">
-                  Não foi possível registrar agora. Tente novamente.
-                </p>
-              )}
-
-              <button
-                type="button"
-                onClick={onAccept}
-                disabled={!checked || accepting}
-                className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 font-sans text-label text-on-primary shadow-sm transition-transform active:scale-[0.98] disabled:opacity-60"
-              >
-                {accepting ? (
-                  <Loader2 size={17} className="animate-spin" aria-hidden />
-                ) : (
-                  <Check size={17} aria-hidden />
-                )}
-                {document.actionLabel}
-              </button>
-            </div>
+            <Check size={17} aria-hidden />
           )}
-        </div>
+          {document.actionLabel}
+        </button>
       </div>
     </div>
   );
 }
 
-function StatusIcon({ status }: { status: LegalStatus }) {
-  if (status === 'accepted') {
-    return (
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-container text-on-primary-container">
-        <ShieldCheck size={19} aria-hidden />
+function AcceptedCard({
+  item,
+  acceptedAtLabel,
+}: {
+  item: LegalDocumentState;
+  acceptedAtLabel: string | null;
+}) {
+  const { document } = item;
+
+  return (
+    <div className="flex items-center gap-3 rounded-2xl bg-surface-container-low px-4 py-3">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-container text-on-primary-container">
+        <ShieldCheck size={18} aria-hidden />
       </span>
-    );
-  }
-
-  return (
-    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-error-container text-on-error-container">
-      <Clock3 size={19} aria-hidden />
-    </span>
-  );
-}
-
-function StatusPill({ status }: { status: LegalStatus }) {
-  const label =
-    status === 'accepted' ? 'Assinado' : status === 'new_version' ? 'Nova versão pendente' : 'Pendente';
-
-  return (
-    <span
-      className={clsx(
-        'inline-flex min-h-6 items-center rounded-full px-2.5 font-sans text-counter',
-        status === 'accepted'
-          ? 'bg-primary-container text-on-primary-container'
-          : 'bg-error-container text-on-error-container',
-      )}
-    >
-      {label}
-    </span>
-  );
-}
-
-function AcceptedNotice({ acceptedAt }: { acceptedAt: string }) {
-  return (
-    <div className="flex items-start gap-3 rounded-xl bg-primary-container px-3 py-3 text-on-primary-container">
-      <LockKeyhole size={18} className="mt-0.5 shrink-0" aria-hidden />
-      <div>
-        <p className="font-sans text-body font-semibold">Aceite registrado em {acceptedAt}</p>
-        <p className="mt-1 font-sans text-body-sm">
-          Esta confirmação não pode ser alterada. Se o documento mudar, uma nova versão aparecerá como pendente.
+      <div className="min-w-0 flex-1">
+        <h2 className="truncate font-sans text-body font-semibold text-on-surface">
+          {document.title}
+        </h2>
+        <p className="truncate font-sans text-body-sm text-on-surface-variant">
+          {acceptedAtLabel ? `Assinado em ${acceptedAtLabel}` : 'Assinado'} · v{document.version}
         </p>
       </div>
+      <a
+        href={document.pdfPath}
+        target="_blank"
+        rel="noreferrer"
+        aria-label={`Abrir PDF de ${document.title}`}
+        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:text-on-surface active:bg-surface-container-high"
+      >
+        <ExternalLink size={18} aria-hidden />
+      </a>
     </div>
   );
 }
 
-function SummaryTile({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) {
+function DocLink({
+  icon: Icon,
+  href,
+  download,
+  children,
+}: {
+  icon: typeof ExternalLink;
+  href: string;
+  download: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex min-h-[66px] items-center gap-3 rounded-2xl bg-surface px-3 py-3 ring-1 ring-outline-variant/30">
-      <IconChip icon={Icon} />
-      <span className="min-w-0">
-        <span className="block font-sans text-title-lg leading-none text-on-surface">{value}</span>
-        <span className="mt-1 block truncate font-sans text-counter text-on-surface-variant">
-          {label}
-        </span>
+    <a
+      href={href}
+      download={download || undefined}
+      target={download ? undefined : '_blank'}
+      rel={download ? undefined : 'noreferrer'}
+      className="inline-flex min-h-9 items-center gap-1.5 font-sans text-label text-primary transition-colors active:opacity-70"
+    >
+      <Icon size={16} aria-hidden />
+      {children}
+    </a>
+  );
+}
+
+function ErrorBlock({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-2xl bg-surface-container-low px-6 py-10 text-center">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-error-container text-on-error-container">
+        <TriangleAlert size={20} aria-hidden />
       </span>
+      <h2 className="mt-3 font-sans text-body font-semibold text-on-surface">
+        Não foi possível carregar
+      </h2>
+      <p className="mt-1 max-w-[34ch] font-sans text-body-sm text-on-surface-variant">
+        Verifique sua conexão e tente novamente.
+      </p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="mt-4 inline-flex min-h-10 items-center gap-2 rounded-full bg-primary px-5 font-sans text-label text-on-primary active:scale-[0.98]"
+      >
+        Tentar novamente
+      </button>
     </div>
   );
 }
 
-function IconChip({ icon: Icon }: { icon: LucideIcon }) {
+function SkeletonList() {
   return (
-    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-      <Icon size={19} aria-hidden />
-    </span>
-  );
-}
-
-function LoadingBlock() {
-  return (
-    <div className="flex min-h-[210px] items-center justify-center px-6 py-8">
-      <Loader2 size={22} className="animate-spin text-primary" aria-label="Carregando" />
-    </div>
+    <ul className="space-y-3" aria-hidden>
+      {[0, 1, 2].map((index) => (
+        <li
+          key={index}
+          className="animate-pulse rounded-2xl bg-surface-container-low p-4 motion-reduce:animate-none"
+        >
+          <div className="flex items-center gap-3">
+            <span className="h-9 w-9 shrink-0 rounded-full bg-surface-container-highest" />
+            <div className="flex-1 space-y-2">
+              <div className="h-3.5 w-2/5 rounded-full bg-surface-container-highest" />
+              <div className="h-3 w-1/4 rounded-full bg-surface-container-highest" />
+            </div>
+          </div>
+          <div className="mt-4 space-y-2">
+            <div className="h-3 w-full rounded-full bg-surface-container-highest" />
+            <div className="h-3 w-3/4 rounded-full bg-surface-container-highest" />
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }
 
 function EmptyBlock() {
   return (
-    <div className="flex min-h-[260px] flex-col items-center justify-center px-6 py-8 text-center">
-      <IconChip icon={FileText} />
+    <div className="flex flex-col items-center justify-center rounded-2xl bg-surface-container-low px-6 py-12 text-center">
+      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <FileText size={20} aria-hidden />
+      </span>
       <h2 className="mt-3 font-sans text-body font-semibold text-on-surface">
-        Nenhum documento configurado
+        Nenhum documento vigente
       </h2>
       <p className="mt-1 max-w-[34ch] font-sans text-body-sm text-on-surface-variant">
-        Adicione documentos em legalDocuments.ts para exibir a central de aceite.
+        Quando houver termos a assinar, eles aparecerão aqui.
       </p>
     </div>
   );
