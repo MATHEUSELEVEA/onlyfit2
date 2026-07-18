@@ -16,7 +16,6 @@ interface TrainingContextValue {
   imported: ImportedActivity[];
   activeSession: WorkoutSession | null;
   startSession: (scheduledId: string) => void;
-  startFreeWorkout: (date: string) => void;
   toggleSet: (exerciseId: string, setIndex: number) => void;
   updateSet: (exerciseId: string, setIndex: number, values: Partial<Pick<ExerciseSetLog, 'weight' | 'reps' | 'rpe' | 'rir'>>) => void;
   setActiveExercise: (index: number) => void;
@@ -58,11 +57,6 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     setActiveSession({ id: `session-${scheduledId}`, scheduledId, templateId: template.id, startedAt: Date.now(), activeExercise: 0, note: '', logs: Object.fromEntries(template.exercises.map((exercise) => [exercise.id, Array.from({ length: exercise.sets }, () => ({ weight: exercise.lastWeight, reps: Number(exercise.targetReps.match(/\d+/)?.[0] ?? 10), rpe: null, rir: null, completed: false }))])) });
     setScheduled((current) => current.map((entry) => entry.id === scheduledId ? { ...entry, status: 'active' } : entry));
   };
-  const startFreeWorkout = (date: string) => {
-    const id = `free-${Date.now()}`;
-    setScheduled((current) => [...current, { id, date, templateId: 'upper', title: 'Treino livre', focus: 'Musculação', durationMin: 45, status: 'active', surface: 'strength' }]);
-    setActiveSession({ id: `session-${id}`, scheduledId: id, templateId: 'upper', startedAt: Date.now(), activeExercise: 0, note: '', logs: Object.fromEntries(templates[0].exercises.map((exercise) => [exercise.id, Array.from({ length: exercise.sets }, () => ({ weight: exercise.lastWeight, reps: Number(exercise.targetReps.match(/\d+/)?.[0] ?? 10), rpe: null, rir: null, completed: false }))])) });
-  };
   const toggleSet = (exerciseId: string, setIndex: number) => setActiveSession((current) => current ? { ...current, logs: { ...current.logs, [exerciseId]: current.logs[exerciseId].map((set, index) => index === setIndex ? { ...set, completed: !set.completed } : set) } } : current);
   const updateSet = (exerciseId: string, setIndex: number, values: Partial<Pick<ExerciseSetLog, 'weight' | 'reps' | 'rpe' | 'rir'>>) => setActiveSession((current) => current ? { ...current, logs: { ...current.logs, [exerciseId]: current.logs[exerciseId].map((set, index) => index === setIndex ? { ...set, ...values } : set) } } : current);
   const setActiveExercise = (activeExercise: number) => setActiveSession((current) => current ? { ...current, activeExercise } : current);
@@ -73,7 +67,7 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     setActiveSession(null);
   };
   const reschedule = (scheduledId: string) => setScheduled((current) => current.map((entry) => entry.id === scheduledId ? { ...entry, date: day(0), status: 'planned' } : entry));
-  const value = { templates, scheduled, imported: initialImported, activeSession, startSession, startFreeWorkout, toggleSet, updateSet, setActiveExercise, updateSessionNote, completeSession, reschedule };
+  const value = { templates, scheduled, imported: initialImported, activeSession, startSession, toggleSet, updateSet, setActiveExercise, updateSessionNote, completeSession, reschedule };
   return <TrainingContext.Provider value={value}>{children}</TrainingContext.Provider>;
 }
 
