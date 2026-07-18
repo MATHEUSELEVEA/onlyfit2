@@ -61,6 +61,26 @@ export function useBusinessOfferings(businessId: string | undefined) {
   });
 }
 
+// Leitura de uma oferta isolada para a tela de gerenciamento. Diferente da
+// lista, NÃO filtra 'archived': a página precisa abrir mesmo uma oferta
+// arquivada (ex. link direto) para mostrar o estado atual.
+export function useBusinessOffering(businessId: string | undefined, offeringId: string | undefined) {
+  return useQuery({
+    queryKey: ['business-offering', businessId, offeringId] as const,
+    enabled: Boolean(businessId && offeringId),
+    queryFn: async (): Promise<BusinessOffering | null> => {
+      const { data, error } = await supabase
+        .from('business_offerings')
+        .select('id,organization_id,offering_type,name,description,status,created_at')
+        .eq('id', offeringId!)
+        .eq('organization_id', businessId!)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as BusinessOffering | null) ?? null;
+    },
+  });
+}
+
 export function useCreateOffering(businessId: string | undefined) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -98,8 +118,11 @@ export function useUpdateOffering(businessId: string | undefined) {
       });
       if (error) throw new Error(error.message);
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       void queryClient.invalidateQueries({ queryKey: ['business-offerings', businessId] });
+      // A tela de gerenciamento lê a oferta isolada; sem invalidar aqui, ela
+      // continuaria mostrando o status/nome antigos após salvar.
+      void queryClient.invalidateQueries({ queryKey: ['business-offering', businessId, variables.offeringId] });
     },
   });
 }
