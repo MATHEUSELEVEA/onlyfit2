@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { clsx } from 'clsx';
 import { Link } from 'react-router-dom';
 import { ChevronRight, type LucideIcon } from 'lucide-react';
 
@@ -16,10 +17,23 @@ export function SectionEyebrow({ children }: { children: ReactNode }) {
   );
 }
 
-export function IconChip({ icon: Icon, badge }: { icon: LucideIcon; badge?: number }) {
+export function IconChip({
+  icon: Icon,
+  badge,
+  compact = false,
+}: {
+  icon: LucideIcon;
+  badge?: number;
+  compact?: boolean;
+}) {
   return (
-    <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-      <Icon size={19} aria-hidden />
+    <span
+      className={clsx(
+        'relative flex shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary',
+        compact ? 'h-9 w-9' : 'h-10 w-10',
+      )}
+    >
+      <Icon size={compact ? 18 : 19} aria-hidden />
       {badge && badge > 0 ? (
         <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#ff1744] px-1 font-sans text-[10px] font-bold leading-none tabular-nums text-white ring-2 ring-surface">
           {badge > 99 ? '99+' : badge}
@@ -44,7 +58,7 @@ export function ProfileLink({
 }) {
   const content = (
     <>
-      <IconChip icon={Icon} badge={badge} />
+      <IconChip icon={Icon} badge={badge} compact={!description} />
       <span className="min-w-0 flex-1">
         <span className="block font-sans text-body font-medium text-on-surface">{title}</span>
         {description && (
@@ -56,8 +70,10 @@ export function ProfileLink({
       <ChevronRight size={19} className="shrink-0 text-outline" aria-hidden />
     </>
   );
-  const className =
-    'flex min-h-[64px] w-full items-center gap-4 border-t border-outline-variant/25 px-4 py-3 text-left transition-colors first:border-t-0 active:bg-surface-container-low';
+  const className = clsx(
+    'flex w-full items-center border-t border-outline-variant/25 px-4 text-left transition-colors first:border-t-0 active:bg-surface-container-low',
+    description ? 'min-h-[64px] gap-4 py-3' : 'min-h-[56px] gap-3 py-2',
+  );
 
   if (to) {
     return (
