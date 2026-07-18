@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Dumbbell, Salad, Stethoscope, type LucideIcon } from 'lucide-react';
+import { Clock3, Dumbbell, Salad, Stethoscope, type LucideIcon } from 'lucide-react';
 import { useTranslation } from '@/i18n/I18nProvider';
 import { PageTopBar } from '@/components/layout/PageTopBar';
 
@@ -14,6 +14,11 @@ export function MeuFitPage() {
   const { t } = useTranslation();
 
   const pillars: Array<{ icon: LucideIcon; title: string; to: string }> = [
+    {
+      icon: Clock3,
+      title: t('meufit.routine.short'),
+      to: '/meu-fit/rotina',
+    },
     {
       icon: Dumbbell,
       title: t('meufit.training.short'),
@@ -35,12 +40,12 @@ export function MeuFitPage() {
     <div className="h-full overflow-y-auto bg-background pb-10">
       <PageTopBar title={t('meufit.title')} showBackButton={false} />
       <div className="mx-auto w-full max-w-[720px] px-6 pt-6">
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-4">
           {pillars.map(({ icon: Icon, title, to }) => (
             <Link
               key={to}
               to={to}
-              className="flex min-h-[132px] flex-col items-center justify-center gap-3 rounded-2xl border border-outline-variant/40 bg-surface-container p-3 text-center transition-transform active:scale-[0.97]"
+              className="flex min-h-[156px] flex-col items-center justify-center gap-3 rounded-2xl border border-outline-variant/40 bg-surface-container p-4 text-center transition-transform active:scale-[0.97]"
             >
               <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                 <Icon size={24} aria-hidden />
