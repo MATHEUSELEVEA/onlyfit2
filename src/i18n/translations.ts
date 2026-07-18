@@ -131,6 +131,12 @@ const pt = {
   'meufit.routine.notificationsOff': 'Somente check manual',
   'meufit.routine.notificationHint': 'As notificações serão configuradas quando esta rotina estiver pronta.',
   'meufit.routine.schedulePreview': 'Sua rotina ficará assim',
+  'meufit.routine.waterDistribution': 'Distribuição da água',
+  'meufit.routine.waterDistributionHint': 'Ajuste cada período. Você pode deixar menos volume à noite.',
+  'meufit.routine.decreaseAmount': 'Diminuir quantidade',
+  'meufit.routine.increaseAmount': 'Aumentar quantidade',
+  'meufit.routine.planned': 'Planejado',
+  'meufit.routine.consumed': 'Bebido',
 
 
   'profile.enrollments.title': 'Minhas compras',
@@ -845,6 +851,12 @@ const en: Record<keyof typeof pt, string> = {
   'meufit.routine.notificationsOff': 'Manual check only',
   'meufit.routine.notificationHint': 'Notifications will be configured when this routine is ready.',
   'meufit.routine.schedulePreview': 'Your routine will look like this',
+  'meufit.routine.waterDistribution': 'Water distribution',
+  'meufit.routine.waterDistributionHint': 'Adjust each period. You can set a smaller amount at night.',
+  'meufit.routine.decreaseAmount': 'Decrease amount',
+  'meufit.routine.increaseAmount': 'Increase amount',
+  'meufit.routine.planned': 'Planned',
+  'meufit.routine.consumed': 'Consumed',
 
 
   'profile.enrollments.title': 'My purchases',
