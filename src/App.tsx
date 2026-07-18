@@ -11,6 +11,7 @@ import { ExplorePage } from './features/explore/ExplorePage';
 import { TrainingPage } from './pages/TrainingPage';
 import { DietPage } from './pages/DietPage';
 import { MeuFitPage } from './features/meufit/MeuFitPage';
+import { RoutinePage } from './features/meufit/RoutinePage';
 import { CommunitiesPage } from './features/communities/CommunitiesPage';
 import { CommunityPage } from './features/communities/CommunityPage';
 import { CommunityFormPage } from './features/communities/CommunityFormPage';
@@ -74,6 +75,7 @@ function AuthenticatedApp() {
           <Route path="/explorar" element={<ExplorePage />} />
           <Route path="/studio" element={<StudioPage />} />
           <Route path="/meu-fit" element={<MeuFitPage />} />
+          <Route path="/meu-fit/rotina" element={<RoutinePage />} />
           <Route path="/meu-fit/treino" element={<TrainingPage />} />
           <Route path="/meu-fit/dieta" element={<DietPage />} />
           <Route path="/treino" element={<Navigate to="/meu-fit" replace />} />
