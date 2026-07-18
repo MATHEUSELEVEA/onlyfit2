@@ -5,7 +5,7 @@ import { clsx } from 'clsx';
 const items = [
   { to: '/feed', label: 'Início', icon: Home },
   { to: '/explorar', label: 'Explorar', icon: Compass },
-  { to: '/meu-fit', label: 'Meu Fit', icon: Activity, featured: true },
+  { to: '/meu-fit', label: 'My Fit', icon: Activity, featured: true },
   { to: '/produtos', label: 'Mercado', icon: ShoppingBag },
   { to: '/perfil', label: 'Perfil', icon: CircleUserRound },
 ];

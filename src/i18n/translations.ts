@@ -58,14 +58,17 @@ const pt = {
   'profile.diet.title': 'Dieta',
   'profile.diet.description': 'Orientações de alimentação para o seu objetivo',
 
-  'meufit.title': 'Meu Fit',
+  'meufit.title': 'My Fit',
   'meufit.subtitle': 'Treino, dieta e saúde em um só lugar',
   'meufit.training.title': 'Treino',
   'meufit.training.description': 'Seus treinos e progresso',
+  'meufit.training.short': 'Treinos',
   'meufit.diet.title': 'Dieta',
   'meufit.diet.description': 'Orientações de alimentação para o seu objetivo',
+  'meufit.diet.short': 'Dieta',
   'meufit.health.title': 'Registro de saúde',
   'meufit.health.description': 'Registre hábitos, resultados clínicos e exames',
+  'meufit.health.short': 'Saúde',
 
 
   'profile.enrollments.title': 'Minhas compras',
@@ -711,10 +714,13 @@ const en: Record<keyof typeof pt, string> = {
   'meufit.subtitle': 'Training, diet and health in one place',
   'meufit.training.title': 'Training',
   'meufit.training.description': 'Your workouts and progress',
+  'meufit.training.short': 'Training',
   'meufit.diet.title': 'Diet',
   'meufit.diet.description': 'Nutrition guidance for your goal',
+  'meufit.diet.short': 'Diet',
   'meufit.health.title': 'Health entry',
   'meufit.health.description': 'Record habits, clinical results and exams',
+  'meufit.health.short': 'Health',
 
 
   'profile.enrollments.title': 'My purchases',
