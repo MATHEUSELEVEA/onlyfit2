@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Play, RotateCcw, TrendingUp } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Play, Plus, RotateCcw, TrendingUp } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -16,13 +16,13 @@ const sourceLabel = (source: string) => ({ apple_health: 'Apple Health', garmin:
 export function TrainingPage() { return <TrainingContent />; }
 
 function TrainingContent() {
-  const [tab, setTab] = useState<Tab>('agenda'); const [selectedDate, setSelectedDate] = useState(today()); const [calendarOpen, setCalendarOpen] = useState(false);
-  const { scheduled, imported, activeSession } = useTraining();
+  const [tab, setTab] = useState<Tab>('agenda'); const [selectedDate, setSelectedDate] = useState(today()); const [calendarOpen, setCalendarOpen] = useState(false); const [recordOpen, setRecordOpen] = useState(false);
+  const { scheduled, imported, activeSession, addActivity } = useTraining();
   const selectedItems = scheduled.filter((item) => item.date === selectedDate);
   const selectedImported = imported.filter((item) => item.date === selectedDate);
   const activeItem = activeSession ? scheduled.find((item) => item.id === activeSession.scheduledId) : null;
   return <div className="flex h-full flex-col overflow-y-auto bg-background pb-8">
-    <PageTopBar title="Treinos" backFallback="/meu-fit" actions={<button type="button" aria-label="Abrir calendário mensal" onClick={() => setCalendarOpen(true)} className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-container text-on-surface"><CalendarDays size={20} aria-hidden /></button>} />
+    <PageTopBar title="Treinos" backFallback="/meu-fit" actions={<div className="flex gap-1"><button type="button" aria-label="Adicionar registro" onClick={() => setRecordOpen(true)} className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-container text-on-surface"><Plus size={20} aria-hidden /></button><button type="button" aria-label="Abrir calendário mensal" onClick={() => setCalendarOpen(true)} className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-container text-on-surface"><CalendarDays size={20} aria-hidden /></button></div>} />
     <main className="mx-auto w-full max-w-[720px] px-5 pb-6 pt-5">
       <div className="grid grid-cols-3 rounded-xl bg-surface-container p-1" role="tablist" aria-label="Seções de treino">{([['agenda', 'Agenda'], ['history', 'Histórico'], ['progress', 'Progresso']] as [Tab, string][]).map(([value, label]) => <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={clsx('min-h-[40px] rounded-lg font-sans text-counter transition-colors', tab === value ? 'bg-surface-container-lowest text-on-surface' : 'text-on-surface-variant')}>{label}</button>)}</div>
       {tab === 'agenda' && <Agenda selectedDate={selectedDate} onDate={setSelectedDate} items={selectedItems} imported={selectedImported} active={activeItem ?? null} onCalendar={() => setCalendarOpen(true)} />}
@@ -30,6 +30,7 @@ function TrainingContent() {
       {tab === 'progress' && <Progress />}
     </main>
     <MonthlyCalendar open={calendarOpen} onClose={() => setCalendarOpen(false)} selectedDate={selectedDate} onSelect={(value) => { setSelectedDate(value); setCalendarOpen(false); }} />
+    <BottomSheet open={recordOpen} onClose={() => setRecordOpen(false)} title="Adicionar registro" description="Registre uma atividade feita fora do Player."><div className="px-5 pb-6"><button type="button" onClick={() => { addActivity({ date: selectedDate, title: 'Treino registrado', durationMin: 60, surface: 'strength', source: 'manual' }); setRecordOpen(false); }} className="flex min-h-14 w-full items-center gap-3 rounded-xl border border-outline-variant/40 bg-surface-container px-4 text-left"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-on-primary"><Plus size={18} /></span><span><span className="block font-sans text-label text-on-surface">Registrar atividade</span><span className="mt-0.5 block font-sans text-body-sm text-on-surface-variant">Musculação, corrida ou outra modalidade.</span></span></button><button type="button" className="mt-3 flex min-h-14 w-full items-center gap-3 rounded-xl border border-outline-variant/40 bg-surface-container px-4 text-left"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-tertiary-container text-on-tertiary-container"><CalendarDays size={18} /></span><span><span className="block font-sans text-label text-on-surface">Importar de wearable</span><span className="mt-0.5 block font-sans text-body-sm text-on-surface-variant">Apple Health, Garmin, Strava e outros — em breve.</span></span></button></div></BottomSheet>
   </div>;
 }
 

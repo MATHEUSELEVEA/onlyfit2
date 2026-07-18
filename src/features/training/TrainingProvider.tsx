@@ -19,6 +19,7 @@ interface TrainingContextValue {
   templates: WorkoutTemplate[];
   scheduled: ScheduledWorkout[];
   imported: ImportedActivity[];
+  addActivity: (activity: Omit<ImportedActivity, 'id'>) => void;
   activeSession: WorkoutSession | null;
   startSession: (scheduledId: string) => void;
   toggleSet: (exerciseId: string, setIndex: number) => void;
@@ -54,6 +55,7 @@ const initialImported: ImportedActivity[] = [{ id: 'run', date: day(-2), title: 
 
 export function TrainingProvider({ children }: { children: ReactNode }) {
   const [scheduled, setScheduled] = useState(initialScheduled);
+  const [imported, setImported] = useState(initialImported);
   const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
   const startSession = (scheduledId: string) => {
     const item = scheduled.find((entry) => entry.id === scheduledId); const template = templates.find((entry) => entry.id === item?.templateId);
@@ -72,7 +74,8 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     setActiveSession(null);
   };
   const reschedule = (scheduledId: string) => setScheduled((current) => current.map((entry) => entry.id === scheduledId ? { ...entry, date: day(0), status: 'planned' } : entry));
-  const value = { templates, scheduled, imported: initialImported, activeSession, startSession, toggleSet, updateSet, setActiveExercise, updateSessionNote, completeSession, reschedule };
+  const addActivity = (activity: Omit<ImportedActivity, 'id'>) => setImported((current) => [{ ...activity, id: `activity-${Date.now()}` }, ...current]);
+  const value = { templates, scheduled, imported, addActivity, activeSession, startSession, toggleSet, updateSet, setActiveExercise, updateSessionNote, completeSession, reschedule };
   return <TrainingContext.Provider value={value}>{children}</TrainingContext.Provider>;
 }
 
