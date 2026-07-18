@@ -38,7 +38,7 @@ export function ProfileLink({
 }: {
   icon: LucideIcon;
   title: string;
-  description: string;
+  description?: string;
   to?: string;
   badge?: number;
 }) {
@@ -47,15 +47,17 @@ export function ProfileLink({
       <IconChip icon={Icon} badge={badge} />
       <span className="min-w-0 flex-1">
         <span className="block font-sans text-body font-medium text-on-surface">{title}</span>
-        <span className="mt-0.5 block font-sans text-body-sm text-on-surface-variant">
-          {description}
-        </span>
+        {description && (
+          <span className="mt-0.5 block font-sans text-body-sm text-on-surface-variant">
+            {description}
+          </span>
+        )}
       </span>
       <ChevronRight size={19} className="shrink-0 text-outline" aria-hidden />
     </>
   );
   const className =
-    'flex min-h-[72px] w-full items-center gap-4 border-t border-outline-variant/25 px-4 py-4 text-left transition-colors first:border-t-0 active:bg-surface-container-low';
+    'flex min-h-[64px] w-full items-center gap-4 border-t border-outline-variant/25 px-4 py-3 text-left transition-colors first:border-t-0 active:bg-surface-container-low';
 
   if (to) {
     return (
