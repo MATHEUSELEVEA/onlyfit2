@@ -45,11 +45,9 @@ export function MeuFitPage() {
             <Link
               key={to}
               to={to}
-              className="flex min-h-[156px] flex-col items-center justify-center gap-3 rounded-2xl border border-outline-variant/40 bg-surface-container p-4 text-center transition-transform active:scale-[0.97]"
+              className="flex min-h-[172px] flex-col items-center justify-center gap-4 rounded-2xl border border-outline-variant/40 bg-surface-container p-4 text-center transition-transform active:scale-[0.97]"
             >
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <Icon size={24} aria-hidden />
-              </span>
+              <Icon size={48} className="text-primary" aria-hidden />
               <span className="font-sans text-label text-on-surface">{title}</span>
             </Link>
           ))}
