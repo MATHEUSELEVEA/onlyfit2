@@ -40,7 +40,7 @@ export function MeuFitPage() {
     <div className="flex h-full flex-col overflow-y-auto bg-background pb-10">
       <PageTopBar title={t('meufit.title')} showBackButton={false} />
       <div className="mx-auto flex w-full max-w-[720px] flex-1 items-center px-6 py-6">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid w-full grid-cols-2 gap-4">
           {pillars.map(({ icon: Icon, title, to }) => (
             <Link
               key={to}
