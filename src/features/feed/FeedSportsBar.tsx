@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, SlidersHorizontal } from 'lucide-react';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { useAffinityGroups } from '@/lib/sports';
 
@@ -17,12 +17,6 @@ export function FeedSportsBar({ selected, availableSports, onSelect }: FeedSport
   // taxonomia, e é ele quem manda: mostra só grupo com conteúdo pro usuário.
   const tabs = availableSports.filter(Boolean).map((key) => ({ key, label: labelFor(key) }));
   const allSelected = selected.length === 0;
-  const selectedLabel =
-    selected.length === 1
-      ? tabs.find((tab) => tab.key === selected[0])?.label ?? 'Tudo'
-      : selected.length > 1
-        ? `${selected.length} modalidades`
-        : 'Tudo';
 
   function toggleSport(key: string) {
     onSelect(selected.includes(key) ? selected.filter((sport) => sport !== key) : [...selected, key]);
@@ -30,18 +24,17 @@ export function FeedSportsBar({ selected, availableSports, onSelect }: FeedSport
 
   return (
     <>
-      <div className="flex justify-center px-4">
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-haspopup="dialog"
-          aria-expanded={open}
-          className="flex min-h-[44px] items-center gap-1.5 rounded-full border border-white/20 bg-black/25 px-4 font-sans text-label text-white backdrop-blur-sm transition-opacity active:opacity-70"
-        >
-          {selectedLabel}
-          <ChevronDown size={16} aria-hidden />
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label="Filtrar modalidades"
+        className="feed-filter-control absolute right-3 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/25 text-white backdrop-blur-sm transition-transform active:scale-95"
+      >
+        <SlidersHorizontal size={20} aria-hidden />
+        {!allSelected && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-primary ring-2 ring-black/40" aria-hidden />}
+      </button>
 
       <BottomSheet
         open={open}

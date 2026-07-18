@@ -50,17 +50,6 @@ export function FeedPage() {
 
   return (
     <div className="feed-viewport relative">
-      {/* O filtro ocupa um único ponto central; as opções ficam no sheet. */}
-      <header className="absolute inset-x-0 top-0 z-20 mx-auto feed-stage pb-2 pt-safe-top">
-        <div className="mt-2">
-          <FeedSportsBar
-            selected={sports}
-            availableSports={availableSports}
-            onSelect={setSportSelection}
-          />
-        </div>
-      </header>
-
       {/* Feed vertical com snap por post */}
       <div
         onScroll={handleScroll}
@@ -98,6 +87,13 @@ export function FeedPage() {
           </div>
         ))}
       </div>
+
+      {/* Filtros acompanham os controles flutuantes da mídia, abaixo do som. */}
+      <FeedSportsBar
+        selected={sports}
+        availableSports={availableSports}
+        onSelect={setSportSelection}
+      />
 
       <button
         type="button"
