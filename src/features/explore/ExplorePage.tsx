@@ -1,17 +1,25 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import {
   Check,
+  Apple as AppleIcon,
+  Dumbbell,
+  Footprints,
   Heart,
+  LayoutGrid,
   Loader2,
+  Medal,
   Play,
   Search,
   SlidersHorizontal,
+  Sparkles,
+  Swords,
   Trophy,
   UsersRound,
   Volume2,
   VolumeX,
+  type LucideIcon,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAffinityGroups } from '@/lib/sports';
@@ -21,7 +29,7 @@ import {
   useVideoMuted,
 } from '@/features/feed/videoSound';
 import { formatCount } from '@/lib/format';
-import { FilterChip } from '@/components/ui/FilterChip';
+import { BottomSheet } from '@/components/ui/BottomSheet';
 import { PageTopBar } from '@/components/layout/PageTopBar';
 import { useToggleCreatorFollow } from '@/features/creators/useCreatorFollow';
 import {
@@ -55,6 +63,21 @@ const PEOPLE_KINDS: { key: PeopleKind; label: string }[] = [
   { key: 'professionals', label: 'Profissionais' },
   { key: 'members', label: 'Membros' },
 ];
+
+// O banco armazena o nome do ícone para a taxonomia inteira continuar sendo
+// configurável. Um fallback mantém a descoberta íntegra se surgir um novo ícone.
+const AFFINITY_ICONS: Record<string, LucideIcon> = {
+  Dumbbell,
+  Sparkles,
+  Swords,
+  Footprints,
+  Medal,
+  Apple: AppleIcon,
+};
+
+function affinityIcon(name: string): LucideIcon {
+  return AFFINITY_ICONS[name] ?? Sparkles;
+}
 
 function CreatorCard({ creator }: { creator: ExploreCreator }) {
   const { labelFor } = useAffinityGroups();
@@ -538,6 +561,7 @@ export function ExplorePage() {
         title="Explorar"
         description="Conteúdos, pessoas, desafios e comunidades"
         showBackButton={false}
+        inlineDescription
       />
       <div className="mx-auto w-full max-w-[720px]">
         <div className="px-4 pt-4">
@@ -559,9 +583,9 @@ export function ExplorePage() {
             </div>
             <button
               type="button"
-              onClick={() => setFiltersOpen((open) => !open)}
+              onClick={() => setFiltersOpen(true)}
               aria-expanded={filtersOpen}
-              aria-label="Mostrar filtros"
+              aria-label="Abrir filtros"
               className={clsx(
                 'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-colors',
                 filtersOpen || hasActiveFilters
@@ -573,9 +597,9 @@ export function ExplorePage() {
             </button>
           </div>
 
-          {/* Abas de texto: o que o usuário está procurando */}
+          {/* Escopo da descoberta: sempre visível e sem rolagem. */}
           <div
-            className="no-scrollbar -mx-4 mt-3 flex gap-5 overflow-x-auto px-4"
+            className="mt-3 grid grid-cols-4"
             role="tablist"
             aria-label="O que explorar"
           >
@@ -587,7 +611,7 @@ export function ExplorePage() {
                 aria-selected={tab === key}
                 onClick={() => setTab(key)}
                 className={clsx(
-                  'relative shrink-0 whitespace-nowrap pb-2 font-sans text-label transition-colors',
+                  'relative min-h-[36px] whitespace-nowrap pb-2 font-sans text-label transition-colors',
                   tab === key ? 'text-on-surface' : 'text-on-surface-variant',
                 )}
               >
@@ -602,53 +626,6 @@ export function ExplorePage() {
             ))}
           </div>
         </div>
-
-        {filtersOpen && (
-          <>
-            {/* Identidade só filtra gente — aparece na aba Pessoas */}
-            {tab === 'people' && (
-              <>
-                <div className="mt-3 px-4">
-                  <h2 className="font-sans text-eyebrow uppercase text-on-surface-variant">
-                    Pessoas
-                  </h2>
-                </div>
-                <div
-                  className="no-scrollbar mt-2 flex gap-2 overflow-x-auto px-4"
-                  role="tablist"
-                  aria-label="Tipo de pessoa"
-                >
-                  {PEOPLE_KINDS.map(({ key, label }) => (
-                    <FilterChip key={key} active={peopleKind === key} onClick={() => setPeopleKind(key)}>
-                      {label}
-                    </FilterChip>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {/* Filtros por grupo de afinidade */}
-            <div className="mt-4 px-4">
-              <h2 className="font-sans text-eyebrow uppercase text-on-surface-variant">
-                Grupos de afinidade
-              </h2>
-            </div>
-            <div
-              className="no-scrollbar mt-2 flex gap-2 overflow-x-auto px-4"
-              role="tablist"
-              aria-label="Grupos de afinidade"
-            >
-              <FilterChip active={sport === null} onClick={() => setSport(null)}>
-                Todos
-              </FilterChip>
-              {groups.map(({ key, label }) => (
-                <FilterChip key={key} active={sport === key} onClick={() => setSport(key)}>
-                  {label}
-                </FilterChip>
-              ))}
-            </div>
-          </>
-        )}
 
         {isLoading && (
           <div className="flex justify-center py-16">
@@ -713,6 +690,121 @@ export function ExplorePage() {
           </>
         )}
       </div>
+
+      <BottomSheet
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        title="Filtros"
+        description="Refine o que você quer descobrir."
+      >
+        <div className="space-y-6 px-5 pb-6 pt-1">
+          {tab === 'people' && (
+            <section>
+              <h2 className="font-sans text-eyebrow uppercase text-on-surface-variant">Pessoas</h2>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                {PEOPLE_KINDS.map(({ key, label }) => (
+                  <ExploreFilterOption
+                    key={key}
+                    active={peopleKind === key}
+                    onClick={() => setPeopleKind(key)}
+                  >
+                    {label}
+                  </ExploreFilterOption>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section>
+            <h2 className="font-sans text-eyebrow uppercase text-on-surface-variant">Modalidade</h2>
+            <div className="mt-3 grid grid-cols-3 gap-3">
+              <AffinityFilterButton
+                icon={LayoutGrid}
+                label="Todos"
+                active={sport === null}
+                onClick={() => setSport(null)}
+              />
+              {groups.map((group) => (
+                <AffinityFilterButton
+                  key={group.key}
+                  icon={affinityIcon(group.icon)}
+                  label={group.label}
+                  active={sport === group.key}
+                  onClick={() => setSport(sport === group.key ? null : group.key)}
+                />
+              ))}
+            </div>
+          </section>
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={() => {
+                setPeopleKind('all');
+                setSport(null);
+              }}
+              className="min-h-[44px] w-full rounded-lg border border-outline-variant/50 font-sans text-label text-on-surface transition-colors active:bg-surface-container-high"
+            >
+              Limpar filtros
+            </button>
+          )}
+        </div>
+      </BottomSheet>
     </div>
+  );
+}
+
+function AffinityFilterButton({
+  icon: Icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: LucideIcon;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={clsx(
+        'flex min-h-[76px] flex-col items-center justify-center gap-1.5 rounded-xl border px-2 transition-colors',
+        active
+          ? 'border-primary bg-primary/10 text-primary'
+          : 'border-outline-variant/30 bg-surface-container text-on-surface-variant',
+      )}
+    >
+      <Icon size={22} aria-hidden />
+      <span className="font-sans text-counter">{label}</span>
+    </button>
+  );
+}
+
+function ExploreFilterOption({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onClick}
+      className={clsx(
+        'min-h-[44px] rounded-full border px-3 font-sans text-label transition-colors',
+        active
+          ? 'border-primary bg-primary/10 text-primary'
+          : 'border-outline-variant/40 bg-surface text-on-surface-variant',
+      )}
+    >
+      {children}
+    </button>
   );
 }
