@@ -33,6 +33,8 @@ import { MyBusinessesPage } from './features/profile/MyBusinessesPage';
 import { CreateBusinessPage } from './features/profile/CreateBusinessPage';
 import { BusinessWorkspacePage } from './features/profile/BusinessWorkspacePage';
 import { OfferingManagementPage } from './features/profile/OfferingManagementPage';
+import { PaymentsPage } from './features/payments/PaymentsPage';
+import { FinancePage } from './features/finance/FinancePage';
 import { PrivacyTermsPage } from './features/legal/PrivacyTermsPage';
 import { CreatorProfilePage } from './features/creators/CreatorProfilePage';
 import { HealthProfilePage } from './features/health/HealthProfilePage';
@@ -100,6 +102,8 @@ function AuthenticatedApp() {
           <Route path="/perfil" element={<ProfilePage />} />
           <Route path="/perfil/menu" element={<SettingsMenuPage />} />
           <Route path="/perfil/editar" element={<EditProfilePage />} />
+          <Route path="/perfil/pagamentos" element={<PaymentsPage />} />
+          <Route path="/perfil/financeiro" element={<FinancePage />} />
           <Route path="/perfil/visual" element={<VisualPreferencesPage />} />
           <Route path="/perfil/saude" element={<HealthProfilePage />} />
           <Route path="/perfil/saude/anamnese/questionario" element={<HealthQuestionnairePage />} />

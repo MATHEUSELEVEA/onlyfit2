@@ -140,6 +140,7 @@ export function SettingsMenuPage() {
             <ProfileLink
               icon={WalletCards}
               title={t('profile.settings.payment')}
+              to="/perfil/pagamentos"
             />
             <ProfileLink
               icon={Palette}
@@ -182,6 +183,7 @@ export function SettingsMenuPage() {
                 <ProfileLink
                   icon={ReceiptText}
                   title={t('profile.settings.finance')}
+                  to="/perfil/financeiro"
                 />
               </>
             )}
