@@ -426,7 +426,7 @@ function OfficialStoresRail({
       <div className="mt-3 grid grid-cols-2 gap-3 px-4 pb-1">
         {loading
           ? Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="h-[120px] min-w-0 animate-pulse rounded-2xl bg-surface-container" aria-hidden />
+              <div key={index} className="h-[132px] min-w-0 animate-pulse rounded-2xl bg-surface-container" aria-hidden />
             ))
           : stores.map((store) => {
               const active = activeStoreKey ? officialStoreKeys(store).includes(activeStoreKey) : false;
@@ -437,33 +437,30 @@ function OfficialStoresRail({
                   aria-pressed={active}
                   onClick={() => onSelect(store)}
                   className={clsx(
-                    'relative h-[120px] min-w-0 overflow-hidden rounded-2xl border p-3 text-left transition-all active:scale-[0.98]',
+                    'relative h-[132px] min-w-0 overflow-hidden rounded-2xl border bg-surface-container-lowest p-2.5 text-left transition-all active:scale-[0.98]',
                     active
-                      ? 'border-primary bg-primary/10 shadow-[0_0_0_1px_hsl(var(--primary)/0.18)]'
-                      : 'border-outline-variant/25 bg-surface-container-lowest',
+                      ? 'border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.18)]'
+                      : 'border-outline-variant/25',
                   )}
                 >
-                  {store.coverImageUrl ? (
-                    <img src={store.coverImageUrl} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover opacity-30" />
-                  ) : (
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/16 via-surface-container to-surface-container-lowest" />
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/92 via-background/45 to-transparent" />
-                  <div className="relative flex h-full flex-col justify-between">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="flex h-10 w-20 items-center justify-center overflow-hidden rounded-xl border border-white/80 bg-white px-2 font-sans text-body font-bold text-neutral-900 shadow-sm">
+                  <div className="flex h-full flex-col gap-2">
+                    <div className="relative flex h-14 items-center justify-center overflow-hidden rounded-xl bg-white px-3 shadow-sm">
+                      {store.coverImageUrl ? (
+                        <img src={store.coverImageUrl} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover opacity-10" />
+                      ) : null}
+                      <span className="relative flex h-full w-full items-center justify-center font-sans text-body font-bold text-neutral-900">
                         {store.logoUrl ? (
-                          <img src={store.logoUrl} alt={store.name} className="h-full w-full object-contain" loading="lazy" />
+                          <img src={store.logoUrl} alt={store.name} className="max-h-9 w-full object-contain" loading="lazy" />
                         ) : (
                           store.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('')
                         )}
                       </span>
-                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-background/35 px-2 py-0.5 font-sans text-counter text-primary shadow-sm backdrop-blur-md">
+                      <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-full border border-primary/20 bg-white/65 px-1.5 py-0.5 font-sans text-[9px] font-semibold leading-none text-primary shadow-sm backdrop-blur-md">
                         <BadgeCheck size={12} aria-hidden />
                         {t('market.official')}
                       </span>
                     </div>
-                    <div>
+                    <div className="min-w-0 px-1">
                       <p className="truncate font-sans text-title text-on-surface">{store.name}</p>
                       <p className="mt-0.5 line-clamp-1 font-sans text-body-sm text-on-surface-variant">
                         {store.category || store.tagline || t('market.sponsorBrand')}
