@@ -6,6 +6,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { PageTopBar } from '@/components/layout/PageTopBar';
 import { type ActivitySource, type ImportedActivity, type ScheduledWorkout, type TrainingStatus, type TrainingSurface, useTraining } from '@/features/training/TrainingProvider';
 import { useAppleHealth } from '@/features/wearables/useAppleHealth';
+import { useTranslation } from '@/i18n/I18nProvider';
 
 type Tab = 'agenda' | 'history' | 'progress';
 type AppleHealthState = ReturnType<typeof useAppleHealth>;
@@ -75,6 +76,7 @@ function Agenda({ selectedDate, onDate, items, imported, active, onCalendar }: {
 }
 
 function AppleHealthCard({ appleHealth, compact }: { appleHealth: AppleHealthState; compact?: boolean }) {
+  const { t } = useTranslation();
   const connected = appleHealth.connection?.status === 'connected';
   const unavailable = !appleHealth.available && !appleHealth.isLoading;
   const syncing = appleHealth.sync.isPending;
@@ -94,13 +96,13 @@ function AppleHealthCard({ appleHealth, compact }: { appleHealth: AppleHealthSta
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-sans text-label text-on-surface">Apple Health</h2>
+              <h2 className="font-sans text-label text-on-surface">{t('health.apple.title')}</h2>
               <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">
                 {unavailable
                   ? appleHealth.availabilityReason
                   : connected
-                    ? `Conectado${lastSync ? ` · ${lastSync}` : ''}`
-                    : 'Importe treinos, passos, calorias, sono, FC e HRV do iPhone/Apple Watch.'}
+                    ? `${t('health.apple.connected')}${lastSync ? ` · ${lastSync}` : ''}`
+                    : t('health.apple.description')}
               </p>
             </div>
             {connected ? (
@@ -110,7 +112,7 @@ function AppleHealthCard({ appleHealth, compact }: { appleHealth: AppleHealthSta
                 disabled={syncing}
                 className="min-h-10 shrink-0 rounded-full bg-primary px-4 font-sans text-counter text-on-primary disabled:opacity-60"
               >
-                {syncing ? 'Sync...' : 'Sincronizar'}
+                {syncing ? t('health.apple.syncing') : t('health.apple.sync')}
               </button>
             ) : null}
           </div>
@@ -118,7 +120,7 @@ function AppleHealthCard({ appleHealth, compact }: { appleHealth: AppleHealthSta
           {!connected && !unavailable ? (
             <div className="mt-4 space-y-3">
               <label className="flex items-center justify-between gap-3 rounded-xl border border-outline-variant/35 bg-surface px-3 py-3">
-                <span className="font-sans text-body-sm text-on-surface">Compartilhar dados importados com meu profissional</span>
+                <span className="font-sans text-body-sm text-on-surface">{t('health.apple.shareWithCoach')}</span>
                 <input
                   type="checkbox"
                   checked={appleHealth.shareWithCoach}
@@ -132,7 +134,7 @@ function AppleHealthCard({ appleHealth, compact }: { appleHealth: AppleHealthSta
                 disabled={syncing}
                 className="min-h-12 w-full rounded-xl bg-primary font-sans text-label text-on-primary disabled:opacity-60"
               >
-                {syncing ? 'Conectando...' : 'Conectar Apple Health'}
+                {syncing ? t('health.apple.connecting') : t('health.apple.connect')}
               </button>
             </div>
           ) : null}
