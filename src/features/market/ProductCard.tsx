@@ -1,7 +1,8 @@
-import { BadgeCheck } from 'lucide-react';
+import { BadgeCheck, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { productTypeMeta } from '@/lib/products';
 import { PriceBadge } from '@/components/ui/PriceBadge';
+import { useTranslation } from '@/i18n/I18nProvider';
 import type { MarketProduct } from './useMarket';
 
 interface ProductCardProps {
@@ -14,12 +15,11 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, featured = false, owned = false, isOfficialStore = false }: ProductCardProps) {
+  const { t } = useTranslation();
   const meta = productTypeMeta(product.type, product.marketItemType);
   const Icon = meta.icon;
   const image = product.coverImageUrl || product.thumbnailUrl;
-  const to = product.creatorUsername
-    ? `/creator/${encodeURIComponent(product.creatorUsername)}`
-    : null;
+  const to = `/produtos/${encodeURIComponent(product.id)}`;
 
   const typeChip = (
     <span className="inline-flex items-center gap-1 rounded-full bg-inverse-surface/80 px-2 py-0.5 font-sans text-counter text-inverse-on-surface backdrop-blur-sm">
@@ -52,7 +52,7 @@ export function ProductCard({ product, featured = false, owned = false, isOffici
         {isOfficialStore && (
           <span className="absolute left-3 top-11 inline-flex items-center gap-1 rounded-full bg-primary/95 px-2 py-0.5 font-sans text-counter text-on-primary shadow-sm">
             <BadgeCheck size={12} aria-hidden />
-            Loja oficial
+            {t('market.officialStore')}
           </span>
         )}
         <div className="absolute inset-x-0 bottom-0 p-3 text-inverse-on-surface">
@@ -70,12 +70,10 @@ export function ProductCard({ product, featured = false, owned = false, isOffici
     );
     const className =
       'group relative col-span-2 block aspect-[16/10] overflow-hidden rounded-2xl border border-outline-variant/20 bg-surface-container';
-    return to ? (
+    return (
       <Link to={to} className={className}>
         {inner}
       </Link>
-    ) : (
-      <div className={className}>{inner}</div>
     );
   }
 
@@ -99,7 +97,7 @@ export function ProductCard({ product, featured = false, owned = false, isOffici
         {isOfficialStore && (
           <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-primary/95 px-2 py-0.5 font-sans text-counter text-on-primary shadow-sm">
             <BadgeCheck size={12} aria-hidden />
-            Oficial
+            {t('market.official')}
           </span>
         )}
       </div>
@@ -118,16 +116,18 @@ export function ProductCard({ product, featured = false, owned = false, isOffici
           </span>
           <PriceBadge price={product.price} owned={owned} />
         </div>
+        <span className="mt-2 inline-flex items-center gap-1 self-start font-sans text-counter text-primary">
+          {t('market.viewProduct')}
+          <ChevronRight size={13} aria-hidden />
+        </span>
       </div>
     </>
   );
   const className =
     'group flex flex-col overflow-hidden rounded-2xl border border-outline-variant/25 bg-surface-container-lowest';
-  return to ? (
+  return (
     <Link to={to} className={className}>
       {inner}
     </Link>
-  ) : (
-    <div className={className}>{inner}</div>
   );
 }

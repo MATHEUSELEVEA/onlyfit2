@@ -26,6 +26,7 @@ import {
 import { formatCount } from '@/lib/format';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { PageTopBar } from '@/components/layout/PageTopBar';
+import { useTranslation } from '@/i18n/I18nProvider';
 import { useToggleCreatorFollow } from '@/features/creators/useCreatorFollow';
 import {
   useExploreCreators,
@@ -132,6 +133,7 @@ function AmbassadorRail({
   ambassadors: ExploreCreator[];
   loading: boolean;
 }) {
+  const { t } = useTranslation();
   const { labelFor } = useAffinityGroups();
   if (!loading && ambassadors.length === 0) return null;
 
@@ -141,10 +143,10 @@ function AmbassadorRail({
         <div>
           <p className="inline-flex items-center gap-1 font-sans text-eyebrow uppercase text-primary">
             <Sparkles size={14} aria-hidden />
-            Embaixadores
+            {t('explore.ambassadors.eyebrow')}
           </p>
           <h2 id="ambassadors-title" className="font-sans text-title text-on-surface">
-            Referências por modalidade
+            {t('explore.ambassadors.title')}
           </h2>
         </div>
       </div>
@@ -175,7 +177,7 @@ function AmbassadorRail({
                     {ambassador.name}
                   </span>
                   <span className="block truncate font-sans text-counter font-normal text-on-surface-variant">
-                    {ambassador.ambassadorHeadline || (sport ? labelFor(sport) : ambassador.ambassadorBadge || 'OnlyFit')}
+                    {ambassador.ambassadorHeadline || (sport ? labelFor(sport) : ambassador.ambassadorBadge || t('explore.ambassadors.fallback'))}
                   </span>
                 </>
               );
@@ -495,6 +497,7 @@ function ChallengeTile({ challenge }: { challenge: ExploreChallenge }) {
 }
 
 export function ExplorePage() {
+  const { t } = useTranslation();
   const { groups } = useAffinityGroups();
   const [search, setSearch] = useState('');
   const [tab, setTab] = useState<ExploreTab>('content');
@@ -681,10 +684,12 @@ export function ExplorePage() {
           </div>
         </div>
 
-        <AmbassadorRail
-          ambassadors={ambassadors}
-          loading={ambassadorsQuery.isLoading && ambassadors.length === 0}
-        />
+        {(tab === 'content' || tab === 'people') && (
+          <AmbassadorRail
+            ambassadors={ambassadors}
+            loading={ambassadorsQuery.isLoading && ambassadors.length === 0}
+          />
+        )}
 
         {isLoading && (
           <div className="flex justify-center py-16">
@@ -695,23 +700,23 @@ export function ExplorePage() {
         {hasError && (
           <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
             <p className="font-sans text-body text-on-surface-variant">
-              Não foi possível carregar o Explorar.
+              {t('explore.loadError')}
             </p>
             <button
               type="button"
               onClick={() => activeQuery.refetch()}
               className="min-h-[44px] rounded-full bg-primary px-6 font-sans text-label text-on-primary"
             >
-              Tentar novamente
+              {t('common.retry')}
             </button>
           </div>
         )}
 
         {isEmpty && (
           <div className="flex flex-col items-center gap-1 px-6 py-14 text-center">
-            <p className="font-sans text-title text-on-surface">Nada encontrado</p>
+            <p className="font-sans text-title text-on-surface">{t('explore.empty.title')}</p>
             <p className="font-sans text-body-sm text-on-surface-variant">
-              Tente outra busca ou remova os filtros.
+              {t('explore.empty.description')}
             </p>
           </div>
         )}
