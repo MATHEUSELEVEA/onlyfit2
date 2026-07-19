@@ -417,11 +417,8 @@ function OfficialStoresRail({
   return (
     <section className="pt-4" aria-labelledby="official-stores-title">
       <div className="px-4">
-        <p className="inline-flex items-center gap-1 font-sans text-eyebrow uppercase text-primary">
+        <h2 id="official-stores-title" className="inline-flex items-center gap-1 font-sans text-title text-on-surface">
           <BadgeCheck size={14} aria-hidden />
-          {t('market.sponsors')}
-        </p>
-        <h2 id="official-stores-title" className="font-sans text-title text-on-surface">
           {t('market.officialStores')}
         </h2>
       </div>
@@ -461,7 +458,7 @@ function OfficialStoresRail({
                           store.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('')
                         )}
                       </span>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-primary/95 px-2 py-0.5 font-sans text-counter text-on-primary">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-background/35 px-2 py-0.5 font-sans text-counter text-primary shadow-sm backdrop-blur-md">
                         <BadgeCheck size={12} aria-hidden />
                         {t('market.official')}
                       </span>
