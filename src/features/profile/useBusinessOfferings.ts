@@ -8,6 +8,8 @@ export interface OfferingType {
   name: string;
   description: string | null;
   icon: string | null;
+  billing_type: 'one_time' | 'recurring' | 'free';
+  billing_interval: 'month' | '2month' | 'quarter' | 'semester' | 'year' | null;
   max_per_business: number | null;
   unique_per_owner_profile: boolean;
   requires_affinity_group: boolean;
@@ -24,6 +26,8 @@ export interface BusinessOffering {
   name: string;
   description: string | null;
   status: OfferingStatus;
+  billing_type: 'one_time' | 'recurring' | 'free';
+  billing_interval: 'month' | '2month' | 'quarter' | 'semester' | 'year' | null;
   created_at: string;
 }
 
@@ -35,7 +39,7 @@ export function useOfferingTypes() {
       const { data, error } = await supabase
         .from('offering_types')
         .select(
-          'slug,name,description,icon,max_per_business,unique_per_owner_profile,requires_affinity_group,requires_product_category,sort_order',
+          'slug,name,description,icon,billing_type,billing_interval,max_per_business,unique_per_owner_profile,requires_affinity_group,requires_product_category,sort_order',
         )
         .order('sort_order', { ascending: true });
       if (error) throw error;
@@ -51,7 +55,7 @@ export function useBusinessOfferings(businessId: string | undefined) {
     queryFn: async (): Promise<BusinessOffering[]> => {
       const { data, error } = await supabase
         .from('business_offerings')
-        .select('id,organization_id,offering_type,name,description,status,created_at')
+        .select('id,organization_id,offering_type,name,description,status,billing_type,billing_interval,created_at')
         .eq('organization_id', businessId!)
         .neq('status', 'archived')
         .order('created_at', { ascending: true });
@@ -71,7 +75,7 @@ export function useBusinessOffering(businessId: string | undefined, offeringId: 
     queryFn: async (): Promise<BusinessOffering | null> => {
       const { data, error } = await supabase
         .from('business_offerings')
-        .select('id,organization_id,offering_type,name,description,status,created_at')
+        .select('id,organization_id,offering_type,name,description,status,billing_type,billing_interval,created_at')
         .eq('id', offeringId!)
         .eq('organization_id', businessId!)
         .maybeSingle();

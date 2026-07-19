@@ -11,6 +11,7 @@ import {
   useOfferingTypes,
   useUpdateOffering,
   type OfferingStatus,
+  type OfferingType,
 } from './useBusinessOfferings';
 
 // Helper (não é componente) para não criar um componente dinâmico no corpo do
@@ -27,6 +28,19 @@ function mapOfferingError(error: unknown, t: (key: TranslationKey) => string): s
   if (message.includes('organization_admin_required')) return t('profile.business.offers.error.notAdmin');
   if (message.includes('invalid_name')) return t('profile.business.offers.error.invalidName');
   return t('profile.business.offers.error.generic');
+}
+
+function billingLabel(
+  billingType: OfferingType['billing_type'],
+  billingInterval: OfferingType['billing_interval'],
+  t: (key: TranslationKey) => string,
+): string {
+  if (billingType === 'free') return t('profile.business.offers.billing.free');
+  if (billingType === 'recurring') {
+    const intervalKey = `profile.business.offers.billing.interval.${billingInterval ?? 'month'}` as TranslationKey;
+    return `${t('profile.business.offers.billing.recurring')} · ${t(intervalKey)}`;
+  }
+  return t('profile.business.offers.billing.oneTime');
 }
 
 export function OfferingManagementPage() {
@@ -138,10 +152,22 @@ export function OfferingManagementPage() {
                     </span>
                   </div>
                   <p className="mt-1 truncate font-sans text-body-sm text-on-surface-variant">
-                    {type?.name ?? offering.offering_type}
+                    {type?.name ?? offering.offering_type} · {billingLabel(offering.billing_type, offering.billing_interval, t)}
                   </p>
                 </div>
               </div>
+
+              <section className="mt-6 rounded-2xl bg-surface-container p-4" aria-labelledby="offering-billing-title">
+                <h3 id="offering-billing-title" className="font-sans text-label text-on-surface">
+                  {t('profile.business.offers.billing.lockedTitle')}
+                </h3>
+                <p className="mt-1 font-sans text-body text-primary">
+                  {billingLabel(offering.billing_type, offering.billing_interval, t)}
+                </p>
+                <p className="mt-1 font-sans text-body-sm text-on-surface-variant">
+                  {t('profile.business.offers.billing.lockedHint')}
+                </p>
+              </section>
 
               {/* Configuração específica do tipo — construída em fases futuras. */}
               <section className="mt-8" aria-labelledby="offering-config-title">

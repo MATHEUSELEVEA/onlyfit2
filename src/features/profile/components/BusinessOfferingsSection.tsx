@@ -11,8 +11,8 @@ import {
   useCreateOffering,
   useOfferingTypes,
   type BusinessOffering,
-  type OfferingStatus,
   type OfferingType,
+  type OfferingStatus,
 } from '../useBusinessOfferings';
 
 function mapOfferingError(error: unknown, t: (key: TranslationKey) => string): string {
@@ -22,6 +22,19 @@ function mapOfferingError(error: unknown, t: (key: TranslationKey) => string): s
   if (message.includes('organization_admin_required')) return t('profile.business.offers.error.notAdmin');
   if (message.includes('invalid_name')) return t('profile.business.offers.error.invalidName');
   return t('profile.business.offers.error.generic');
+}
+
+function billingLabel(
+  billingType: OfferingType['billing_type'],
+  billingInterval: OfferingType['billing_interval'],
+  t: (key: TranslationKey) => string,
+): string {
+  if (billingType === 'free') return t('profile.business.offers.billing.free');
+  if (billingType === 'recurring') {
+    const intervalKey = `profile.business.offers.billing.interval.${billingInterval ?? 'month'}` as TranslationKey;
+    return `${t('profile.business.offers.billing.recurring')} · ${t(intervalKey)}`;
+  }
+  return t('profile.business.offers.billing.oneTime');
 }
 
 export function BusinessOfferingsSection({
@@ -78,8 +91,8 @@ export function BusinessOfferingsSection({
                     <span className="block truncate font-sans text-body font-semibold text-on-surface">
                       {offering.name}
                     </span>
-                    <span className="mt-0.5 block truncate font-sans text-body-sm text-on-surface-variant">
-                      {type?.name ?? offering.offering_type}
+                  <span className="mt-0.5 block truncate font-sans text-body-sm text-on-surface-variant">
+                      {type?.name ?? offering.offering_type} · {billingLabel(offering.billing_type, offering.billing_interval, t)}
                     </span>
                   </span>
                   <span
@@ -235,6 +248,9 @@ function CreateOfferingSheet({
                       {type.description}
                     </span>
                   )}
+                  <span className="mt-1 block font-sans text-counter text-primary">
+                    {billingLabel(type.billing_type, type.billing_interval, t)}
+                  </span>
                   {limitReached && (
                     <span className="mt-1 block font-sans text-counter text-on-surface-variant">
                       {t('profile.business.offers.error.limit')}
@@ -265,6 +281,15 @@ function CreateOfferingSheet({
             maxLength={400}
             disabled={createMutation.isPending}
           />
+          <div className="rounded-2xl bg-surface-container-high px-4 py-3">
+            <p className="font-sans text-counter text-primary">{t('profile.business.offers.billing.lockedTitle')}</p>
+            <p className="mt-1 font-sans text-body-sm text-on-surface-variant">
+              {billingLabel(selectedType.billing_type, selectedType.billing_interval, t)}
+            </p>
+            <p className="mt-1 font-sans text-body-sm text-on-surface-variant">
+              {t('profile.business.offers.billing.lockedHint')}
+            </p>
+          </div>
           <div className="flex gap-2 pt-2">
             <button
               type="button"
