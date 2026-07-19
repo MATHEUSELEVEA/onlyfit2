@@ -4,14 +4,16 @@ import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { PageTopBar } from '@/components/layout/PageTopBar';
-import { type ActivitySource, type ScheduledWorkout, type TrainingStatus, type TrainingSurface, useTraining } from '@/features/training/TrainingProvider';
+import { type ActivitySource, type ImportedActivity, type ScheduledWorkout, type TrainingStatus, type TrainingSurface, useTraining } from '@/features/training/TrainingProvider';
+import { useAppleHealth } from '@/features/wearables/useAppleHealth';
 
 type Tab = 'agenda' | 'history' | 'progress';
+type AppleHealthState = ReturnType<typeof useAppleHealth>;
 const dateKey = (date: Date) => date.toISOString().slice(0, 10);
 const today = () => dateKey(new Date());
 const statusLabel: Record<TrainingStatus, string> = { planned: 'Planejado', active: 'Em andamento', partial: 'Parcial', completed: 'Concluído', missed: 'Não realizado', imported: 'Importado', rest: 'Descanso' };
 const statusTone: Record<TrainingStatus, string> = { planned: 'bg-outline', active: 'bg-primary', partial: 'bg-secondary', completed: 'bg-primary', missed: 'bg-error', imported: 'bg-tertiary', rest: 'bg-outline-variant' };
-const sourceLabel = (source: string) => ({ apple_health: 'Apple Health', garmin: 'Garmin', strava: 'Strava', coros: 'COROS', fitbit: 'Fitbit', manual: 'Registro pessoal', onlyfit: 'OnlyFit' }[source] ?? source);
+const sourceLabel = (source: string) => ({ healthkit: 'Apple Health', apple_health: 'Apple Health', garmin: 'Garmin', strava: 'Strava', coros: 'COROS', fitbit: 'Fitbit', manual: 'Registro pessoal', onlyfit: 'OnlyFit' }[source] ?? source);
 const enduranceSurfaces: TrainingSurface[] = ['running', 'cycling', 'walking', 'swimming'];
 const surfaceIcon: Record<TrainingSurface, ReactNode> = {
   strength: <Dumbbell size={18} />,
@@ -42,19 +44,22 @@ export function TrainingPage() { return <TrainingContent />; }
 function TrainingContent() {
   const [tab, setTab] = useState<Tab>('agenda'); const [selectedDate, setSelectedDate] = useState(today()); const [calendarOpen, setCalendarOpen] = useState(false); const [recordOpen, setRecordOpen] = useState(false);
   const { scheduled, imported, activeSession, addActivity } = useTraining();
+  const appleHealth = useAppleHealth();
+  const allImported = useMemo<ImportedActivity[]>(() => [...appleHealth.importedActivities, ...imported], [appleHealth.importedActivities, imported]);
   const selectedItems = scheduled.filter((item) => item.date === selectedDate);
-  const selectedImported = imported.filter((item) => item.date === selectedDate);
+  const selectedImported = allImported.filter((item) => item.date === selectedDate);
   const activeItem = activeSession ? scheduled.find((item) => item.id === activeSession.scheduledId) : null;
   return <div className="relative flex h-full flex-col overflow-y-auto bg-background pb-8">
     <PageTopBar title="Treinos" backFallback="/meu-fit" actions={<button type="button" aria-label="Abrir calendário mensal" onClick={() => setCalendarOpen(true)} className="flex h-11 w-11 items-center justify-center rounded-full bg-surface-container text-on-surface"><CalendarDays size={20} aria-hidden /></button>} />
     <main className="mx-auto w-full max-w-[720px] px-5 pb-6 pt-5">
       <div className="grid grid-cols-3 rounded-xl bg-surface-container p-1" role="tablist" aria-label="Seções de treino">{([['agenda', 'Agenda'], ['history', 'Histórico'], ['progress', 'Progresso']] as [Tab, string][]).map(([value, label]) => <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={clsx('min-h-[40px] rounded-lg font-sans text-counter transition-colors', tab === value ? 'bg-surface-container-lowest text-on-surface' : 'text-on-surface-variant')}>{label}</button>)}</div>
+      <AppleHealthCard appleHealth={appleHealth} compact={tab === 'agenda'} />
       {tab === 'agenda' && <Agenda selectedDate={selectedDate} onDate={setSelectedDate} items={selectedItems} imported={selectedImported} active={activeItem ?? null} onCalendar={() => setCalendarOpen(true)} />}
-      {tab === 'history' && <History />}
-      {tab === 'progress' && <Progress />}
+      {tab === 'history' && <History imported={allImported} />}
+      {tab === 'progress' && <Progress appleHealth={appleHealth} />}
     </main>
     <button type="button" onClick={() => setRecordOpen(true)} className="absolute bottom-5 right-5 z-20 flex min-h-12 items-center gap-2 rounded-full border border-primary/40 bg-primary px-4 font-sans text-label text-on-primary shadow-lg shadow-black/20 active:scale-[0.98]" aria-label="Adicionar registro de atividade"><Plus size={18} aria-hidden />Registrar</button>
-    <MonthlyCalendar open={calendarOpen} onClose={() => setCalendarOpen(false)} selectedDate={selectedDate} onSelect={(value) => { setSelectedDate(value); setCalendarOpen(false); }} />
+    <MonthlyCalendar open={calendarOpen} onClose={() => setCalendarOpen(false)} selectedDate={selectedDate} imported={allImported} onSelect={(value) => { setSelectedDate(value); setCalendarOpen(false); }} />
     <AddActivitySheet open={recordOpen} onClose={() => setRecordOpen(false)} selectedDate={selectedDate} onAdd={(activity) => { addActivity(activity); setRecordOpen(false); }} />
   </div>;
 }
@@ -69,9 +74,80 @@ function Agenda({ selectedDate, onDate, items, imported, active, onCalendar }: {
   </section>;
 }
 
-function History() { const { scheduled, imported } = useTraining(); const entries = [...scheduled.filter((item) => ['completed', 'partial', 'missed'].includes(item.status)).map((item) => ({ id: item.id, date: item.date, title: item.title, meta: item.summary ?? `${item.durationMin} min · ${statusLabel[item.status].toLowerCase()}`, status: item.status, surface: item.surface })), ...imported.map((item) => ({ id: item.id, date: item.date, title: item.title, meta: formatActivityMeta(item), status: 'imported' as TrainingStatus, surface: item.surface }))].sort((a, b) => b.date.localeCompare(a.date)); return <section className="mt-6"><h2 className="font-sans text-title text-on-surface">Histórico</h2><p className="mt-1 font-sans text-body-sm text-on-surface-variant">Treinos e atividades registrados.</p><div className="mt-4 space-y-2">{entries.map((item) => <HistoryRow key={item.id} {...item} />)}</div></section>; }
+function AppleHealthCard({ appleHealth, compact }: { appleHealth: AppleHealthState; compact?: boolean }) {
+  const connected = appleHealth.connection?.status === 'connected';
+  const unavailable = !appleHealth.available && !appleHealth.isLoading;
+  const syncing = appleHealth.sync.isPending;
+  const lastSync = appleHealth.connection?.last_sync_at
+    ? new Date(appleHealth.connection.last_sync_at).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+    : null;
+  const error = appleHealth.sync.error instanceof Error
+    ? appleHealth.sync.error.message
+    : appleHealth.connection?.last_error;
+
+  return (
+    <section className={clsx('mt-4 rounded-2xl border border-outline-variant/40 bg-surface-container p-4', compact && connected && 'py-3')}>
+      <div className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/35 bg-primary/10 text-primary">
+          <Watch size={18} aria-hidden />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="font-sans text-label text-on-surface">Apple Health</h2>
+              <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">
+                {unavailable
+                  ? appleHealth.availabilityReason
+                  : connected
+                    ? `Conectado${lastSync ? ` · ${lastSync}` : ''}`
+                    : 'Importe treinos, passos, calorias, sono, FC e HRV do iPhone/Apple Watch.'}
+              </p>
+            </div>
+            {connected ? (
+              <button
+                type="button"
+                onClick={() => appleHealth.sync.mutate('manual')}
+                disabled={syncing}
+                className="min-h-10 shrink-0 rounded-full bg-primary px-4 font-sans text-counter text-on-primary disabled:opacity-60"
+              >
+                {syncing ? 'Sync...' : 'Sincronizar'}
+              </button>
+            ) : null}
+          </div>
+
+          {!connected && !unavailable ? (
+            <div className="mt-4 space-y-3">
+              <label className="flex items-center justify-between gap-3 rounded-xl border border-outline-variant/35 bg-surface px-3 py-3">
+                <span className="font-sans text-body-sm text-on-surface">Compartilhar dados importados com meu profissional</span>
+                <input
+                  type="checkbox"
+                  checked={appleHealth.shareWithCoach}
+                  onChange={(event) => appleHealth.setShareWithCoach(event.target.checked)}
+                  className="h-5 w-5 accent-primary"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => appleHealth.sync.mutate('initial')}
+                disabled={syncing}
+                className="min-h-12 w-full rounded-xl bg-primary font-sans text-label text-on-primary disabled:opacity-60"
+              >
+                {syncing ? 'Conectando...' : 'Conectar Apple Health'}
+              </button>
+            </div>
+          ) : null}
+
+          {appleHealth.lastSyncMessage ? <p className="mt-3 font-sans text-counter text-primary">{appleHealth.lastSyncMessage}</p> : null}
+          {error ? <p className="mt-3 font-sans text-body-sm text-error">{error}</p> : null}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function History({ imported }: { imported: ImportedActivity[] }) { const { scheduled } = useTraining(); const entries = [...scheduled.filter((item) => ['completed', 'partial', 'missed'].includes(item.status)).map((item) => ({ id: item.id, date: item.date, title: item.title, meta: item.summary ?? `${item.durationMin} min · ${statusLabel[item.status].toLowerCase()}`, status: item.status, surface: item.surface })), ...imported.map((item) => ({ id: item.id, date: item.date, title: item.title, meta: formatActivityMeta(item), status: 'imported' as TrainingStatus, surface: item.surface }))].sort((a, b) => b.date.localeCompare(a.date)); return <section className="mt-6"><h2 className="font-sans text-title text-on-surface">Histórico</h2><p className="mt-1 font-sans text-body-sm text-on-surface-variant">Treinos e atividades registrados.</p><div className="mt-4 space-y-2">{entries.length ? entries.map((item) => <HistoryRow key={item.id} {...item} />) : <p className="rounded-xl border border-dashed border-outline-variant/50 px-4 py-5 font-sans text-body-sm text-on-surface-variant">Sem atividades registradas ainda.</p>}</div></section>; }
 function HistoryRow({ date, title, meta, status, surface }: { date: string; title: string; meta: string; status: TrainingStatus; surface: TrainingSurface }) { return <div className="flex items-center gap-3 rounded-xl border border-outline-variant/40 bg-surface-container p-3"><TrainingBadge surface={surface} status={status} /><div className="min-w-0"><p className="truncate font-sans text-label text-on-surface">{title}</p><p className="mt-0.5 truncate font-sans text-body-sm text-on-surface-variant">{new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} · {meta}</p></div></div>; }
-function Progress() { const { scheduled } = useTraining(); const completed = scheduled.filter((item) => item.status === 'completed').length; return <section className="mt-6"><h2 className="font-sans text-title text-on-surface">Progresso</h2><p className="mt-1 font-sans text-body-sm text-on-surface-variant">Leitura simples da sua consistência.</p><div className="mt-5 grid grid-cols-2 gap-3"><Metric icon="✓" value={`${completed}`} label="treinos concluídos" /><Metric icon="%" value="75%" label="aderência semanal" /><Metric icon="3" value="3 dias" label="sequência atual" /><Metric icon="+" value="2" label="marcos recentes" /></div><div className="mt-5 rounded-2xl border border-outline-variant/40 bg-surface-container p-4"><div className="flex items-center gap-2 text-primary"><Dumbbell size={18} aria-hidden /><span className="font-sans text-label">Supino reto</span></div><p className="mt-4 font-sans text-title-lg text-on-surface">60 kg</p><p className="mt-1 font-sans text-body-sm text-on-surface-variant">Última carga registrada · evolução preparada para o histórico real.</p></div></section>; }
+function Progress({ appleHealth }: { appleHealth: AppleHealthState }) { const { scheduled } = useTraining(); const completed = scheduled.filter((item) => item.status === 'completed').length; const sleep = appleHealth.progress.avgSleepMinutes ? `${Math.floor(appleHealth.progress.avgSleepMinutes / 60)}h${String(appleHealth.progress.avgSleepMinutes % 60).padStart(2, '0')}` : '—'; return <section className="mt-6"><h2 className="font-sans text-title text-on-surface">Progresso</h2><p className="mt-1 font-sans text-body-sm text-on-surface-variant">Leitura simples da sua consistência com dados importados quando existirem.</p><div className="mt-5 grid grid-cols-2 gap-3"><Metric icon="✓" value={`${completed}`} label="treinos concluídos" /><Metric icon="↯" value={appleHealth.progress.activeKcal ? `${Math.round(appleHealth.progress.activeKcal)} kcal` : '—'} label="calorias ativas" /><Metric icon="⌁" value={appleHealth.progress.steps ? appleHealth.progress.steps.toLocaleString('pt-BR') : '—'} label="passos em 30 dias" /><Metric icon="☾" value={sleep} label="sono médio" /></div><div className="mt-5 rounded-2xl border border-outline-variant/40 bg-surface-container p-4"><div className="flex items-center gap-2 text-primary"><Watch size={18} aria-hidden /><span className="font-sans text-label">Fonte Apple Health</span></div><p className="mt-4 font-sans text-title-lg text-on-surface">{appleHealth.importedActivities.length}</p><p className="mt-1 font-sans text-body-sm text-on-surface-variant">atividades importadas do iPhone/Apple Watch.</p></div></section>; }
 function Metric({ icon, value, label }: { icon: string; value: string; label: string }) { return <div className="rounded-2xl border border-outline-variant/40 bg-surface-container p-4"><span className="font-sans text-label text-primary">{icon}</span><p className="mt-3 font-sans text-title text-on-surface">{value}</p><p className="mt-1 font-sans text-body-sm text-on-surface-variant">{label}</p></div>; }
 function TrainingBadge({ surface, status }: { surface: TrainingSurface; status: TrainingStatus }) {
   const completed = status === 'completed' || status === 'imported';
@@ -90,8 +166,8 @@ function TrainingBadge({ surface, status }: { surface: TrainingSurface; status: 
     </span>
   );
 }
-function MonthlyCalendar({ open, onClose, selectedDate, onSelect }: { open: boolean; onClose: () => void; selectedDate: string; onSelect: (value: string) => void }) {
-  const { scheduled, imported } = useTraining();
+function MonthlyCalendar({ open, onClose, selectedDate, imported, onSelect }: { open: boolean; onClose: () => void; selectedDate: string; imported: ImportedActivity[]; onSelect: (value: string) => void }) {
+  const { scheduled } = useTraining();
   const [cursor, setCursor] = useState(() => new Date(`${selectedDate}T12:00:00`));
   const year = cursor.getFullYear(); const month = cursor.getMonth(); const firstDay = new Date(year, month, 1).getDay();
   const days = Array.from({ length: firstDay + new Date(year, month + 1, 0).getDate() }, (_, index) => index < firstDay ? null : new Date(year, month, index - firstDay + 1));
