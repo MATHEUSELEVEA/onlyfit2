@@ -61,6 +61,31 @@ const PEOPLE_KINDS: { key: PeopleKind; label: string }[] = [
   { key: 'members', label: 'Membros' },
 ];
 
+function ambassadorAffinityKey(creator: ExploreCreator): string | null {
+  return creator.ambassadorSport || creator.sports[0] || null;
+}
+
+function oneAmbassadorPerAffinity(
+  ambassadors: ExploreCreator[],
+  affinityOrder: string[],
+): ExploreCreator[] {
+  const byAffinity = new Map<string, ExploreCreator>();
+
+  ambassadors.forEach((ambassador) => {
+    const key = ambassadorAffinityKey(ambassador);
+    if (!key || byAffinity.has(key)) return;
+    byAffinity.set(key, ambassador);
+  });
+
+  if (affinityOrder.length > 0) {
+    return affinityOrder
+      .map((key) => byAffinity.get(key))
+      .filter((ambassador): ambassador is ExploreCreator => Boolean(ambassador));
+  }
+
+  return Array.from(byAffinity.values()).slice(0, 6);
+}
+
 function CreatorCard({ creator }: { creator: ExploreCreator }) {
   const { labelFor } = useAffinityGroups();
   const toggleFollow = useToggleCreatorFollow(creator.id);
@@ -525,11 +550,12 @@ export function ExplorePage() {
 
   const ambassadors = useMemo(() => {
     const editorial = ambassadorsQuery.data ?? [];
-    if (editorial.length > 0) return editorial;
-    return (creatorsQuery.data ?? [])
+    const affinityOrder = groups.map((group) => group.key);
+    if (editorial.length > 0) return oneAmbassadorPerAffinity(editorial, affinityOrder);
+    return oneAmbassadorPerAffinity((creatorsQuery.data ?? [])
       .filter((creator) => creator.isProfessional)
-      .slice(0, 8);
-  }, [ambassadorsQuery.data, creatorsQuery.data]);
+      .filter((creator) => ambassadorAffinityKey(creator)), affinityOrder);
+  }, [ambassadorsQuery.data, creatorsQuery.data, groups]);
 
   const creators = useMemo(() => {
     let list = creatorsQuery.data ?? [];
