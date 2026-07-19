@@ -12,6 +12,18 @@ const today = () => dateKey(new Date());
 const statusLabel: Record<TrainingStatus, string> = { planned: 'Planejado', active: 'Em andamento', partial: 'Parcial', completed: 'Concluído', missed: 'Não realizado', imported: 'Importado', rest: 'Descanso' };
 const statusTone: Record<TrainingStatus, string> = { planned: 'bg-outline', active: 'bg-primary', partial: 'bg-secondary', completed: 'bg-primary', missed: 'bg-error', imported: 'bg-tertiary', rest: 'bg-outline-variant' };
 const sourceLabel = (source: string) => ({ apple_health: 'Apple Health', garmin: 'Garmin', strava: 'Strava', coros: 'COROS', fitbit: 'Fitbit', manual: 'Registro pessoal', onlyfit: 'OnlyFit' }[source] ?? source);
+const enduranceSurfaces: TrainingSurface[] = ['running', 'cycling', 'walking', 'swimming'];
+
+function formatActivityMeta(activity: { durationMin: number; source: string; distanceKm?: number; calories?: number; averageHeartRate?: number; elevationM?: number }) {
+  return [
+    `${activity.durationMin} min`,
+    activity.distanceKm ? `${activity.distanceKm.toLocaleString('pt-BR')} km` : null,
+    activity.calories ? `${activity.calories} kcal` : null,
+    activity.averageHeartRate ? `${activity.averageHeartRate} bpm` : null,
+    activity.elevationM ? `${activity.elevationM} m alt.` : null,
+    sourceLabel(activity.source),
+  ].filter(Boolean).join(' · ');
+}
 
 export function TrainingPage() { return <TrainingContent />; }
 
@@ -35,17 +47,17 @@ function TrainingContent() {
   </div>;
 }
 
-function Agenda({ selectedDate, onDate, items, imported, active, onCalendar }: { selectedDate: string; onDate: (value: string) => void; items: ScheduledWorkout[]; imported: { id: string; title: string; durationMin: number; source: string }[]; active: ScheduledWorkout | null; onCalendar: () => void }) {
+function Agenda({ selectedDate, onDate, items, imported, active, onCalendar }: { selectedDate: string; onDate: (value: string) => void; items: ScheduledWorkout[]; imported: { id: string; title: string; durationMin: number; source: string; distanceKm?: number; calories?: number; averageHeartRate?: number; elevationM?: number }[]; active: ScheduledWorkout | null; onCalendar: () => void }) {
   const navigate = useNavigate(); const { startSession, activeSession, reschedule, scheduled } = useTraining(); const week = useMemo(() => Array.from({ length: 7 }, (_, index) => { const d = new Date(); d.setDate(d.getDate() - d.getDay() + index); return d; }), []);
   const primary = active ?? items.find((item) => item.status === 'planned') ?? null;
   return <section className="mt-6 space-y-7">
     <div className="rounded-2xl border border-outline-variant/40 bg-surface-container p-5"><span className="font-sans text-counter text-primary">{active ? 'TREINO EM ANDAMENTO' : selectedDate === today() ? 'HOJE' : 'AGENDA'}</span><h2 className="mt-2 font-sans text-title-lg text-on-surface">{primary ? primary.title : 'Nenhum treino programado'}</h2><p className="mt-1 font-sans text-body-sm text-on-surface-variant">{primary ? `${primary.focus} · ${primary.durationMin} min` : 'Seu profissional ainda não programou um treino para esta data.'}</p>{primary ? <button type="button" onClick={() => { startSession(primary.id); navigate('/meu-fit/treino/player'); }} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary font-sans text-label text-on-primary"><Play size={18} fill="currentColor" aria-hidden />{activeSession ? 'Continuar treino' : 'Começar treino'}</button> : null}</div>
     <section><div className="flex items-center justify-between"><h2 className="font-sans text-title text-on-surface">Esta semana</h2><button type="button" onClick={onCalendar} className="font-sans text-counter text-primary">Calendário</button></div><div className="mt-3 grid grid-cols-7 gap-1">{week.map((date) => { const value = dateKey(date); const selected = selectedDate === value; const item = scheduled.find((entry) => entry.date === value); return <button key={value} type="button" onClick={() => onDate(value)} aria-pressed={selected} className={clsx('flex min-h-[64px] flex-col items-center justify-center rounded-xl font-sans text-counter', selected ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant')}><span>{date.toLocaleDateString('pt-BR', { weekday: 'narrow' })}</span><span className="mt-1 text-body">{date.getDate()}</span>{item ? <span className={clsx('mt-1 h-1.5 w-1.5 rounded-full', selected ? 'bg-on-primary' : statusTone[item.status])} /> : null}</button>; })}</div></section>
-    <section><h2 className="font-sans text-title text-on-surface">{new Date(`${selectedDate}T12:00:00`).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}</h2><div className="mt-3 space-y-2">{items.length === 0 && imported.length === 0 ? <p className="rounded-xl border border-dashed border-outline-variant/50 px-4 py-5 font-sans text-body-sm text-on-surface-variant">Dia livre. Aguarde um treino enviado pelo seu profissional.</p> : null}{items.map((item) => <div key={item.id} className="flex items-center gap-3 rounded-xl border border-outline-variant/40 bg-surface-container p-3"><span className={clsx('h-2.5 w-2.5 rounded-full', statusTone[item.status])} aria-hidden /><div className="min-w-0 flex-1"><p className="font-sans text-label text-on-surface">{item.title}</p><p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{statusLabel[item.status]} · {item.summary ?? `${item.durationMin} min`}</p></div>{item.status === 'planned' ? <button type="button" onClick={() => { startSession(item.id); navigate('/meu-fit/treino/player'); }} className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-on-primary" aria-label={`Começar ${item.title}`}><Play size={16} fill="currentColor" aria-hidden /></button> : null}{item.status === 'missed' ? <button type="button" onClick={() => reschedule(item.id)} className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-high text-primary" aria-label={`Reagendar ${item.title}`}><RotateCcw size={16} aria-hidden /></button> : null}</div>)}{imported.map((item) => <div key={item.id} className="flex items-center gap-3 rounded-xl border border-outline-variant/40 bg-surface p-3"><span className="h-2.5 w-2.5 rounded-full bg-tertiary" /><div><p className="font-sans text-label text-on-surface">{item.title}</p><p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{item.durationMin} min · {sourceLabel(item.source)}</p></div></div>)}</div></section>
+    <section><h2 className="font-sans text-title text-on-surface">{new Date(`${selectedDate}T12:00:00`).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}</h2><div className="mt-3 space-y-2">{items.length === 0 && imported.length === 0 ? <p className="rounded-xl border border-dashed border-outline-variant/50 px-4 py-5 font-sans text-body-sm text-on-surface-variant">Dia livre. Aguarde um treino enviado pelo seu profissional.</p> : null}{items.map((item) => <div key={item.id} className="flex items-center gap-3 rounded-xl border border-outline-variant/40 bg-surface-container p-3"><span className={clsx('h-2.5 w-2.5 rounded-full', statusTone[item.status])} aria-hidden /><div className="min-w-0 flex-1"><p className="font-sans text-label text-on-surface">{item.title}</p><p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{statusLabel[item.status]} · {item.summary ?? `${item.durationMin} min`}</p></div>{item.status === 'planned' ? <button type="button" onClick={() => { startSession(item.id); navigate('/meu-fit/treino/player'); }} className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-on-primary" aria-label={`Começar ${item.title}`}><Play size={16} fill="currentColor" aria-hidden /></button> : null}{item.status === 'missed' ? <button type="button" onClick={() => reschedule(item.id)} className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container-high text-primary" aria-label={`Reagendar ${item.title}`}><RotateCcw size={16} aria-hidden /></button> : null}</div>)}{imported.map((item) => <div key={item.id} className="flex items-center gap-3 rounded-xl border border-outline-variant/40 bg-surface p-3"><span className="h-2.5 w-2.5 rounded-full bg-tertiary" /><div><p className="font-sans text-label text-on-surface">{item.title}</p><p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{formatActivityMeta(item)}</p></div></div>)}</div></section>
   </section>;
 }
 
-function History() { const { scheduled, imported } = useTraining(); const entries = [...scheduled.filter((item) => ['completed', 'partial', 'missed'].includes(item.status)).map((item) => ({ id: item.id, date: item.date, title: item.title, meta: item.summary ?? statusLabel[item.status], status: item.status })), ...imported.map((item) => ({ id: item.id, date: item.date, title: item.title, meta: `${item.durationMin} min · ${sourceLabel(item.source)}`, status: 'imported' as TrainingStatus }))].sort((a, b) => b.date.localeCompare(a.date)); return <section className="mt-6"><h2 className="font-sans text-title text-on-surface">Histórico</h2><p className="mt-1 font-sans text-body-sm text-on-surface-variant">Treinos e atividades registrados.</p><div className="mt-4 space-y-2">{entries.map((item) => <HistoryRow key={item.id} {...item} />)}</div></section>; }
+function History() { const { scheduled, imported } = useTraining(); const entries = [...scheduled.filter((item) => ['completed', 'partial', 'missed'].includes(item.status)).map((item) => ({ id: item.id, date: item.date, title: item.title, meta: item.summary ?? statusLabel[item.status], status: item.status })), ...imported.map((item) => ({ id: item.id, date: item.date, title: item.title, meta: formatActivityMeta(item), status: 'imported' as TrainingStatus }))].sort((a, b) => b.date.localeCompare(a.date)); return <section className="mt-6"><h2 className="font-sans text-title text-on-surface">Histórico</h2><p className="mt-1 font-sans text-body-sm text-on-surface-variant">Treinos e atividades registrados.</p><div className="mt-4 space-y-2">{entries.map((item) => <HistoryRow key={item.id} {...item} />)}</div></section>; }
 function HistoryRow({ date, title, meta, status }: { date: string; title: string; meta: string; status: TrainingStatus }) { return <div className="flex items-center gap-3 rounded-xl border border-outline-variant/40 bg-surface-container p-3"><span className={clsx('h-2.5 w-2.5 rounded-full', statusTone[status])} /><div><p className="font-sans text-label text-on-surface">{title}</p><p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} · {meta}</p></div></div>; }
 function Progress() { const { scheduled } = useTraining(); const completed = scheduled.filter((item) => item.status === 'completed').length; return <section className="mt-6"><h2 className="font-sans text-title text-on-surface">Progresso</h2><p className="mt-1 font-sans text-body-sm text-on-surface-variant">Leitura simples da sua consistência.</p><div className="mt-5 grid grid-cols-2 gap-3"><Metric icon="✓" value={`${completed}`} label="treinos concluídos" /><Metric icon="↗" value="8.4 t" label="volume recente" /><Metric icon="3" value="3 dias" label="sequência atual" /><Metric icon="+" value="2" label="PRs simulados" /></div><div className="mt-5 rounded-2xl border border-outline-variant/40 bg-surface-container p-4"><div className="flex items-center gap-2 text-primary"><TrendingUp size={18} aria-hidden /><span className="font-sans text-label">Supino reto</span></div><p className="mt-4 font-sans text-title-lg text-on-surface">60 kg</p><p className="mt-1 font-sans text-body-sm text-on-surface-variant">Última carga registrada · evolução preparada para o histórico real.</p></div></section>; }
 function Metric({ icon, value, label }: { icon: string; value: string; label: string }) { return <div className="rounded-2xl border border-outline-variant/40 bg-surface-container p-4"><span className="font-sans text-label text-primary">{icon}</span><p className="mt-3 font-sans text-title text-on-surface">{value}</p><p className="mt-1 font-sans text-body-sm text-on-surface-variant">{label}</p></div>; }
@@ -86,15 +98,27 @@ function AddActivitySheet({
   open: boolean;
   onClose: () => void;
   selectedDate: string;
-  onAdd: (activity: { date: string; title: string; durationMin: number; surface: TrainingSurface; source: ActivitySource; distanceKm?: number }) => void;
+  onAdd: (activity: { date: string; title: string; durationMin: number; surface: TrainingSurface; source: ActivitySource; distanceKm?: number; calories?: number; averageHeartRate?: number; elevationM?: number }) => void;
 }) {
   const [mode, setMode] = useState<'manual' | 'import'>('manual');
   const [surface, setSurface] = useState<TrainingSurface>('strength');
   const [duration, setDuration] = useState(55);
+  const [distance, setDistance] = useState('5,0');
+  const [calories, setCalories] = useState('420');
+  const [averageHeartRate, setAverageHeartRate] = useState('145');
+  const [elevation, setElevation] = useState('');
   const [source, setSource] = useState<ActivitySource>('apple_health');
 
   const selectedSurface = surfaces.find((item) => item.value === surface) ?? surfaces[0];
   const selectedSource = importSources.find((item) => item.value === source) ?? importSources[0];
+  const isEndurance = enduranceSurfaces.includes(surface);
+  const readNumber = (value: string) => Number(String(value).replace(',', '.')) || undefined;
+  const activityMetrics = {
+    distanceKm: isEndurance ? readNumber(distance) : undefined,
+    calories: readNumber(calories),
+    averageHeartRate: readNumber(averageHeartRate),
+    elevationM: isEndurance ? readNumber(elevation) : undefined,
+  };
 
   const addManual = () => {
     onAdd({
@@ -103,7 +127,7 @@ function AddActivitySheet({
       durationMin: duration,
       surface,
       source: 'manual',
-      distanceKm: ['running', 'cycling', 'walking'].includes(surface) ? 5 : undefined,
+      ...activityMetrics,
     });
   };
 
@@ -114,7 +138,7 @@ function AddActivitySheet({
       durationMin: duration,
       surface,
       source,
-      distanceKm: ['running', 'cycling', 'walking'].includes(surface) ? 5.2 : undefined,
+      ...activityMetrics,
     });
   };
 
@@ -159,11 +183,11 @@ function AddActivitySheet({
                 className={clsx(
                   'flex min-h-[76px] flex-col items-center justify-center gap-2 rounded-xl border font-sans text-counter',
                   surface === item.value
-                    ? 'border-primary bg-primary-container text-on-primary-container'
+                    ? 'border-primary bg-primary text-on-primary shadow-[0_0_0_1px_rgba(188,255,0,0.22)]'
                     : 'border-outline-variant/35 bg-surface-container text-on-surface-variant',
                 )}
               >
-                <span className={surface === item.value ? 'text-primary' : 'text-on-surface-variant'}>{item.icon}</span>
+                <span className={surface === item.value ? 'text-on-primary' : 'text-on-surface-variant'}>{item.icon}</span>
                 {item.label}
               </button>
             ))}
@@ -197,6 +221,17 @@ function AddActivitySheet({
           </div>
         </div>
 
+        <div className="grid grid-cols-2 gap-3">
+          {isEndurance ? (
+            <MetricInput label="Distância" value={distance} onChange={setDistance} suffix="km" inputMode="decimal" />
+          ) : null}
+          <MetricInput label="Calorias" value={calories} onChange={setCalories} suffix="kcal" inputMode="numeric" />
+          <MetricInput label="FC média" value={averageHeartRate} onChange={setAverageHeartRate} suffix="bpm" inputMode="numeric" />
+          {isEndurance ? (
+            <MetricInput label="Elevação" value={elevation} onChange={setElevation} suffix="m" inputMode="numeric" optional />
+          ) : null}
+        </div>
+
         {mode === 'import' ? (
           <div>
             <p className="font-sans text-label text-on-surface">Origem</p>
@@ -209,11 +244,11 @@ function AddActivitySheet({
                   className={clsx(
                     'flex min-h-12 w-full items-center gap-3 rounded-xl border px-4 text-left font-sans text-label',
                     source === item.value
-                      ? 'border-primary bg-primary-container text-on-primary-container'
+                      ? 'border-primary bg-primary text-on-primary'
                       : 'border-outline-variant/35 bg-surface-container text-on-surface',
                   )}
                 >
-                  <span className="text-primary">{item.icon}</span>
+                  <span className={source === item.value ? 'text-on-primary' : 'text-primary'}>{item.icon}</span>
                   {item.label}
                 </button>
               ))}
@@ -233,5 +268,39 @@ function AddActivitySheet({
         </button>
       </div>
     </BottomSheet>
+  );
+}
+
+function MetricInput({
+  label,
+  value,
+  onChange,
+  suffix,
+  inputMode,
+  optional = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  suffix: string;
+  inputMode: 'numeric' | 'decimal';
+  optional?: boolean;
+}) {
+  return (
+    <label className="rounded-2xl border border-outline-variant/35 bg-surface-container px-4 py-3">
+      <span className="font-sans text-counter text-on-surface-variant">
+        {label}{optional ? ' opcional' : ''}
+      </span>
+      <div className="mt-1 flex items-baseline gap-1">
+        <input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          inputMode={inputMode}
+          placeholder="0"
+          className="min-w-0 flex-1 bg-transparent font-sans text-title text-on-surface outline-none placeholder:text-on-surface-variant/45"
+        />
+        <span className="font-sans text-counter text-on-surface-variant">{suffix}</span>
+      </div>
+    </label>
   );
 }
