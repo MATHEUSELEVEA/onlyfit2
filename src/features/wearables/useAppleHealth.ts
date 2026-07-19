@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/i18n/I18nProvider';
 import { OnlyFitHealthKit } from './onlyFitHealthKit';
 import type { AppleHealthIngestPayload, AppleHealthSyncResult, WearableActivity } from './types';
 
@@ -113,6 +114,7 @@ function writeQueuedPayloads(payloads: AppleHealthIngestPayload[]) {
 }
 
 export function useAppleHealth() {
+  const { t } = useTranslation();
   const { session } = useAuth();
   const queryClient = useQueryClient();
   const userId = session?.user.id;
@@ -198,16 +200,16 @@ export function useAppleHealth() {
         error?: string;
       }>('wearables-ingest', { body: payload });
       if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || 'Falha ao importar Apple Health');
+      if (!data?.success) throw new Error(data?.error || t('health.apple.ingestError'));
       return data;
     } catch (error) {
       if (!globalThis.navigator?.onLine) {
         writeQueuedPayloads([...readQueuedPayloads(), payload]);
-        setLastSyncMessage('Sem internet · sincronização guardada para reenviar.');
+        setLastSyncMessage(t('health.apple.offlineQueued'));
       }
       throw error;
     }
-  }, [shareWithCoach]);
+  }, [shareWithCoach, t]);
 
   const flushQueue = useCallback(async () => {
     const queue = readQueuedPayloads();
@@ -219,29 +221,29 @@ export function useAppleHealth() {
     }
     writeQueuedPayloads(remaining);
     if (remaining.length < queue.length) {
-      setLastSyncMessage(`${queue.length - remaining.length} sincronização pendente reenviada.`);
+      setLastSyncMessage(t('health.apple.queueFlushed', { count: queue.length - remaining.length }));
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['apple-health', 'connection', userId] }),
         queryClient.invalidateQueries({ queryKey: ['apple-health', 'activities', userId] }),
         queryClient.invalidateQueries({ queryKey: ['apple-health', 'daily-summaries', userId] }),
       ]);
     }
-  }, [queryClient, userId]);
+  }, [queryClient, t, userId]);
 
   const sync = useMutation({
     mutationFn: async (mode: 'initial' | 'manual' = 'manual') => {
-      if (!userId) throw new Error('Faça login para conectar o Apple Health.');
+      if (!userId) throw new Error(t('health.apple.loginRequired'));
       const available = await OnlyFitHealthKit.isAvailable();
-      if (!available.available) throw new Error(available.reason || 'Apple Health indisponível neste dispositivo.');
+      if (!available.available) throw new Error(available.reason || t('health.apple.unavailable'));
       const permission = await OnlyFitHealthKit.requestPermissions();
-      if (!permission.granted) throw new Error('Permissão do Apple Health não concedida.');
+      if (!permission.granted) throw new Error(t('health.apple.permissionDenied'));
       const result = mode === 'initial'
         ? await OnlyFitHealthKit.syncInitial({ days: 90 })
         : await OnlyFitHealthKit.syncDelta({});
       const response = await ingest(mode, result);
       const count = response.counts?.inserted ?? 0;
       const updated = response.counts?.updated ?? 0;
-      setLastSyncMessage(`${count} novas · ${updated} atualizadas`);
+      setLastSyncMessage(t('health.apple.syncResult', { inserted: count, updated }));
       return response;
     },
     onSuccess: async () => {
