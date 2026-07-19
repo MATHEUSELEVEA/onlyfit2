@@ -171,12 +171,12 @@ function AmbassadorRail({
         </p>
       </div>
 
-      <div className="mt-2 grid grid-flow-col grid-rows-2 gap-x-4 gap-y-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mt-2 grid grid-flow-col grid-rows-2 gap-x-5 gap-y-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {loading
           ? Array.from({ length: 8 }).map((_, index) => (
-              <div key={index} className="w-[74px]" aria-hidden>
-                <div className="mx-auto h-14 w-14 animate-pulse rounded-full bg-surface-container" />
-                <div className="mx-auto mt-1.5 h-2.5 w-12 animate-pulse rounded bg-surface-container" />
+              <div key={index} className="w-[84px]" aria-hidden>
+                <div className="mx-auto h-16 w-16 animate-pulse rounded-full bg-surface-container" />
+                <div className="mx-auto mt-1.5 h-2.5 w-14 animate-pulse rounded bg-surface-container" />
               </div>
             ))
           : ambassadors.map((ambassador) => {
@@ -188,8 +188,8 @@ function AmbassadorRail({
                 : nameParts[0] || ambassador.name;
               const inner = (
                 <>
-                  <span className="mx-auto block h-14 w-14 rounded-full bg-gradient-to-br from-primary via-primary/50 to-surface-container p-[1.5px] shadow-[0_0_0_3px_hsl(var(--primary)/0.07)]">
-                    <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-background bg-surface-container-high font-sans text-body font-semibold text-primary">
+                  <span className="mx-auto block h-16 w-16 rounded-full bg-gradient-to-br from-primary via-primary/50 to-surface-container p-[1.5px] shadow-[0_0_0_3px_hsl(var(--primary)/0.08)]">
+                    <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-background bg-surface-container-high font-sans text-title font-semibold text-primary">
                       {ambassador.avatarUrl ? (
                         <img src={ambassador.avatarUrl} alt={ambassador.name} loading="lazy" className="h-full w-full object-cover" />
                       ) : (
@@ -197,7 +197,7 @@ function AmbassadorRail({
                       )}
                     </span>
                   </span>
-                  <span className="mt-1.5 block truncate font-sans text-counter text-on-surface">
+                  <span className="mt-2 block truncate font-sans text-counter text-on-surface">
                     {compactName}
                   </span>
                   <span className="block truncate font-sans text-[10px] font-normal leading-tight text-on-surface-variant">
@@ -206,11 +206,11 @@ function AmbassadorRail({
                 </>
               );
               return profileTo ? (
-                <Link key={ambassador.id} to={profileTo} className="w-[74px] text-center">
+                <Link key={ambassador.id} to={profileTo} className="w-[84px] text-center">
                   {inner}
                 </Link>
               ) : (
-                <div key={ambassador.id} className="w-[74px] text-center">
+                <div key={ambassador.id} className="w-[84px] text-center">
                   {inner}
                 </div>
               );
