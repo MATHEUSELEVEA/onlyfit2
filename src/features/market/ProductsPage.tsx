@@ -451,9 +451,9 @@ function OfficialStoresRail({
                   <div className="absolute inset-0 bg-gradient-to-t from-background/92 via-background/45 to-transparent" />
                   <div className="relative flex h-full flex-col justify-between">
                     <div className="flex items-start justify-between gap-2">
-                      <span className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl border border-outline-variant/25 bg-surface/80 font-sans text-body font-bold text-primary backdrop-blur-sm">
+                      <span className="flex h-10 w-20 items-center justify-center overflow-hidden rounded-xl border border-white/80 bg-white px-2 font-sans text-body font-bold text-neutral-900 shadow-sm">
                         {store.logoUrl ? (
-                          <img src={store.logoUrl} alt={store.name} className="h-full w-full object-cover" loading="lazy" />
+                          <img src={store.logoUrl} alt={store.name} className="h-full w-full object-contain" loading="lazy" />
                         ) : (
                           store.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('')
                         )}

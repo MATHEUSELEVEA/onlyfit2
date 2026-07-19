@@ -4,6 +4,10 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { inferProductSports } from '@/lib/products';
 import { useAffinityGroups, type AffinityGroup } from '@/lib/sports';
+import btgPactualLogoUrl from '@/assets/official-stores/btg-pactual.svg?url';
+import integralmedicaLogoUrl from '@/assets/official-stores/integralmedica.svg?url';
+import natuVidaLogoUrl from '@/assets/official-stores/natu-vida.svg?url';
+import nikeLogoUrl from '@/assets/official-stores/nike.svg?url';
 
 // Marketplace: leitura pública dos produtos à venda e leitura das compras do
 // próprio usuário. Tudo somente leitura — o front nunca escreve em produto ou
@@ -85,7 +89,7 @@ const OFFICIAL_MARKET_STORE_FALLBACKS: OfficialMarketStore[] = [
     name: 'Natu Vida',
     tagline: 'Bem-estar, saúde e suplementação natural.',
     category: 'Suplementos naturais',
-    logoUrl: null,
+    logoUrl: natuVidaLogoUrl,
     coverImageUrl: null,
     badgeLabel: 'Loja oficial',
     sortOrder: 10,
@@ -97,7 +101,7 @@ const OFFICIAL_MARKET_STORE_FALLBACKS: OfficialMarketStore[] = [
     name: 'Integralmédica',
     tagline: 'Performance e suplementação esportiva.',
     category: 'Suplementos',
-    logoUrl: null,
+    logoUrl: integralmedicaLogoUrl,
     coverImageUrl: null,
     badgeLabel: 'Loja oficial',
     sortOrder: 20,
@@ -109,7 +113,7 @@ const OFFICIAL_MARKET_STORE_FALLBACKS: OfficialMarketStore[] = [
     name: 'Nike',
     tagline: 'Performance, treino e lifestyle esportivo.',
     category: 'Vestuário e performance',
-    logoUrl: null,
+    logoUrl: nikeLogoUrl,
     coverImageUrl: null,
     badgeLabel: 'Loja oficial',
     sortOrder: 30,
@@ -121,7 +125,7 @@ const OFFICIAL_MARKET_STORE_FALLBACKS: OfficialMarketStore[] = [
     name: 'BTG Pactual',
     tagline: 'Soluções financeiras para atletas e profissionais.',
     category: 'Parceiro financeiro',
-    logoUrl: null,
+    logoUrl: btgPactualLogoUrl,
     coverImageUrl: null,
     badgeLabel: 'Loja oficial',
     sortOrder: 40,

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 72" role="img" aria-labelledby="title">
+  <title id="title">Integralmédica</title>
+  <rect width="220" height="72" rx="18" fill="#ffffff"/>
+  <rect x="22" y="18" width="34" height="36" rx="9" fill="#111111"/>
+  <path d="M33 27h12v18H33z" fill="#ffffff"/>
+  <text x="68" y="42" fill="#111111" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="900">Integral</text>
+  <text x="151" y="42" fill="#d71920" font-family="Arial, Helvetica, sans-serif" font-size="22" font-weight="900">medica</text>
+</svg>
