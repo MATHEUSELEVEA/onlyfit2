@@ -1,3 +1,4 @@
+import { BadgeCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { productTypeMeta } from '@/lib/products';
 import { PriceBadge } from '@/components/ui/PriceBadge';
@@ -9,9 +10,10 @@ interface ProductCardProps {
   featured?: boolean;
   /** Vitrine de Meus produtos: esconde preço e mostra "Adquirido". */
   owned?: boolean;
+  isOfficialStore?: boolean;
 }
 
-export function ProductCard({ product, featured = false, owned = false }: ProductCardProps) {
+export function ProductCard({ product, featured = false, owned = false, isOfficialStore = false }: ProductCardProps) {
   const meta = productTypeMeta(product.type, product.marketItemType);
   const Icon = meta.icon;
   const image = product.coverImageUrl || product.thumbnailUrl;
@@ -47,6 +49,12 @@ export function ProductCard({ product, featured = false, owned = false }: Produc
           {typeChip}
           <PriceBadge price={product.price} owned={owned} />
         </div>
+        {isOfficialStore && (
+          <span className="absolute left-3 top-11 inline-flex items-center gap-1 rounded-full bg-primary/95 px-2 py-0.5 font-sans text-counter text-on-primary shadow-sm">
+            <BadgeCheck size={12} aria-hidden />
+            Loja oficial
+          </span>
+        )}
         <div className="absolute inset-x-0 bottom-0 p-3 text-inverse-on-surface">
           <p className="line-clamp-2 font-sans text-title drop-shadow">{product.name}</p>
           {product.description && (
@@ -55,7 +63,7 @@ export function ProductCard({ product, featured = false, owned = false }: Produc
             </p>
           )}
           <p className="mt-1.5 truncate font-sans text-counter font-normal text-inverse-on-surface/80">
-            {product.creatorName}
+            {product.storeName}
           </p>
         </div>
       </>
@@ -88,6 +96,12 @@ export function ProductCard({ product, featured = false, owned = false }: Produc
           </div>
         )}
         <div className="absolute left-2 top-2">{typeChip}</div>
+        {isOfficialStore && (
+          <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-primary/95 px-2 py-0.5 font-sans text-counter text-on-primary shadow-sm">
+            <BadgeCheck size={12} aria-hidden />
+            Oficial
+          </span>
+        )}
       </div>
       <div className="flex flex-1 flex-col gap-1 p-3">
         <p className="line-clamp-2 font-sans text-body font-semibold text-on-surface">
@@ -100,7 +114,7 @@ export function ProductCard({ product, featured = false, owned = false }: Produc
         )}
         <div className="mt-auto flex items-center justify-between gap-2 pt-1.5">
           <span className="min-w-0 flex-1 truncate font-sans text-counter font-normal text-on-surface-variant">
-            {product.creatorName}
+            {product.storeName}
           </span>
           <PriceBadge price={product.price} owned={owned} />
         </div>

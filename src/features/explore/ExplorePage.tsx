@@ -9,6 +9,7 @@ import {
   Play,
   Search,
   SlidersHorizontal,
+  Sparkles,
   Trophy,
   UsersRound,
   Volume2,
@@ -31,6 +32,7 @@ import {
   useExploreContent,
   useExploreCommunities,
   useExploreChallenges,
+  useFeaturedAmbassadors,
   type ExploreCreator,
   type ExploreContentItem,
   type ExploreCommunity,
@@ -120,6 +122,75 @@ function CreatorCard({ creator }: { creator: ExploreCreator }) {
         {creator.followedByMe ? 'Seguindo' : 'Seguir'}
       </button>
     </li>
+  );
+}
+
+function AmbassadorRail({
+  ambassadors,
+  loading,
+}: {
+  ambassadors: ExploreCreator[];
+  loading: boolean;
+}) {
+  const { labelFor } = useAffinityGroups();
+  if (!loading && ambassadors.length === 0) return null;
+
+  return (
+    <section className="pt-4" aria-labelledby="ambassadors-title">
+      <div className="flex items-end justify-between px-4">
+        <div>
+          <p className="inline-flex items-center gap-1 font-sans text-eyebrow uppercase text-primary">
+            <Sparkles size={14} aria-hidden />
+            Embaixadores
+          </p>
+          <h2 id="ambassadors-title" className="font-sans text-title text-on-surface">
+            Referências por modalidade
+          </h2>
+        </div>
+      </div>
+
+      <div className="mt-3 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {loading
+          ? Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className="w-20 shrink-0" aria-hidden>
+                <div className="mx-auto h-[68px] w-[68px] animate-pulse rounded-full bg-surface-container" />
+                <div className="mx-auto mt-2 h-3 w-16 animate-pulse rounded bg-surface-container" />
+              </div>
+            ))
+          : ambassadors.map((ambassador) => {
+              const profileTo = ambassador.username ? `/creator/${encodeURIComponent(ambassador.username)}` : null;
+              const sport = ambassador.ambassadorSport || ambassador.sports[0] || null;
+              const inner = (
+                <>
+                  <span className="mx-auto block h-[68px] w-[68px] rounded-full bg-gradient-to-br from-primary via-primary/60 to-surface-container p-[2px] shadow-[0_0_0_4px_hsl(var(--primary)/0.08)]">
+                    <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border-2 border-background bg-surface-container-high font-sans text-title text-primary">
+                      {ambassador.avatarUrl ? (
+                        <img src={ambassador.avatarUrl} alt={ambassador.name} loading="lazy" className="h-full w-full object-cover" />
+                      ) : (
+                        ambassador.name.slice(0, 1).toUpperCase()
+                      )}
+                    </span>
+                  </span>
+                  <span className="mt-2 block truncate font-sans text-counter text-on-surface">
+                    {ambassador.name}
+                  </span>
+                  <span className="block truncate font-sans text-counter font-normal text-on-surface-variant">
+                    {ambassador.ambassadorHeadline || (sport ? labelFor(sport) : ambassador.ambassadorBadge || 'OnlyFit')}
+                  </span>
+                </>
+              );
+              return profileTo ? (
+                <Link key={ambassador.id} to={profileTo} className="w-20 shrink-0 text-center">
+                  {inner}
+                </Link>
+              ) : (
+                <div key={ambassador.id} className="w-20 shrink-0 text-center">
+                  {inner}
+                </div>
+              );
+            })}
+      </div>
+    </section>
   );
 }
 
@@ -435,6 +506,7 @@ export function ExplorePage() {
   // pré-carregada). Debounce evita uma query por tecla.
   const debouncedSearch = useDebouncedValue(search, 300);
   const creatorsQuery = useExploreCreators(debouncedSearch);
+  const ambassadorsQuery = useFeaturedAmbassadors();
   const contentQuery = useExploreContent();
   const communitiesQuery = useExploreCommunities();
   const challengesQuery = useExploreChallenges();
@@ -448,6 +520,14 @@ export function ExplorePage() {
   }, [creatorsQuery.data]);
 
   const term = search.trim().toLowerCase();
+
+  const ambassadors = useMemo(() => {
+    const editorial = ambassadorsQuery.data ?? [];
+    if (editorial.length > 0) return editorial;
+    return (creatorsQuery.data ?? [])
+      .filter((creator) => creator.isProfessional)
+      .slice(0, 8);
+  }, [ambassadorsQuery.data, creatorsQuery.data]);
 
   const creators = useMemo(() => {
     let list = creatorsQuery.data ?? [];
@@ -600,6 +680,11 @@ export function ExplorePage() {
             ))}
           </div>
         </div>
+
+        <AmbassadorRail
+          ambassadors={ambassadors}
+          loading={ambassadorsQuery.isLoading && ambassadors.length === 0}
+        />
 
         {isLoading && (
           <div className="flex justify-center py-16">

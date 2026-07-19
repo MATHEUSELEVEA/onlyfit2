@@ -14,6 +14,9 @@ export interface ExploreCreator {
   followedByMe: boolean;
   /** Identidade no mobile: profissional (casca de profissional ligada) ou membro. */
   isProfessional: boolean;
+  ambassadorBadge?: string | null;
+  ambassadorHeadline?: string | null;
+  ambassadorSport?: string | null;
 }
 
 interface CreatorRow {
@@ -26,6 +29,57 @@ interface CreatorRow {
     | { bio: string | null; sports: string[] | null; follower_count: number | null }
     | { bio: string | null; sports: string[] | null; follower_count: number | null }[]
     | null;
+}
+
+interface FeaturedAmbassadorRow {
+  id: string;
+  profile_id: string;
+  sport_key: string | null;
+  headline: string | null;
+  badge_label: string | null;
+  profiles:
+    | (CreatorRow & {
+        creator_profiles:
+          | { bio: string | null; sports: string[] | null; follower_count: number | null }
+          | { bio: string | null; sports: string[] | null; follower_count: number | null }[]
+          | null;
+      })
+    | (CreatorRow & {
+        creator_profiles:
+          | { bio: string | null; sports: string[] | null; follower_count: number | null }
+          | { bio: string | null; sports: string[] | null; follower_count: number | null }[]
+          | null;
+      })[]
+    | null;
+}
+
+function isMissingEditorialTableError(error: unknown, tableName: string): boolean {
+  const maybe = error as { code?: string; message?: string } | null | undefined;
+  return maybe?.code === '42P01' || maybe?.code === 'PGRST205' || new RegExp(`${tableName}|does not exist`, 'i').test(maybe?.message ?? '');
+}
+
+function toExploreCreator(
+  row: CreatorRow,
+  followedIds: Set<string>,
+  ambassador?: { badgeLabel?: string | null; headline?: string | null; sportKey?: string | null },
+): ExploreCreator {
+  const cp = Array.isArray(row.creator_profiles)
+    ? row.creator_profiles[0]
+    : row.creator_profiles;
+  return {
+    id: row.id,
+    username: row.username,
+    name: row.full_name || row.username || 'Usuário',
+    avatarUrl: row.avatar_url,
+    bio: cp?.bio ?? '',
+    sports: cp?.sports ?? [],
+    followerCount: cp?.follower_count ?? 0,
+    followedByMe: followedIds.has(row.id),
+    isProfessional: Boolean(row.professional_shell_enabled),
+    ambassadorBadge: ambassador?.badgeLabel ?? null,
+    ambassadorHeadline: ambassador?.headline ?? null,
+    ambassadorSport: ambassador?.sportKey ?? null,
+  };
 }
 
 // Pessoas para descoberta: qualquer perfil (profissional OU usuário comum),
@@ -76,22 +130,66 @@ export function useExploreCreators(searchTerm = '') {
         ((follows ?? []) as { creator_id: string }[]).map((row) => row.creator_id),
       );
 
-      return rows.map((row) => {
-        const cp = Array.isArray(row.creator_profiles)
-          ? row.creator_profiles[0]
-          : row.creator_profiles;
-        return {
-          id: row.id,
-          username: row.username,
-          name: row.full_name || row.username || 'Usuário',
-          avatarUrl: row.avatar_url,
-          bio: cp?.bio ?? '',
-          sports: cp?.sports ?? [],
-          followerCount: cp?.follower_count ?? 0,
-          followedByMe: followedIds.has(row.id),
-          isProfessional: Boolean(row.professional_shell_enabled),
-        };
-      });
+      return rows.map((row) => toExploreCreator(row, followedIds));
+    },
+  });
+}
+
+export function useFeaturedAmbassadors() {
+  const { session } = useAuth();
+  const userId = session?.user.id;
+
+  return useQuery({
+    queryKey: ['featured-ambassadors', userId],
+    enabled: Boolean(userId),
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<ExploreCreator[]> => {
+      const { data, error } = await supabase
+        .from('featured_ambassadors')
+        .select(
+          `id, profile_id, sport_key, headline, badge_label,
+           profiles:profile_id (
+             id, username, full_name, avatar_url, professional_shell_enabled,
+             creator_profiles (bio, sports, follower_count)
+           )`,
+        )
+        .order('sort_order', { ascending: true })
+        .order('created_at', { ascending: false })
+        .limit(12);
+
+      if (error) {
+        if (isMissingEditorialTableError(error, 'featured_ambassadors')) return [];
+        throw error;
+      }
+
+      const rows = (data ?? []) as unknown as FeaturedAmbassadorRow[];
+      const profileRows = rows
+        .map((row) => (Array.isArray(row.profiles) ? row.profiles[0] : row.profiles))
+        .filter((profile): profile is CreatorRow => Boolean(profile?.id));
+
+      const { data: follows } = profileRows.length
+        ? await supabase
+            .from('creator_follows')
+            .select('creator_id')
+            .eq('follower_id', userId!)
+            .eq('status', 'active')
+            .in('creator_id', profileRows.map((profile) => profile.id))
+        : { data: [] };
+      const followedIds = new Set(
+        ((follows ?? []) as { creator_id: string }[]).map((row) => row.creator_id),
+      );
+
+      return rows
+        .map((row) => {
+          const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+          if (!profile) return null;
+          return toExploreCreator(profile, followedIds, {
+            badgeLabel: row.badge_label,
+            headline: row.headline,
+            sportKey: row.sport_key,
+          });
+        })
+        .filter((creator): creator is ExploreCreator => creator !== null);
     },
   });
 }
