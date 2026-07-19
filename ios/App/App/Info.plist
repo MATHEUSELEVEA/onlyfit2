@@ -26,6 +26,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>O OnlyFit usa a camera para criar posts e atualizar sua foto de perfil.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>O OnlyFit lê seus treinos e métricas de saúde do Apple Health para mostrar histórico, progresso e acompanhamento com seu profissional quando você autorizar.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>O OnlyFit usa o microfone ao gravar videos para posts.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
