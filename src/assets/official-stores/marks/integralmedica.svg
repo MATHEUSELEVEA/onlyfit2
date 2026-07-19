@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title">
+  <title id="title">Integralmédica</title>
+  <rect width="96" height="96" rx="24" fill="#ffffff"/>
+  <rect x="25" y="23" width="46" height="50" rx="13" fill="#111111"/>
+  <path d="M39 36h18v24H39z" fill="#ffffff"/>
+  <path d="M61 36h6v24h-6z" fill="#d71920"/>
+</svg>

@@ -7,6 +7,10 @@ import { MARKET_CATEGORIES, productCategory } from '@/lib/products';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { PageTopBar } from '@/components/layout/PageTopBar';
 import { useTranslation } from '@/i18n/I18nProvider';
+import btgPactualMarkUrl from '@/assets/official-stores/marks/btg-pactual.svg?url';
+import integralmedicaMarkUrl from '@/assets/official-stores/marks/integralmedica.svg?url';
+import natuVidaMarkUrl from '@/assets/official-stores/marks/natu-vida.svg?url';
+import nikeMarkUrl from '@/assets/official-stores/marks/nike.svg?url';
 import { ProductCard } from './ProductCard';
 import { PurchasedProducts } from './PurchasedProducts';
 import {
@@ -40,6 +44,17 @@ function officialStoreKeys(store: OfficialMarketStore): string[] {
   return [store.organizationId, store.slug, store.name]
     .map(normalizeStoreKey)
     .filter(Boolean);
+}
+
+const OFFICIAL_STORE_MARKS: Record<string, string> = {
+  'natu-vida': natuVidaMarkUrl,
+  integralmedica: integralmedicaMarkUrl,
+  nike: nikeMarkUrl,
+  'btg-pactual': btgPactualMarkUrl,
+};
+
+function officialStoreMarkUrl(store: OfficialMarketStore): string | null {
+  return OFFICIAL_STORE_MARKS[store.slug] ?? null;
 }
 
 function filterProducts(
@@ -430,6 +445,7 @@ function OfficialStoresRail({
             ))
           : stores.map((store) => {
               const active = activeStoreKey ? officialStoreKeys(store).includes(activeStoreKey) : false;
+              const markUrl = officialStoreMarkUrl(store);
               return (
                 <button
                   key={store.id}
@@ -443,19 +459,21 @@ function OfficialStoresRail({
                       : 'border-outline-variant/25',
                   )}
                 >
-                  <div className="flex h-full flex-col gap-2">
-                    <div className="relative flex h-14 items-center justify-center overflow-hidden rounded-xl bg-white px-3 shadow-sm">
-                      {store.coverImageUrl ? (
-                        <img src={store.coverImageUrl} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover opacity-10" />
-                      ) : null}
-                      <span className="relative flex h-full w-full items-center justify-center font-sans text-body font-bold text-neutral-900">
-                        {store.logoUrl ? (
-                          <img src={store.logoUrl} alt={store.name} className="max-h-9 w-full object-contain" loading="lazy" />
+                  <div className="flex h-full flex-col justify-between gap-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-2 shadow-sm">
+                        {(markUrl || store.logoUrl) ? (
+                          <img
+                            src={markUrl || store.logoUrl || undefined}
+                            alt={store.name}
+                            className="h-full w-full object-contain"
+                            loading="lazy"
+                          />
                         ) : (
                           store.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('')
                         )}
                       </span>
-                      <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-1 rounded-full border border-primary/20 bg-white/65 px-1.5 py-0.5 font-sans text-[9px] font-semibold leading-none text-primary shadow-sm backdrop-blur-md">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-background/35 px-1.5 py-0.5 font-sans text-[9px] font-semibold leading-none text-primary shadow-sm backdrop-blur-md">
                         <BadgeCheck size={12} aria-hidden />
                         {t('market.official')}
                       </span>
