@@ -139,33 +139,32 @@ function AmbassadorRail({
 
   return (
     <section className="pt-4" aria-labelledby="ambassadors-title">
-      <div className="flex items-end justify-between px-4">
-        <div>
-          <p className="inline-flex items-center gap-1 font-sans text-eyebrow uppercase text-primary">
-            <Sparkles size={14} aria-hidden />
-            {t('explore.ambassadors.eyebrow')}
-          </p>
-          <h2 id="ambassadors-title" className="font-sans text-title text-on-surface">
-            {t('explore.ambassadors.title')}
-          </h2>
-        </div>
+      <div className="px-4">
+        <p id="ambassadors-title" className="inline-flex items-center gap-1 font-sans text-eyebrow uppercase text-primary">
+          <Sparkles size={14} aria-hidden />
+          {t('explore.ambassadors.eyebrow')}
+        </p>
       </div>
 
-      <div className="mt-3 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mt-2 grid grid-flow-col grid-rows-2 gap-x-4 gap-y-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {loading
-          ? Array.from({ length: 5 }).map((_, index) => (
-              <div key={index} className="w-20 shrink-0" aria-hidden>
-                <div className="mx-auto h-[68px] w-[68px] animate-pulse rounded-full bg-surface-container" />
-                <div className="mx-auto mt-2 h-3 w-16 animate-pulse rounded bg-surface-container" />
+          ? Array.from({ length: 8 }).map((_, index) => (
+              <div key={index} className="w-[74px]" aria-hidden>
+                <div className="mx-auto h-14 w-14 animate-pulse rounded-full bg-surface-container" />
+                <div className="mx-auto mt-1.5 h-2.5 w-12 animate-pulse rounded bg-surface-container" />
               </div>
             ))
           : ambassadors.map((ambassador) => {
               const profileTo = ambassador.username ? `/creator/${encodeURIComponent(ambassador.username)}` : null;
               const sport = ambassador.ambassadorSport || ambassador.sports[0] || null;
+              const nameParts = ambassador.name.trim().split(/\s+/);
+              const compactName = nameParts.length > 1
+                ? `${nameParts[0]} ${nameParts[1].slice(0, 1)}.`
+                : nameParts[0] || ambassador.name;
               const inner = (
                 <>
-                  <span className="mx-auto block h-[68px] w-[68px] rounded-full bg-gradient-to-br from-primary via-primary/60 to-surface-container p-[2px] shadow-[0_0_0_4px_hsl(var(--primary)/0.08)]">
-                    <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border-2 border-background bg-surface-container-high font-sans text-title text-primary">
+                  <span className="mx-auto block h-14 w-14 rounded-full bg-gradient-to-br from-primary via-primary/50 to-surface-container p-[1.5px] shadow-[0_0_0_3px_hsl(var(--primary)/0.07)]">
+                    <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-background bg-surface-container-high font-sans text-body font-semibold text-primary">
                       {ambassador.avatarUrl ? (
                         <img src={ambassador.avatarUrl} alt={ambassador.name} loading="lazy" className="h-full w-full object-cover" />
                       ) : (
@@ -173,20 +172,20 @@ function AmbassadorRail({
                       )}
                     </span>
                   </span>
-                  <span className="mt-2 block truncate font-sans text-counter text-on-surface">
-                    {ambassador.name}
+                  <span className="mt-1.5 block truncate font-sans text-counter text-on-surface">
+                    {compactName}
                   </span>
-                  <span className="block truncate font-sans text-counter font-normal text-on-surface-variant">
+                  <span className="block truncate font-sans text-[10px] font-normal leading-tight text-on-surface-variant">
                     {ambassador.ambassadorHeadline || (sport ? labelFor(sport) : ambassador.ambassadorBadge || t('explore.ambassadors.fallback'))}
                   </span>
                 </>
               );
               return profileTo ? (
-                <Link key={ambassador.id} to={profileTo} className="w-20 shrink-0 text-center">
+                <Link key={ambassador.id} to={profileTo} className="w-[74px] text-center">
                   {inner}
                 </Link>
               ) : (
-                <div key={ambassador.id} className="w-20 shrink-0 text-center">
+                <div key={ambassador.id} className="w-[74px] text-center">
                   {inner}
                 </div>
               );
