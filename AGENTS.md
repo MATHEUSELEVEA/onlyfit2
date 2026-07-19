@@ -1,5 +1,9 @@
 # AGENTS.md
 
+## REGRA RÍGIDA E PRIORITÁRIA: ENTREGA SEMPRE NO GIT REMOTO
+
+Esta é a primeira instrução operacional para qualquer agente. Quando o usuário pedir `push`, PR, merge ou deploy, é proibido encerrar com mudanças ou commits apenas locais. O agente deve partir da `main` atualizada, criar branch, fazer commit, enviar a branch ao remoto, abrir Pull Request para `main`, fazer merge do PR e confirmar que a `main` remota contém a entrega. Nunca faça commit ou push direto na `main`.
+
 Arquivo padrão para agentes de IA (Cursor, GitHub Copilot, OpenAI Codex, Windsurf, Gemini e afins) que procuram um `AGENTS.md` na raiz do projeto.
 
 ## Leia o CLAUDE.md
