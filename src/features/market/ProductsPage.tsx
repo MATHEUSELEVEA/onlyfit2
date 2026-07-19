@@ -441,7 +441,7 @@ function OfficialStoresRail({
       <div className="mt-3 grid grid-cols-2 gap-3 px-4 pb-1">
         {loading
           ? Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="h-[132px] min-w-0 animate-pulse rounded-2xl bg-surface-container" aria-hidden />
+              <div key={index} className="h-[170px] min-w-0 animate-pulse rounded-2xl bg-surface-container" aria-hidden />
             ))
           : stores.map((store) => {
               const active = activeStoreKey ? officialStoreKeys(store).includes(activeStoreKey) : false;
@@ -453,15 +453,15 @@ function OfficialStoresRail({
                   aria-pressed={active}
                   onClick={() => onSelect(store)}
                   className={clsx(
-                    'relative h-[132px] min-w-0 overflow-hidden rounded-2xl border bg-surface-container-lowest p-2.5 text-left transition-all active:scale-[0.98]',
+                    'relative h-[170px] min-w-0 overflow-hidden rounded-2xl border bg-surface-container-lowest p-2.5 text-left transition-all active:scale-[0.98]',
                     active
                       ? 'border-primary shadow-[0_0_0_1px_hsl(var(--primary)/0.18)]'
                       : 'border-outline-variant/25',
                   )}
                 >
-                  <div className="flex h-full flex-col justify-between gap-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white p-2 shadow-sm">
+                  <div className="flex h-full flex-col overflow-hidden rounded-xl">
+                    <div className="relative flex min-h-0 flex-1 items-center justify-center bg-white p-4">
+                      <span className="flex aspect-square w-[72%] max-w-[84px] items-center justify-center">
                         {(markUrl || store.logoUrl) ? (
                           <img
                             src={markUrl || store.logoUrl || undefined}
@@ -473,12 +473,12 @@ function OfficialStoresRail({
                           store.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('')
                         )}
                       </span>
-                      <span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-background/35 px-1.5 py-0.5 font-sans text-[9px] font-semibold leading-none text-primary shadow-sm backdrop-blur-md">
+                      <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full border border-primary/20 bg-background/70 px-1.5 py-0.5 font-sans text-[9px] font-semibold leading-none text-primary shadow-sm backdrop-blur-md">
                         <BadgeCheck size={12} aria-hidden />
                         {t('market.official')}
                       </span>
                     </div>
-                    <div className="min-w-0 px-1">
+                    <div className="min-w-0 border-t border-outline-variant/20 bg-surface-container-lowest px-2 py-2">
                       <p className="truncate font-sans text-title text-on-surface">{store.name}</p>
                       <p className="mt-0.5 line-clamp-1 font-sans text-body-sm text-on-surface-variant">
                         {store.category || store.tagline || t('market.sponsorBrand')}
