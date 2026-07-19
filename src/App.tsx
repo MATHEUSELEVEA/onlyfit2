@@ -21,6 +21,7 @@ import { TopicPage } from './features/communities/TopicPage';
 import { ChallengesPage } from './features/challenges/ChallengesPage';
 import { ChallengePage } from './features/challenges/ChallengePage';
 import { ChallengeFormPage } from './features/challenges/ChallengeFormPage';
+import { ProductDetailPage } from './features/market/ProductDetailPage';
 import { ProductsPage } from './features/market/ProductsPage';
 import { StudioPage } from './features/studio/StudioPage';
 import { ProfilePage } from './features/profile/ProfilePage';
@@ -85,6 +86,7 @@ function AuthenticatedApp() {
           <Route path="/meu-fit/dieta" element={<DietPage />} />
           <Route path="/treino" element={<Navigate to="/meu-fit" replace />} />
           <Route path="/produtos" element={<ProductsPage />} />
+          <Route path="/produtos/:productId" element={<ProductDetailPage />} />
           {/* Minhas compras virou aba do Mercado; a rota antiga cai direto nela */}
           <Route path="/meus-produtos" element={<Navigate to="/produtos?aba=compras" replace />} />
           {/* /mercado era o nome antigo da vitrine, virou /produtos (bottom nav) */}
