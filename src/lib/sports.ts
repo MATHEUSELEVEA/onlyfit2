@@ -3,6 +3,15 @@
 // desativar um grupo é mudança de dado, não de código — não devolva a lista
 // para cá nem "só como fallback".
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import {
+  Apple as AppleIcon,
+  Dumbbell,
+  Footprints,
+  Medal,
+  Sparkles,
+  Swords,
+  type LucideIcon,
+} from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 export interface AffinityGroup {
@@ -78,6 +87,23 @@ export function useAffinityGroups() {
   const labels = new Map(groups.map((group) => [group.key, group.label]));
   const labelFor = (key: string) => labels.get(key) ?? humanizeSportKey(key);
   return { groups, labelFor, isLoading };
+}
+
+// O banco guarda o NOME do ícone (coluna `feed_affinity_groups.icon`) para a
+// taxonomia inteira continuar sendo dado. Um fallback mantém a UI íntegra se
+// surgir um ícone ainda não mapeado aqui.
+const AFFINITY_ICONS: Record<string, LucideIcon> = {
+  Dumbbell,
+  Sparkles,
+  Swords,
+  Footprints,
+  Medal,
+  Apple: AppleIcon,
+};
+
+/** Componente lucide para o ícone de um grupo de afinidade (com fallback). */
+export function affinityIcon(name: string): LucideIcon {
+  return AFFINITY_ICONS[name] ?? Sparkles;
 }
 
 /** Espelha `public.affinity_slug`: minúsculo, sem acento, só alfanumérico. */

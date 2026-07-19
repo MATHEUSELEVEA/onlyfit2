@@ -3,18 +3,12 @@ import { Link } from 'react-router-dom';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import {
   Check,
-  Apple as AppleIcon,
-  Dumbbell,
-  Footprints,
   Heart,
   LayoutGrid,
   Loader2,
-  Medal,
   Play,
   Search,
   SlidersHorizontal,
-  Sparkles,
-  Swords,
   Trophy,
   UsersRound,
   Volume2,
@@ -22,7 +16,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useAffinityGroups } from '@/lib/sports';
+import { affinityIcon, useAffinityGroups } from '@/lib/sports';
 import {
   muteAfterAutoplayBlock,
   setVideoMuted,
@@ -63,21 +57,6 @@ const PEOPLE_KINDS: { key: PeopleKind; label: string }[] = [
   { key: 'professionals', label: 'Profissionais' },
   { key: 'members', label: 'Membros' },
 ];
-
-// O banco armazena o nome do ícone para a taxonomia inteira continuar sendo
-// configurável. Um fallback mantém a descoberta íntegra se surgir um novo ícone.
-const AFFINITY_ICONS: Record<string, LucideIcon> = {
-  Dumbbell,
-  Sparkles,
-  Swords,
-  Footprints,
-  Medal,
-  Apple: AppleIcon,
-};
-
-function affinityIcon(name: string): LucideIcon {
-  return AFFINITY_ICONS[name] ?? Sparkles;
-}
 
 function CreatorCard({ creator }: { creator: ExploreCreator }) {
   const { labelFor } = useAffinityGroups();
