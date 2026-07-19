@@ -43,7 +43,7 @@ const templates: WorkoutTemplate[] = [{
 }];
 
 const initialScheduled: ScheduledWorkout[] = [
-  { id: 'yesterday', date: day(-1), templateId: 'upper', title: 'Superior A', focus: 'Peito · costas · ombros', durationMin: 58, status: 'completed', surface: 'strength', summary: '58 min · 8.4 t de volume' },
+  { id: 'yesterday', date: day(-1), templateId: 'upper', title: 'Superior A', focus: 'Peito · costas · ombros', durationMin: 58, status: 'completed', surface: 'strength', summary: '58 min · concluído' },
   { id: 'today', date: day(0), templateId: 'upper', title: 'Superior A', focus: 'Peito · costas · ombros', durationMin: 58, status: 'planned', surface: 'strength' },
   { id: 'tomorrow', date: day(1), templateId: 'upper', title: 'Inferior B', focus: 'Quadríceps · posterior', durationMin: 62, status: 'planned', surface: 'strength' },
   { id: 'missed', date: day(-3), templateId: 'upper', title: 'Superior A', focus: 'Peito · costas', durationMin: 55, status: 'missed', surface: 'strength' },
