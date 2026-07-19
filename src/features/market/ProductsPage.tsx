@@ -423,10 +423,10 @@ function OfficialStoresRail({
         </h2>
       </div>
 
-      <div className="mt-3 grid grid-flow-col grid-rows-2 gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mt-3 grid grid-cols-2 gap-3 px-4 pb-1">
         {loading
           ? Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="h-[120px] w-52 animate-pulse rounded-2xl bg-surface-container" aria-hidden />
+              <div key={index} className="h-[120px] min-w-0 animate-pulse rounded-2xl bg-surface-container" aria-hidden />
             ))
           : stores.map((store) => {
               const active = activeStoreKey ? officialStoreKeys(store).includes(activeStoreKey) : false;
@@ -437,7 +437,7 @@ function OfficialStoresRail({
                   aria-pressed={active}
                   onClick={() => onSelect(store)}
                   className={clsx(
-                    'relative h-[120px] w-52 shrink-0 overflow-hidden rounded-2xl border p-3 text-left transition-all active:scale-[0.98]',
+                    'relative h-[120px] min-w-0 overflow-hidden rounded-2xl border p-3 text-left transition-all active:scale-[0.98]',
                     active
                       ? 'border-primary bg-primary/10 shadow-[0_0_0_1px_hsl(var(--primary)/0.18)]'
                       : 'border-outline-variant/25 bg-surface-container-lowest',
