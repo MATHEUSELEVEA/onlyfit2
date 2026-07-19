@@ -69,6 +69,7 @@ Edge Functions do Perfil de Saúde:
 
 - Mudança de schema, policy ou function → PR no `onlyfit-supabase` (checkout irmão: `../onlyfit-supabase`), seguindo o CLAUDE.md de lá.
 - Toda migration precisa ser retrocompatível com o código deployado dos **dois** apps.
+- Depois do merge na `main`, o GitHub Actions do `onlyfit-supabase` aplica migrations e publica as functions alteradas. Não execute esses comandos neste repositório.
 
 ## Nomenclatura
 

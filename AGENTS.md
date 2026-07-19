@@ -15,6 +15,7 @@ As regras invioláveis, a stack, como rodar e a estrutura de pastas estão lá. 
 - **Nunca** segredo no cliente — só a `anon key` do Supabase vai pro front. RLS autoriza acesso, não o front.
 - **Simples > esperto.** Sem dependência, abstração ou arquivo a mais sem necessidade. Apague o que não usa.
 - Pedido de PR, merge ou deploy exige o fluxo completo: branch a partir da `main`, commit, push da branch, Pull Request para `main` e merge do PR. Nunca encerre só com commit local.
+- Migrations e Edge Functions pertencem ao `onlyfit-supabase` e são implantadas pelo GitHub Actions daquele repositório. Não execute deploy de backend a partir deste app.
 - Antes de "pronto": `npm run build` e `npm run lint` limpos, e teste o fluxo real no app.
 
 Qualquer conflito entre este resumo e o `CLAUDE.md`: **o `CLAUDE.md` vence.**

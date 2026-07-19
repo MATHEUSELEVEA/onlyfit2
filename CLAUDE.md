@@ -36,7 +36,7 @@ npm run lint
 7. **Cliente nunca escreve em tabela de pagamento.** O front só escreve interações do próprio usuário (`post_likes`, `post_comments`, `creator_follows`). `subscriptions`/`creator_memberships` são somente leitura — assinar é checkout no servidor. Ver `docs/DATABASE.md`.
 8. **Backend e banco são compartilhados com o `onlyfit-desktop`.** Mudança de schema, RPC ou edge function em `onlyfit-supabase` não pode quebrar o desktop. Se a mudança exigir ajustar o desktop também, avise e ajuste os dois lados.
 9. **Gitflow obrigatório.** Nunca commite direto na `main`. Quando o usuário pedir PR, merge ou deploy, nunca faça só localmente: crie branch a partir da `main`, faça commit, faça push da branch, abra Pull Request da branch para `main` e faça merge do PR. Commit local sem push/PR/merge não conclui a tarefa. Ver `docs/GIT-FLOW.md`.
-10. **Migration não é só Git.** Se a entrega exigir migration no `onlyfit-supabase`, o agente deve garantir que ela foi mergeada e aplicada no banco, seguindo o `CLAUDE.md` do backend.
+10. **Deploy do backend é centralizado.** Se a entrega exigir migration ou Edge Function, faça a mudança e o PR no `onlyfit-supabase`. O GitHub Actions desse repositório implanta após o merge na `main`; agentes deste app não executam migrations nem deploy de functions.
 
 ## Onde as coisas ficam
 
