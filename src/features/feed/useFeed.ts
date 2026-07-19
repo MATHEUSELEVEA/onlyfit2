@@ -185,26 +185,6 @@ async function fetchFeedPostById(userId: string, postId: string): Promise<FeedPo
   return toFeedPost(row, likedPostIds, mediaByPost);
 }
 
-async function fetchAvailableFeedSports(): Promise<string[]> {
-  const { data, error } = await supabase.rpc('feed_home_available_sports');
-  if (error) throw error;
-  return ((data ?? []) as { sport: string }[]).map((row) => row.sport);
-}
-
-export function useAvailableFeedSports() {
-  const { session } = useAuth();
-  const userId = session?.user.id;
-
-  return useQuery({
-    queryKey: ['feed-available-sports', userId],
-    queryFn: fetchAvailableFeedSports,
-    enabled: Boolean(userId),
-    staleTime: 5 * 60 * 1000,
-    gcTime: 30 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
-}
-
 // Feed paginado: o usuário rola até o fim do que segue, não só a primeira
 // página. Sem isto o feed parava nos 10 primeiros posts e creators com posts
 // mais antigos nunca apareciam.

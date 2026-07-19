@@ -44,6 +44,23 @@ const colorTokens = [
 
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
+  // As classes de accent dos grupos de afinidade vêm do banco
+  // (feed_affinity_groups.accent) e não aparecem no código-fonte, então o JIT
+  // as purgaria e o gradiente do ícone do grupo sumiria. A lista explícita
+  // cobre a taxonomia atual; o pattern cobre cores novas da mesma paleta.
+  safelist: [
+    'from-primary/20',
+    'from-amber-500/30',
+    'from-rose-500/30',
+    'from-red-500/30',
+    'from-orange-500/30',
+    'from-violet-500/30',
+    'from-lime-500/30',
+    {
+      pattern:
+        /^from-(amber|rose|red|orange|violet|lime|emerald|sky|blue|cyan|teal|indigo|purple|fuchsia|pink|green|yellow)-(400|500|600)\/(20|25|30|40)$/,
+    },
+  ],
   theme: {
     extend: {
       colors: Object.fromEntries(colorTokens.map((t) => [t, token(t)])),

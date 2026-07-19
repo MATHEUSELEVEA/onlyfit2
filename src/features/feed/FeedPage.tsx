@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAvailableFeedSports, useFeed } from './useFeed';
+import { useFeed } from './useFeed';
 import { PostCard } from './PostCard';
 import { FeedSportsBar } from './FeedSportsBar';
 
@@ -31,12 +31,10 @@ function FeedSkeleton() {
 
 export function FeedPage() {
   const navigate = useNavigate();
-  const [sportSelection, setSportSelection] = useState<string[]>([]);
-  const { data: availableSports = [] } = useAvailableFeedSports();
-  const sports = useMemo(
-    () => sportSelection.filter((sport) => availableSports.includes(sport)),
-    [sportSelection, availableSports],
-  );
+  // O filtro guarda as chaves dos grupos escolhidos. Um grupo sem conteúdo é
+  // aplicado do mesmo jeito — o feed fica vazio e mostra o estado próprio, em
+  // vez de ignorar a escolha do usuário.
+  const [sports, setSports] = useState<string[]>([]);
   const {
     data,
     isLoading,
@@ -160,10 +158,28 @@ export function FeedPage() {
 
         {!isLoading && !isError && !hasNextPage && posts.length === 0 && (
           <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
-            <p className="font-sans text-title text-on-surface">Nada por aqui ainda</p>
-            <p className="text-body-sm text-on-surface-variant">
-              Siga creators na aba Explorar para ver conteúdos no seu feed.
-            </p>
+            {sports.length > 0 ? (
+              <>
+                <p className="font-sans text-title text-on-surface">Nada neste filtro ainda</p>
+                <p className="text-body-sm text-on-surface-variant">
+                  Ainda não há conteúdo para os grupos selecionados.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setSports([])}
+                  className="mt-2 min-h-[44px] rounded-lg bg-primary px-6 font-sans text-label text-on-primary"
+                >
+                  Ver tudo
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="font-sans text-title text-on-surface">Nada por aqui ainda</p>
+                <p className="text-body-sm text-on-surface-variant">
+                  Siga creators na aba Explorar para ver conteúdos no seu feed.
+                </p>
+              </>
+            )}
           </div>
         )}
 
@@ -175,11 +191,7 @@ export function FeedPage() {
       </div>
 
       {/* Cluster de controles do topo: som (no PostCard) → filtro → criar */}
-      <FeedSportsBar
-        selected={sports}
-        availableSports={availableSports}
-        onSelect={setSportSelection}
-      />
+      <FeedSportsBar selected={sports} onSelect={setSports} />
 
       <button
         type="button"
