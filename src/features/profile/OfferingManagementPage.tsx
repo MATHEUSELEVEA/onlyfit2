@@ -27,7 +27,22 @@ function mapOfferingError(error: unknown, t: (key: TranslationKey) => string): s
   if (message.includes('offering_limit_reached')) return t('profile.business.offers.error.limit');
   if (message.includes('organization_admin_required')) return t('profile.business.offers.error.notAdmin');
   if (message.includes('invalid_name')) return t('profile.business.offers.error.invalidName');
+  if (message.includes('price_below_minimum')) return t('profile.business.offers.error.priceBelowMinimum');
+  if (message.includes('price_required')) return t('profile.business.offers.error.priceRequired');
+  if (message.includes('invalid_price')) return t('profile.business.offers.error.invalidPrice');
   return t('profile.business.offers.error.generic');
+}
+
+// Converte "1.234,56" (pt-BR) em número; null quando vazio/inválido.
+function parsePriceInput(value: string): number | null {
+  const normalized = value.trim().replace(/\./g, '').replace(',', '.');
+  if (normalized === '') return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? Math.round(parsed * 100) / 100 : null;
+}
+
+function formatPrice(value: number): string {
+  return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function billingLabel(
@@ -56,6 +71,9 @@ export function OfferingManagementPage() {
   const updateMutation = useUpdateOffering(businessId);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [priceInput, setPriceInput] = useState('');
+  const [priceError, setPriceError] = useState<string | null>(null);
+  const [priceFeedback, setPriceFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmArchive, setConfirmArchive] = useState(false);
   // Preenche o formulário quando a oferta carrega (ou troca); o guard por id
@@ -65,8 +83,39 @@ export function OfferingManagementPage() {
     setLoadedId(offering.id);
     setName(offering.name);
     setDescription(offering.description ?? '');
+    setPriceInput(offering.price !== null ? formatPrice(offering.price) : '');
+    setPriceError(null);
+    setPriceFeedback(null);
     setError(null);
     setConfirmArchive(false);
+  }
+
+  const isPaidOffering = offering ? offering.billing_type !== 'free' : false;
+  const minimumPrice = type?.minimum_price ?? 0;
+
+  function savePrice() {
+    if (!offering) return;
+    setPriceError(null);
+    setPriceFeedback(null);
+    const parsed = parsePriceInput(priceInput);
+    if (parsed === null || parsed <= 0) {
+      setPriceError(t('profile.business.offers.error.invalidPrice'));
+      return;
+    }
+    if (parsed < minimumPrice) {
+      setPriceError(t('profile.business.offers.error.priceBelowMinimum'));
+      return;
+    }
+    updateMutation.mutate(
+      { offeringId: offering.id, price: parsed },
+      {
+        onSuccess: () => {
+          setPriceInput(formatPrice(parsed));
+          setPriceFeedback(t('profile.business.offers.price.saved'));
+        },
+        onError: (mutationError) => setPriceError(mapOfferingError(mutationError, t)),
+      },
+    );
   }
 
   function saveDetails(event: FormEvent) {
@@ -168,6 +217,48 @@ export function OfferingManagementPage() {
                   {t('profile.business.offers.billing.lockedHint')}
                 </p>
               </section>
+
+              {/* Preço da oferta — definido pelo profissional, respeitando o mínimo do tipo. */}
+              {isPaidOffering && (
+                <section className="mt-8" aria-labelledby="offering-price-title">
+                  <h3 id="offering-price-title" className="px-1 font-sans text-label text-on-surface">
+                    {t('profile.business.offers.price.title')}
+                  </h3>
+                  <div className="mt-2 space-y-3 rounded-2xl bg-surface-container p-5">
+                    <TextField
+                      label={t('profile.business.offers.price.label')}
+                      value={priceInput}
+                      onChange={(event) => setPriceInput(event.target.value.replace(/[^\d.,]/g, ''))}
+                      onBlur={() => {
+                        const parsed = parsePriceInput(priceInput);
+                        if (parsed !== null) setPriceInput(formatPrice(parsed));
+                      }}
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      error={priceError ?? undefined}
+                      hint={
+                        minimumPrice > 0
+                          ? t('profile.business.offers.price.minimumHint').replace('{value}', formatPrice(minimumPrice))
+                          : t('profile.business.offers.price.hint')
+                      }
+                    />
+                    {priceFeedback && (
+                      <p role="status" className="font-sans text-body-sm text-primary">
+                        {priceFeedback}
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={savePrice}
+                      disabled={updateMutation.isPending}
+                      className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 font-sans text-label text-on-primary transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-60"
+                    >
+                      {updateMutation.isPending && <Loader2 size={16} className="animate-spin" aria-hidden />}
+                      {t('profile.business.offers.price.save')}
+                    </button>
+                  </div>
+                </section>
+              )}
 
               {/* Configuração específica do tipo — construída em fases futuras. */}
               <section className="mt-8" aria-labelledby="offering-config-title">
