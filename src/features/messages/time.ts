@@ -2,7 +2,7 @@ import {
   intlLocaleFromLanguage,
   normalizeLanguageCode,
   type LanguageCode,
-} from '@/i18n/I18nProvider';
+} from '@/i18n/language';
 import { dictionaries } from '@/i18n/translations';
 
 function locale(language: LanguageCode): string {

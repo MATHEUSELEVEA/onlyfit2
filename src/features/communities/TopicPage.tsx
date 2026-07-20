@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { clsx } from 'clsx';
 import { Flag, Loader2, Lock, LockOpen, Pin, PinOff, Send, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { intlLocaleFromLanguage, useTranslation } from '@/i18n/I18nProvider';
+import { useTranslation } from '@/i18n/I18nProvider';
+import { intlLocaleFromLanguage } from '@/i18n/language';
 import { PageTopBar } from '@/components/layout/PageTopBar';
 import { useCommunity, useMyMembership } from './useCommunity';
 import {

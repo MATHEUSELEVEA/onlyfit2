@@ -16,7 +16,9 @@ import {
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuth } from '@/contexts/AuthContext';
-import { intlLocaleFromLanguage, useTranslation, type TranslationKey } from '@/i18n/I18nProvider';
+import { useTranslation } from '@/i18n/I18nProvider';
+import type { TranslationKey } from '@/i18n/translations';
+import { intlLocaleFromLanguage } from '@/i18n/language';
 import { supabase } from '@/lib/supabase';
 import { useAffinityGroups } from '@/lib/sports';
 import { myProfileQueryKey, useMyProfile, type MyProfile } from './useMyProfile';

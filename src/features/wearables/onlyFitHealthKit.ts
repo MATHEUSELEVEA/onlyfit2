@@ -1,4 +1,5 @@
-import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
+import { registerPlugin, type PluginListenerHandle } from '@capacitor/core';
+import { isNativeIos } from '@/lib/nativeSecureStorage';
 import type { AppleHealthSyncResult } from './types';
 
 export interface OnlyFitHealthKitPlugin {
@@ -53,6 +54,6 @@ const unavailable: OnlyFitHealthKitPlugin = {
   },
 };
 
-export const OnlyFitHealthKit = Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform()
+export const OnlyFitHealthKit = isNativeIos()
   ? NativeOnlyFitHealthKit
   : unavailable;

@@ -22,6 +22,7 @@ const pt = {
   'health.apple.loginRequired': 'Faça login para conectar o Apple Health.',
   'health.apple.unavailable': 'Apple Health indisponível neste dispositivo.',
   'health.apple.permissionDenied': 'Permissão do Apple Health não concedida.',
+  'health.apple.noDataReturned': 'Nenhum dado do Apple Health foi encontrado com as permissões atuais. Abra Saúde > Compartilhamento > Apps > OnlyFit e confirme os dados liberados.',
 
   'explore.ambassadors.eyebrow': 'Embaixadores',
   'explore.ambassadors.title': 'Embaixadores',
@@ -952,6 +953,7 @@ const en: Record<keyof typeof pt, string> = {
   'health.apple.loginRequired': 'Sign in to connect Apple Health.',
   'health.apple.unavailable': 'Apple Health is unavailable on this device.',
   'health.apple.permissionDenied': 'Apple Health permission was not granted.',
+  'health.apple.noDataReturned': 'No Apple Health data was found with the current permissions. Open Health > Sharing > Apps > OnlyFit and confirm the allowed data.',
 
   'explore.ambassadors.eyebrow': 'Ambassadors',
   'explore.ambassadors.title': 'Ambassadors',
@@ -1874,6 +1876,7 @@ const ptPT: Record<keyof typeof pt, string> = {
   'health.apple.syncResult': '{inserted} novas · {updated} atualizadas',
   'health.apple.loginRequired': 'Inicie sessão para ligar o Apple Health.',
   'health.apple.permissionDenied': 'A permissão do Apple Health não foi concedida.',
+  'health.apple.noDataReturned': 'Nenhum dado do Apple Health foi encontrado com as permissões atuais. Abra Saúde > Partilha > Apps > OnlyFit e confirme os dados permitidos.',
   'privacyTerms.subtitle': 'Documentos vigentes e aceitações obrigatórias.',
   'privacyTerms.acceptedSummary': 'Aceitações registadas',
   'privacyTerms.acceptError': 'Não foi possível registar agora. Tente novamente.',
@@ -1898,6 +1901,7 @@ const es: Record<keyof typeof pt, string> = {
   'health.apple.loginRequired': 'Inicia sesión para conectar Apple Health.',
   'health.apple.unavailable': 'Apple Health no está disponible en este dispositivo.',
   'health.apple.permissionDenied': 'Permiso de Apple Health no concedido.',
+  'health.apple.noDataReturned': 'No se encontraron datos de Apple Health con los permisos actuales. Abre Salud > Compartir > Apps > OnlyFit y confirma los datos permitidos.',
   'explore.ambassadors.eyebrow': 'Embajadores',
   'explore.ambassadors.title': 'Embajadores',
   'explore.loadError': 'No se pudo cargar Explorar.',

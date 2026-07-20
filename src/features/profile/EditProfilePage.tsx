@@ -3,12 +3,8 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Check, Loader2, MapPin, Plus, Trash2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  normalizeLanguageCode,
-  SUPPORTED_LANGUAGES,
-  useTranslation,
-  type LanguageCode,
-} from '@/i18n/I18nProvider';
+import { useTranslation } from '@/i18n/I18nProvider';
+import { normalizeLanguageCode, SUPPORTED_LANGUAGES, type LanguageCode } from '@/i18n/language';
 import { COUNTRY_OPTIONS, countryName } from '@/lib/countries';
 import { formatCpf, isValidCpf, normalizeCpf } from '@/lib/cpf';
 import { formatCep } from '@/lib/masks';

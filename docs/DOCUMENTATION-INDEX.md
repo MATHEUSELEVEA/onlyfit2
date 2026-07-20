@@ -41,6 +41,7 @@ Mapa de toda a documentação do OnlyFit v2. Comece pelo topo.
 | [`COMMIT-TEMPLATE.md`](./COMMIT-TEMPLATE.md) | Padrão de mensagem de commit (Conventional Commits). |
 | [`PR-CHECKLIST.md`](./PR-CHECKLIST.md) | Checklist obrigatório antes do review. |
 | [`TESTING.md`](./TESTING.md) | Testar o fluxo de verdade + stack de teste a adotar. |
+| [`IOS-NATIVE-READINESS.md`](./IOS-NATIVE-READINESS.md) | Checklist de build nativo iOS, HealthKit real, App Store e bloqueios externos. |
 | [`VERSIONING.md`](./VERSIONING.md) | SemVer, releases, compatibilidade com o ecossistema. |
 | [`DECISIONS.md`](./DECISIONS.md) | Registro de decisões de arquitetura (ADR). |
 | [`ONBOARDING.md`](./ONBOARDING.md) | Do zero ao primeiro PR. |

@@ -49,6 +49,13 @@ import {
 
 type TabKey = 'free' | 'exclusive' | 'products' | 'challenges' | 'communities' | 'followers';
 
+type BooleanRpcClient = {
+  rpc: (
+    fn: 'is_user_pair_blocked',
+    args: { p_user_a: string; p_user_b: string },
+  ) => PromiseLike<{ data: boolean | null; error: Error | null }>;
+};
+
 const TABS: { key: TabKey; label: string; icon: LucideIcon }[] = [
   { key: 'free', label: 'Gratuito', icon: Play },
   { key: 'exclusive', label: 'Assinantes', icon: Lock },
@@ -613,7 +620,7 @@ function useUserBlockState(targetId: string | null) {
     queryKey: ['user-block-state', session?.user.id, targetId],
     enabled: Boolean(session?.user.id && targetId && session.user.id !== targetId),
     queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc('is_user_pair_blocked', {
+      const { data, error } = await (supabase as unknown as BooleanRpcClient).rpc('is_user_pair_blocked', {
         p_user_a: session!.user.id,
         p_user_b: targetId!,
       });

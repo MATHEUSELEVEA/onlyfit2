@@ -11,7 +11,8 @@ import {
   ShieldCheck,
   TriangleAlert,
 } from 'lucide-react';
-import { intlLocaleFromLanguage, useTranslation } from '@/i18n/I18nProvider';
+import { useTranslation } from '@/i18n/I18nProvider';
+import { intlLocaleFromLanguage } from '@/i18n/language';
 import type { LegalDocument } from './legalDocuments';
 import {
   useAcceptLegalDocument,

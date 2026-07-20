@@ -2,12 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CAPACITOR_DEBUG</key>
+	<key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>OnlyFit</string>
+	<string>OnlyFit</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -24,10 +24,12 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>O OnlyFit usa a camera para criar posts e atualizar sua foto de perfil.</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>O OnlyFit lê seus treinos e métricas de saúde do Apple Health para mostrar histórico, progresso e acompanhamento com seu profissional quando você autorizar.</string>
+	<string>O OnlyFit lê apenas os dados que você autorizar no Apple Health — treinos, passos, calorias, sono, frequência cardíaca e HRV — para montar seu histórico, progresso e acompanhamento com seu profissional.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>O OnlyFit usa o microfone ao gravar videos para posts.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
@@ -38,7 +40,7 @@
 	<string>Main</string>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
+		<string>arm64</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>

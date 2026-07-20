@@ -8,6 +8,7 @@ Rode esta lista antes de pedir review. Serve para pessoa e para IA. Se um item f
 - [ ] `npm run lint` limpo.
 - [ ] Testei o fluxo **de verdade** no app rodando, não só compilei. (`docs/TESTING.md`)
 - [ ] Estados de loading, vazio e erro tratados na UI — nada de tela branca.
+- [ ] Se mexeu em iOS/HealthKit: seguir `docs/IOS-NATIVE-READINESS.md` e testar em iPhone físico/TestFlight quando o Xcode estiver disponível.
 
 ## Limpo e simples
 

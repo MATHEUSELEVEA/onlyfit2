@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/lib/supabase';
+import { isNativeIos } from '@/lib/nativeSecureStorage';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from '@/i18n/I18nProvider';
 import { OnlyFitHealthKit } from './onlyFitHealthKit';
@@ -138,6 +139,10 @@ function writeQueuedPayloads(payloads: AppleHealthIngestPayload[]) {
   } catch {
     // Best-effort queue. Storage can be unavailable in private mode.
   }
+}
+
+function hasAppleHealthData(result: AppleHealthSyncResult) {
+  return result.activities.length > 0 || result.daily_summaries.length > 0;
 }
 
 export function useAppleHealth() {
@@ -286,6 +291,9 @@ export function useAppleHealth() {
       const result = mode === 'initial'
         ? await OnlyFitHealthKit.syncInitial({ days: 90 })
         : await OnlyFitHealthKit.syncDelta({ anchors: syncState.data ?? {} });
+      if (mode === 'initial' && !hasAppleHealthData(result)) {
+        throw new Error(t('health.apple.noDataReturned'));
+      }
       const response = await ingest(mode, result);
       if (mode === 'initial') {
         await OnlyFitHealthKit.startBackgroundDelivery();
@@ -386,7 +394,7 @@ export function useAppleHealth() {
   return {
     available: availability.data?.available ?? false,
     availabilityReason: availability.data?.reason,
-    isNativeIos: Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform(),
+    isNativeIos: isNativeIos(),
     connection: connection.data,
     importedActivities: activities.data ?? [],
     dailySummaries: dailySummaries.data ?? [],
