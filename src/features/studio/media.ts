@@ -16,7 +16,7 @@ export interface DraftMedia {
   previewUrl: string;
 }
 
-const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif']);
+const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'heic', 'heif']);
 const VIDEO_EXTENSIONS = new Set(['mp4', 'webm', 'ogg', 'mov', 'm4v']);
 
 export function fileExtension(file: File): string {
@@ -32,6 +32,27 @@ export function inferMediaKind(file: File): MediaKind | null {
   if (IMAGE_EXTENSIONS.has(ext)) return 'image';
   if (VIDEO_EXTENSIONS.has(ext)) return 'video';
   return null;
+}
+
+export function contentTypeForMedia(file: File, kind: MediaKind): string {
+  const explicitType = file.type.trim().toLowerCase();
+  if (explicitType && explicitType !== 'application/octet-stream') return explicitType;
+
+  const ext = fileExtension(file);
+  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+  if (ext === 'png') return 'image/png';
+  if (ext === 'webp') return 'image/webp';
+  if (ext === 'gif') return 'image/gif';
+  if (ext === 'avif') return 'image/avif';
+  if (ext === 'heic') return 'image/heic';
+  if (ext === 'heif') return 'image/heif';
+  if (ext === 'mov') return 'video/quicktime';
+  if (ext === 'm4v') return 'video/x-m4v';
+  if (ext === 'webm') return 'video/webm';
+  if (ext === 'ogg') return 'video/ogg';
+  if (ext === 'mp4') return 'video/mp4';
+
+  return kind === 'image' ? 'image/jpeg' : 'video/mp4';
 }
 
 let draftSeq = 0;
