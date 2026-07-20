@@ -386,6 +386,7 @@ export function useAppleHealth() {
   return {
     available: availability.data?.available ?? false,
     availabilityReason: availability.data?.reason,
+    isNativeIos: Capacitor.getPlatform() === 'ios' && Capacitor.isNativePlatform(),
     connection: connection.data,
     importedActivities: activities.data ?? [],
     dailySummaries: dailySummaries.data ?? [],
