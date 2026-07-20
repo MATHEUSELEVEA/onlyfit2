@@ -8,7 +8,7 @@ export interface ExerciseSetLog { weight: number; reps: number; rpe: number | nu
 export interface WorkoutExercise { id: string; name: string; muscle: string; sets: number; targetReps: string; lastWeight: number; technique: string; demoLabel: string; }
 export interface WorkoutTemplate { id: string; title: string; focus: string; durationMin: number; exercises: WorkoutExercise[]; }
 export interface ScheduledWorkout { id: string; date: string; templateId?: string; title: string; focus: string; durationMin: number; status: TrainingStatus; surface: TrainingSurface; summary?: string; }
-/** Boundary for future HealthKit/wearable adapters. External data never becomes a prescribed workout. */
+/** Boundary for wearable adapters. External data never becomes a prescribed workout. */
 export interface ImportedActivity {
   id: string; date: string; title: string; durationMin: number; surface: TrainingSurface; source: ActivitySource;
   externalId?: string; startedAt?: string; distanceKm?: number; calories?: number; averageHeartRate?: number; elevationM?: number;
@@ -52,9 +52,7 @@ const initialScheduled: ScheduledWorkout[] = [
   { id: 'rest', date: day(2), title: 'Descanso', focus: 'Recuperação', durationMin: 0, status: 'rest', surface: 'strength' },
 ];
 
-const initialImported: ImportedActivity[] = import.meta.env.DEV
-  ? [{ id: 'run', date: day(-2), title: 'Corrida ao ar livre', durationMin: 34, surface: 'running', source: 'apple_health', externalId: 'healthkit-demo-run-01', distanceKm: 5.2, averageHeartRate: 146 }]
-  : [];
+const initialImported: ImportedActivity[] = [];
 
 export function TrainingProvider({ children }: { children: ReactNode }) {
   const [scheduled, setScheduled] = useState(initialScheduled);
