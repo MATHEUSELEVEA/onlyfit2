@@ -91,9 +91,12 @@ function Agenda({ selectedDate, onDate, items, imported, active, onCalendar, onR
 
 function AppleHealthCard({ appleHealth, compact }: { appleHealth: AppleHealthState; compact?: boolean }) {
   const { t } = useTranslation();
-  const connected = appleHealth.connection?.status === 'connected';
+  const hasImportedData = appleHealth.importedActivities.length > 0 || appleHealth.dailySummaries.length > 0;
+  const hasCompletedSync = Boolean(appleHealth.connection?.last_sync_at) || hasImportedData;
+  const connected = appleHealth.connection?.status === 'connected' && hasCompletedSync;
+  const waitingForNativeState = appleHealth.isNativeIos && appleHealth.isLoading && !appleHealth.connection;
   const unavailable = !appleHealth.available && !appleHealth.isLoading;
-  if (!connected && !appleHealth.isNativeIos) return null;
+  if (!connected && !waitingForNativeState && !appleHealth.isNativeIos) return null;
   const syncing = appleHealth.sync.isPending;
   const lastSync = appleHealth.connection?.last_sync_at
     ? new Date(appleHealth.connection.last_sync_at).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -109,11 +112,13 @@ function AppleHealthCard({ appleHealth, compact }: { appleHealth: AppleHealthSta
           <Watch size={18} aria-hidden />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-3">
-            <div>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
               <h2 className="font-sans text-label text-on-surface">{t('health.apple.title')}</h2>
               <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">
-                {unavailable
+                {waitingForNativeState
+                  ? t('common.loading')
+                  : unavailable
                   ? (appleHealth.availabilityReason || t('health.apple.unavailable'))
                   : connected
                     ? `${t('health.apple.connected')}${lastSync ? ` · ${lastSync}` : ''}`
@@ -132,7 +137,7 @@ function AppleHealthCard({ appleHealth, compact }: { appleHealth: AppleHealthSta
             ) : null}
           </div>
 
-          {!connected && !unavailable ? (
+          {!connected && !unavailable && !waitingForNativeState ? (
             <div className="mt-4 space-y-3">
               <label className="flex items-center justify-between gap-3 rounded-xl border border-outline-variant/35 bg-surface px-3 py-3">
                 <span className="font-sans text-body-sm text-on-surface">{t('health.apple.shareWithCoach')}</span>
