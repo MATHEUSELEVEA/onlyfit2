@@ -12,11 +12,37 @@ function shouldUploadThroughFunction(file: Blob): boolean {
   return (protocol === 'capacitor:' || protocol === 'ionic:') && file.size <= 20 * 1024 * 1024;
 }
 
+// PUT via XMLHttpRequest em vez de fetch: é o único jeito de expor progresso
+// de upload de forma confiável no WebKit (a Progress API de fetch para upload
+// não tem suporte consistente em WKWebView/Safari).
+function putWithProgress(
+  url: string,
+  file: Blob,
+  contentType: string,
+  onProgress?: (fraction: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', url);
+    xhr.setRequestHeader('Content-Type', contentType);
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress?.(event.loaded / event.total);
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error('Falha ao enviar o arquivo. Tente novamente.'));
+    };
+    xhr.onerror = () => reject(new Error('Falha ao enviar o arquivo. Tente novamente.'));
+    xhr.send(file);
+  });
+}
+
 export async function uploadAsset(
   file: Blob,
   filename: string,
   contentType: string,
   bucket: Bucket,
+  onProgress?: (fraction: number) => void,
 ): Promise<string> {
   if (shouldUploadThroughFunction(file)) {
     const form = new FormData();
@@ -30,6 +56,7 @@ export async function uploadAsset(
       body: form,
     });
     if (error) throw error;
+    onProgress?.(1);
 
     const { publicUrl } = data as { publicUrl: string };
     return publicUrl;
@@ -46,12 +73,7 @@ export async function uploadAsset(
   if (error) throw error;
 
   const { uploadUrl, publicUrl } = data as { uploadUrl: string; publicUrl: string };
-  const put = await fetch(uploadUrl, {
-    method: 'PUT',
-    headers: { 'Content-Type': contentType },
-    body: file,
-  });
-  if (!put.ok) throw new Error('Falha ao enviar o arquivo. Tente novamente.');
+  await putWithProgress(uploadUrl, file, contentType, onProgress);
 
   return publicUrl;
 }
@@ -60,7 +82,12 @@ export async function uploadAsset(
 // best-effort: se o navegador não conseguir decodificar, devolve null e o post
 // segue sem poster. Roda sobre object URL (mesma origem), então o canvas não é
 // marcado como "tainted".
-export function captureVideoPoster(file: File): Promise<Blob | null> {
+//
+// Usada apenas para o caminho legado (vídeo escolhido da galeria/picker). Para
+// vídeo gravado pela câmera (CameraStep/useVideoCapture), o poster já vem
+// capturado ao vivo do stream — ver DraftMedia.posterBlob — e este caminho é
+// pulado inteiramente.
+function capturePosterFrame(file: File): Promise<Blob | null> {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file);
     const video = document.createElement('video');
@@ -98,4 +125,16 @@ export function captureVideoPoster(file: File): Promise<Blob | null> {
       resolve(null);
     };
   });
+}
+
+// Timeout de segurança: vídeos .mov/HEVC que a WebView não decodifica bem
+// podem nunca disparar onloadeddata/onseeked, deixando essa promise pendente
+// para sempre — e como o post inteiro esperava por ela, o "Publicando…"
+// travava eternamente. A função já é best-effort (null = "sem poster, segue o
+// post"), então o timeout só adianta essa resposta em vez de travar o fluxo.
+export function captureVideoPoster(file: File, timeoutMs = 4000): Promise<Blob | null> {
+  return Promise.race([
+    capturePosterFrame(file),
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs)),
+  ]);
 }

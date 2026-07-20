@@ -7,6 +7,11 @@
 
 export type MediaKind = 'image' | 'video';
 
+// Modo selecionado na câmera (CameraModeSwitcher). 'stories' só passa a
+// publicar de fato a partir do PR de Stories — até lá a captura nesse modo
+// fica retida na própria tela da câmera.
+export type CaptureMode = 'photo' | 'video' | 'stories';
+
 // Uma página de mídia ainda em rascunho (local, não enviada). `previewUrl` é um
 // object URL — quem cria é responsável por revogar (URL.revokeObjectURL).
 export interface DraftMedia {
@@ -14,6 +19,11 @@ export interface DraftMedia {
   file: File;
   kind: MediaKind;
   previewUrl: string;
+  // Poster capturado ao vivo do stream da câmera no instante em que a
+  // gravação começou (ver useVideoCapture). Quando presente, o upload pula
+  // captureVideoPoster (que abre o arquivo gravado e pode travar em .mov/HEVC
+  // que a WebView não decodifica) e sobe este blob direto.
+  posterBlob?: Blob | null;
 }
 
 const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif']);
@@ -45,6 +55,24 @@ export function createDraftMedia(file: File): DraftMedia | null {
     file,
     kind,
     previewUrl: URL.createObjectURL(file),
+  };
+}
+
+// Mesma construção de createDraftMedia, para mídia que já sai da câmera
+// (CameraStep) com o kind já conhecido (não precisa inferir de MIME/extensão)
+// e, no caso de vídeo, o poster já capturado ao vivo do stream.
+export function createDraftMediaFromCapture(
+  file: File,
+  kind: MediaKind,
+  posterBlob?: Blob | null,
+): DraftMedia {
+  draftSeq += 1;
+  return {
+    id: `draft-${Date.now()}-${draftSeq}`,
+    file,
+    kind,
+    previewUrl: URL.createObjectURL(file),
+    posterBlob: posterBlob ?? null,
   };
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
+  AlertCircle,
   BadgeCheck,
   Bookmark,
   ChevronRight,
@@ -8,7 +9,9 @@ import {
   Heart,
   MessageCircle,
   Plus,
+  RotateCw,
   Share2,
+  X,
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { ShareSheet } from '@/components/ui/ShareSheet';
@@ -23,6 +26,7 @@ import { useSavedPost } from './useSavedPost';
 import { useCreatorFollowState, useToggleCreatorFollow } from '@/features/creators/useCreatorFollow';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { dismissPublishError, isLocalPostId, retryPublish, usePublishJob } from '@/features/studio/publishQueue';
 
 // Janela do double-tap: dois toques dentro desse intervalo curtem o post.
 const DOUBLE_TAP_MS = 300;
@@ -31,19 +35,21 @@ interface RailButtonProps {
   label: string;
   count?: string;
   active?: boolean;
+  disabled?: boolean;
   onClick?: () => void;
   children: React.ReactNode;
 }
 
-function RailButton({ label, count, active, onClick, children }: RailButtonProps) {
+function RailButton({ label, count, active, disabled, onClick, children }: RailButtonProps) {
   return (
     <button
       type="button"
       aria-label={label}
       aria-pressed={active}
       onClick={onClick}
+      disabled={disabled}
       className={clsx(
-        'flex min-h-[48px] min-w-[48px] flex-col items-center gap-0.5 drop-shadow-lg transition-colors',
+        'flex min-h-[48px] min-w-[48px] flex-col items-center gap-0.5 drop-shadow-lg transition-colors disabled:opacity-40',
         active ? 'text-primary' : 'text-white',
       )}
     >
@@ -122,6 +128,13 @@ export function PostCard({ post }: PostCardProps) {
   // Chave do coração do double-tap: um novo timestamp remonta a animação.
   const [heartBurst, setHeartBurst] = useState(0);
 
+  // Post ainda subindo (ver features/studio/publishQueue.ts): id local
+  // (não existe em `posts` ainda), então nenhuma ação que grave contra
+  // post_id pode rodar aqui — evita erro de FK/RLS num toque duplo enquanto
+  // o upload+RPC de criação ainda está em voo.
+  const isLocal = isLocalPostId(post.id);
+  const publishJob = usePublishJob(post.id);
+
   // O feed mantém os posts vizinhos montados, então é a visibilidade — e não a
   // montagem — que decide qual vídeo toca. Sem isso os vizinhos tocam juntos.
   useEffect(() => {
@@ -143,6 +156,7 @@ export function PostCard({ post }: PostCardProps) {
   // Double-tap na mídia curte (nunca descurte), com o coração animado do
   // TikTok. Toques em botões (som, pontinhos) não contam para o gesto.
   const handleMediaTap = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (isLocal) return;
     if ((event.target as HTMLElement).closest('button')) return;
     const now = Date.now();
     if (now - lastTapRef.current < DOUBLE_TAP_MS) {
@@ -224,13 +238,16 @@ export function PostCard({ post }: PostCardProps) {
           </div>
 
           {/* Trilho de ações: avatar+seguir, curtir, comentar, salvar,
-              compartilhar — tudo a um toque, como no TikTok. */}
+              compartilhar — tudo a um toque, como no TikTok. Post ainda
+              subindo (isLocal) desabilita tudo: nenhuma ação tem post_id
+              real para gravar contra. */}
           <div className="flex w-12 shrink-0 flex-col items-center feed-actions-rail">
             <RailAvatar author={post.author} viewerId={session?.user.id} />
             <RailButton
               label="Curtir"
               count={formatCount(post.likeCount)}
               active={post.likedByMe}
+              disabled={isLocal}
               onClick={() => toggleLike.mutate({ postId: post.id, liked: post.likedByMe })}
             >
               <Heart className="feed-rail-icon" fill={post.likedByMe ? 'currentColor' : 'none'} aria-hidden />
@@ -239,20 +256,61 @@ export function PostCard({ post }: PostCardProps) {
               <RailButton
                 label="Comentar"
                 count={formatCount(post.commentCount)}
+                disabled={isLocal}
                 onClick={() => setCommentsPostId(post.id)}
               >
                 <MessageCircle className="feed-rail-icon" aria-hidden />
               </RailButton>
             )}
-            <RailButton label={saved ? 'Remover dos salvos' : 'Salvar'} active={saved} onClick={toggleSaved}>
+            <RailButton
+              label={saved ? 'Remover dos salvos' : 'Salvar'}
+              active={saved}
+              disabled={isLocal}
+              onClick={toggleSaved}
+            >
               <Bookmark className="feed-rail-icon" fill={saved ? 'currentColor' : 'none'} aria-hidden />
             </RailButton>
-            <RailButton label="Compartilhar" onClick={() => setShareOpen(true)}>
+            <RailButton label="Compartilhar" disabled={isLocal} onClick={() => setShareOpen(true)}>
               <Share2 className="feed-rail-icon" aria-hidden />
             </RailButton>
           </div>
         </div>
       </div>
+
+      {/* Post ainda subindo (ver publishQueue.ts): overlay de progresso, ou
+          banner de erro com opção de tentar de novo/descartar. */}
+      {publishJob && (
+        <div className="absolute inset-x-3 z-10 flex flex-col gap-2 feed-publish-status">
+          {publishJob.status === 'uploading' ? (
+            <div className="flex items-center gap-2 rounded-full bg-black/50 px-3 py-2 text-white backdrop-blur-sm">
+              <span className="h-3.5 w-3.5 shrink-0 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-hidden />
+              <span className="flex-1 font-sans text-body-sm">Publicando…</span>
+              <span className="font-sans text-counter text-white/70">{Math.round(publishJob.progress * 100)}%</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 rounded-xl bg-error-container px-3 py-2 text-on-error-container">
+              <AlertCircle size={16} className="shrink-0" aria-hidden />
+              <span className="flex-1 font-sans text-body-sm">{publishJob.error ?? 'Falha ao publicar.'}</span>
+              <button
+                type="button"
+                onClick={() => retryPublish(post.id)}
+                aria-label="Tentar publicar de novo"
+                className="flex h-8 w-8 items-center justify-center rounded-full active:bg-on-error-container/10"
+              >
+                <RotateCw size={16} aria-hidden />
+              </button>
+              <button
+                type="button"
+                onClick={() => dismissPublishError(post.id)}
+                aria-label="Descartar post"
+                className="flex h-8 w-8 items-center justify-center rounded-full active:bg-on-error-container/10"
+              >
+                <X size={16} aria-hidden />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <CommentsSheet postId={commentsPostId} onClose={() => setCommentsPostId(null)} />
       <ShareSheet

@@ -1,5 +1,4 @@
-import { useRef } from 'react';
-import { ArrowLeft, ArrowRight, ImagePlus, Play, Plus, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Play, Plus, X } from 'lucide-react';
 import type { DraftMedia } from '../media';
 
 interface MediaThumbProps {
@@ -68,43 +67,28 @@ function MediaThumb({ media, index, total, onRemove, onMove }: MediaThumbProps) 
 
 interface PickMediaStepProps {
   media: DraftMedia[];
-  onAdd: (files: FileList) => void;
   onRemove: (id: string) => void;
   onMove: (from: number, to: number) => void;
+  /** Reabre a câmera (CameraStep) — é lá que também vive o acesso à galeria. */
+  onAddMore: () => void;
   onNext: () => void;
 }
 
-export function PickMediaStep({ media, onAdd, onRemove, onMove, onNext }: PickMediaStepProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const openPicker = () => inputRef.current?.click();
-
+// Tela de revisão do que já foi capturado: grid do carrossel, reordenar,
+// remover, e "+ adicionar" volta para a câmera (não abre um picker próprio —
+// a câmera já oferece a galeria como opção secundária).
+export function PickMediaStep({ media, onRemove, onMove, onAddMore, onNext }: PickMediaStepProps) {
   return (
     <div className="flex h-full flex-col">
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*,video/*"
-        multiple
-        className="hidden"
-        onChange={(e) => {
-          if (e.target.files?.length) onAdd(e.target.files);
-          e.target.value = '';
-        }}
-      />
-
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {media.length === 0 ? (
           <button
             type="button"
-            onClick={openPicker}
+            onClick={onAddMore}
             className="flex h-full min-h-[16rem] w-full flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-outline-variant/60 bg-surface-container-low text-on-surface-variant transition-colors active:bg-surface-container"
           >
-            <ImagePlus size={40} strokeWidth={1.5} aria-hidden />
-            <span className="font-sans text-title text-on-surface">Toque para escolher</span>
-            <span className="max-w-[15rem] text-center text-body-sm">
-              Imagem única, vídeo ou várias mídias para montar um carrossel.
-            </span>
+            <Plus size={40} strokeWidth={1.5} aria-hidden />
+            <span className="font-sans text-title text-on-surface">Adicionar mídia</span>
           </button>
         ) : (
           <div className="grid grid-cols-3 gap-2">
@@ -120,7 +104,7 @@ export function PickMediaStep({ media, onAdd, onRemove, onMove, onNext }: PickMe
             ))}
             <button
               type="button"
-              onClick={openPicker}
+              onClick={onAddMore}
               aria-label="Adicionar mídia"
               className="flex aspect-[4/5] flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-outline-variant/60 bg-surface-container-low text-on-surface-variant active:bg-surface-container"
             >

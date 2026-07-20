@@ -1,4 +1,5 @@
-import { Loader2, Lock, Globe } from 'lucide-react';
+import { useState } from 'react';
+import { Lock, Globe } from 'lucide-react';
 import { clsx } from 'clsx';
 import { FilterChip } from '@/components/ui/FilterChip';
 import { useAffinityGroups } from '@/lib/sports';
@@ -13,8 +14,6 @@ interface DetailsStepProps {
   onVisibilityChange: (value: PostVisibility) => void;
   canPublishToMembers: boolean;
   onPublish: () => void;
-  isPublishing: boolean;
-  error: string | null;
 }
 
 const VISIBILITY_OPTIONS: { value: PostVisibility; label: string; icon: typeof Globe }[] = [
@@ -31,10 +30,12 @@ export function DetailsStep({
   onVisibilityChange,
   canPublishToMembers,
   onPublish,
-  isPublishing,
-  error,
 }: DetailsStepProps) {
   const { groups } = useAffinityGroups();
+  // A publicação em si (enqueuePublish) é instantânea e não bloqueia — este
+  // estado só evita um duplo-tap disparar dois posts antes de a navegação
+  // para o feed (StudioPage.publish) desmontar esta tela.
+  const [submitted, setSubmitted] = useState(false);
 
   return (
     <div className="flex h-full flex-col">
@@ -90,23 +91,20 @@ export function DetailsStep({
           </div>
         </div>
         )}
-
-        {error && (
-          <p role="alert" className="rounded-lg bg-error-container p-3 text-body-sm text-on-error-container">
-            {error}
-          </p>
-        )}
       </div>
 
       <div className="border-t border-outline-variant/40 p-4">
         <button
           type="button"
-          onClick={onPublish}
-          disabled={isPublishing}
+          onClick={() => {
+            if (submitted) return;
+            setSubmitted(true);
+            onPublish();
+          }}
+          disabled={submitted}
           className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary font-sans text-label text-on-primary transition-opacity active:opacity-90 disabled:opacity-60"
         >
-          {isPublishing && <Loader2 size={18} className="animate-spin" aria-hidden />}
-          {isPublishing ? 'Publicando…' : 'Publicar'}
+          Publicar
         </button>
       </div>
     </div>

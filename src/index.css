@@ -86,6 +86,12 @@
   .feed-progress {
     bottom: var(--feed-inset-b);
   }
+
+  /* Overlay de "Publicando…"/erro do post ainda subindo (publishQueue.ts),
+   * ancorado no mesmo topo dos controles do feed. */
+  .feed-publish-status {
+    top: calc(var(--feed-inset-t) + 8px);
+  }
 }
 
 @layer utilities {
