@@ -21,6 +21,12 @@
     @apply bg-background font-sans text-body text-on-background antialiased;
     overscroll-behavior-y: none;
   }
+
+  /* Reserva a faixa da barra em navegadores com scrollbar clássica, para ela
+   * não atravessar cartões e abas do Perfil ao rolar. */
+  .scrollbar-gutter-stable {
+    scrollbar-gutter: stable;
+  }
 }
 
 @layer utilities {
@@ -84,7 +90,9 @@
 
   /* Barra fina de progresso do vídeo, encostada na nav translúcida. */
   .feed-progress {
-    bottom: var(--feed-inset-b);
+    /* A barra fica acima da navegação. Assim o botão elevado de My Fit não
+     * intercepta a área de duração do vídeo. */
+    bottom: calc(var(--feed-inset-b) + 18px);
   }
 }
 

@@ -73,7 +73,7 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-background pb-10">
+    <div className="scrollbar-gutter-stable h-full overflow-y-auto bg-background pb-10">
       <div className="mx-auto min-h-full w-full max-w-[720px] bg-background md:my-6 md:overflow-hidden md:rounded-3xl md:border md:border-outline-variant/30 md:shadow-xl">
         {/* ---------- Herói: foto em moldura padronizada ---------- */}
         <header>

@@ -289,7 +289,10 @@ function WaterDistribution({ schedule, goalMl, plan, onChange }: { schedule: str
   const { t } = useTranslation();
   const total = schedule.reduce((sum, time) => sum + (plan[time] ?? defaultWaterAmount(goalMl, schedule.length)), 0);
   function amountFor(time: string) { return plan[time] ?? defaultWaterAmount(goalMl, schedule.length); }
-  function update(time: string, amount: number) { onChange({ ...plan, [time]: Math.max(50, Math.round(amount / 50) * 50) }); }
+  function update(time: string, amount: number) {
+    if (!Number.isFinite(amount)) return;
+    onChange({ ...plan, [time]: Math.max(0, Math.round(amount / 50) * 50) });
+  }
 
   return (
     <div className="mt-7">
@@ -302,8 +305,21 @@ function WaterDistribution({ schedule, goalMl, plan, onChange }: { schedule: str
         {schedule.map((time) => (
           <div key={time} className="flex items-center gap-2 rounded-xl border border-outline-variant/40 bg-surface-container p-2">
             <span className="w-12 font-sans text-label text-on-surface">{time}</span>
-            <button type="button" onClick={() => update(time, amountFor(time) - 50)} aria-label={t('meufit.routine.decreaseAmount')} className="flex h-9 w-9 items-center justify-center rounded-lg text-on-surface-variant"><span className="text-title">−</span></button>
-            <span className="min-w-0 flex-1 text-center font-sans text-label text-on-surface">{amountFor(time)} ml</span>
+            <label className="min-w-0 flex-1">
+              <span className="sr-only">Quantidade de água às {time}</span>
+              <div className="flex items-center rounded-lg bg-surface px-2 ring-1 ring-outline-variant/35 focus-within:ring-primary">
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min="0"
+                  step="50"
+                  value={amountFor(time)}
+                  onChange={(event) => update(time, Number(event.target.value))}
+                  className="min-h-10 w-full bg-transparent text-center font-sans text-label text-on-surface outline-none"
+                />
+                <span className="font-sans text-counter text-on-surface-variant">ml</span>
+              </div>
+            </label>
             <button type="button" onClick={() => update(time, amountFor(time) + 50)} aria-label={t('meufit.routine.increaseAmount')} className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary"><Plus size={18} aria-hidden /></button>
           </div>
         ))}

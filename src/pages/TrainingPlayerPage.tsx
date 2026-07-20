@@ -203,7 +203,7 @@ export function TrainingPlayerPage() {
               label="Carga"
               value={activeSet.weight}
               suffix="kg"
-              step={2}
+              step={0.5}
               min={0}
               onChange={(value) => updateSet({ weight: value })}
             />
@@ -218,7 +218,7 @@ export function TrainingPlayerPage() {
 
           <div className="mt-4 flex items-center justify-between rounded-xl bg-surface-container px-3 py-3">
             <span className="font-sans text-body-sm text-on-surface-variant">
-              Última execução: {exercise.lastWeight} kg · {activeSet.reps} reps
+              No treino anterior: {exercise.lastWeight} kg · {exercise.lastReps} reps
             </span>
             {activeSet.completed ? (
               <span className="flex items-center gap-1 font-sans text-counter text-primary">
@@ -303,6 +303,7 @@ export function TrainingPlayerPage() {
         onClose={() => setSheet(null)}
         title={exercise.name}
         description={exercise.demoLabel}
+        videoUrl={exercise.videoUrl}
       />
       <SubstituteSheet open={sheet === 'substitute'} onClose={() => setSheet(null)} />
     </div>
@@ -329,10 +330,22 @@ function MetricStepper({
   return (
     <div className="rounded-2xl border border-outline-variant/35 bg-surface-container px-3 py-4 text-center">
       <p className="font-sans text-counter text-on-surface-variant">{label}</p>
-      <p className="mt-2 font-sans text-display text-on-surface">
-        {value}
-        {suffix ? <span className="ml-1 align-middle font-sans text-label text-on-surface-variant">{suffix}</span> : null}
-      </p>
+      <label className="mt-2 flex items-baseline justify-center gap-1">
+        <span className="sr-only">{label}</span>
+        <input
+          type="number"
+          inputMode="decimal"
+          min={min}
+          step={step}
+          value={value}
+          onChange={(event) => {
+            const next = Number(event.target.value);
+            if (Number.isFinite(next)) setValue(next);
+          }}
+          className="w-24 bg-transparent text-center font-sans text-display text-on-surface outline-none ring-1 ring-transparent focus:rounded-lg focus:ring-primary"
+        />
+        {suffix ? <span className="align-middle font-sans text-label text-on-surface-variant">{suffix}</span> : null}
+      </label>
       <div className="mt-4 flex items-center justify-center gap-3">
         <button
           type="button"
@@ -558,20 +571,32 @@ function VideoSheet({
   onClose,
   title,
   description,
+  videoUrl,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   description: string;
+  videoUrl?: string | null;
 }) {
   return (
     <BottomSheet open={open} onClose={onClose} title="Demonstração" description={title}>
       <div className="px-5 pb-6">
-        <div className="flex aspect-video items-center justify-center rounded-2xl border border-outline-variant/40 bg-surface-container">
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-on-primary">
-            <Play size={22} fill="currentColor" />
-          </span>
-        </div>
+        {videoUrl ? (
+          <video
+            src={videoUrl}
+            controls
+            playsInline
+            preload="metadata"
+            className="aspect-video w-full rounded-2xl bg-black object-contain"
+          />
+        ) : (
+          <div className="flex aspect-video flex-col items-center justify-center rounded-2xl border border-outline-variant/40 bg-surface-container px-5 text-center">
+            <Play size={24} className="text-on-surface-variant" aria-hidden />
+            <p className="mt-3 font-sans text-label text-on-surface">Demonstração ainda não publicada</p>
+            <p className="mt-1 font-sans text-body-sm text-on-surface-variant">Quando o profissional adicionar o vídeo deste exercício, ele aparecerá aqui.</p>
+          </div>
+        )}
         <p className="mt-4 font-sans text-body text-on-surface-variant">{description}</p>
       </div>
     </BottomSheet>

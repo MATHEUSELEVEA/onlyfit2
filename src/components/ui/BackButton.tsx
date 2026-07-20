@@ -9,11 +9,15 @@ import { ArrowLeft } from 'lucide-react';
  * `fallback` é usado só quando não há histórico interno (deep link / primeira
  * rota da sessão), caso em que `location.key === 'default'`.
  */
-export function BackButton({ fallback = '/perfil', label = 'Voltar' }: { fallback?: string; label?: string }) {
+export function BackButton({ fallback = '/perfil', label = 'Voltar', onBack }: { fallback?: string; label?: string; onBack?: () => void }) {
   const navigate = useNavigate();
   const location = useLocation();
 
   function handleBack() {
+    if (onBack) {
+      onBack();
+      return;
+    }
     if (location.key === 'default') {
       navigate(fallback);
     } else {

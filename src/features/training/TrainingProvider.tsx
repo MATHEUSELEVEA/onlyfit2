@@ -5,7 +5,19 @@ export type TrainingSurface = 'strength' | 'running' | 'cycling' | 'walking' | '
 export type ActivitySource = 'onlyfit' | 'manual' | 'apple_health' | 'healthkit' | 'garmin' | 'strava' | 'coros' | 'fitbit';
 
 export interface ExerciseSetLog { weight: number; reps: number; rpe: number | null; rir: number | null; completed: boolean; }
-export interface WorkoutExercise { id: string; name: string; muscle: string; sets: number; targetReps: string; lastWeight: number; technique: string; demoLabel: string; }
+export interface WorkoutExercise {
+  id: string;
+  name: string;
+  muscle: string;
+  sets: number;
+  targetReps: string;
+  lastWeight: number;
+  lastReps: number;
+  technique: string;
+  demoLabel: string;
+  /** URL publicada pelo profissional/biblioteca. Sem URL não fingimos vídeo. */
+  videoUrl?: string | null;
+}
 export interface WorkoutTemplate { id: string; title: string; focus: string; durationMin: number; exercises: WorkoutExercise[]; }
 export interface ScheduledWorkout { id: string; date: string; templateId?: string; title: string; focus: string; durationMin: number; status: TrainingStatus; surface: TrainingSurface; summary?: string; }
 /** Boundary for wearable adapters. External data never becomes a prescribed workout. */
@@ -37,9 +49,9 @@ const day = (offset: number) => { const date = new Date(); date.setDate(date.get
 const templates: WorkoutTemplate[] = [{
   id: 'upper', title: 'Superior A', focus: 'Peito · costas · ombros', durationMin: 58,
   exercises: [
-    { id: 'supino', name: 'Supino reto', muscle: 'Peito', sets: 4, targetReps: '8–10', lastWeight: 60, technique: 'Escápulas firmes e pés no chão.', demoLabel: 'Posição e trajetória da barra' },
-    { id: 'remada', name: 'Remada baixa', muscle: 'Costas', sets: 4, targetReps: '10–12', lastWeight: 48, technique: 'Puxe com os cotovelos, sem elevar os ombros.', demoLabel: 'Controle da puxada e escápulas' },
-    { id: 'desenvolvimento', name: 'Desenvolvimento', muscle: 'Ombros', sets: 3, targetReps: '8–10', lastWeight: 18, technique: 'Controle a descida e mantenha o tronco estável.', demoLabel: 'Estabilidade do tronco' },
+    { id: 'supino', name: 'Supino reto', muscle: 'Peito', sets: 4, targetReps: '8–10', lastWeight: 60, lastReps: 8, technique: 'Escápulas firmes e pés no chão.', demoLabel: 'Posição e trajetória da barra' },
+    { id: 'remada', name: 'Remada baixa', muscle: 'Costas', sets: 4, targetReps: '10–12', lastWeight: 48, lastReps: 10, technique: 'Puxe com os cotovelos, sem elevar os ombros.', demoLabel: 'Controle da puxada e escápulas' },
+    { id: 'desenvolvimento', name: 'Desenvolvimento', muscle: 'Ombros', sets: 3, targetReps: '8–10', lastWeight: 18, lastReps: 8, technique: 'Controle a descida e mantenha o tronco estável.', demoLabel: 'Estabilidade do tronco' },
   ],
 }];
 
@@ -65,7 +77,26 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     setActiveSession({ id: `session-${scheduledId}`, scheduledId, templateId: template.id, startedAt: Date.now(), activeExercise: 0, note: '', logs: Object.fromEntries(template.exercises.map((exercise) => [exercise.id, Array.from({ length: exercise.sets }, () => ({ weight: exercise.lastWeight, reps: Number(exercise.targetReps.match(/\d+/)?.[0] ?? 10), rpe: null, rir: null, completed: false }))])) });
     setScheduled((current) => current.map((entry) => entry.id === scheduledId ? { ...entry, status: 'active' } : entry));
   };
-  const toggleSet = (exerciseId: string, setIndex: number) => setActiveSession((current) => current ? { ...current, logs: { ...current.logs, [exerciseId]: current.logs[exerciseId].map((set, index) => index === setIndex ? { ...set, completed: !set.completed } : set) } } : current);
+  const toggleSet = (exerciseId: string, setIndex: number) => setActiveSession((current) => {
+    if (!current) return current;
+    const currentSet = current.logs[exerciseId][setIndex];
+    const completing = !currentSet.completed;
+    return {
+      ...current,
+      logs: {
+        ...current.logs,
+        [exerciseId]: current.logs[exerciseId].map((set, index) => {
+          if (index === setIndex) return { ...set, completed: !set.completed };
+          // A série seguinte herda a carga e as repetições digitadas agora.
+          // Isso evita o retorno ao valor padrão a cada conclusão.
+          if (completing && index === setIndex + 1 && !set.completed) {
+            return { ...set, weight: currentSet.weight, reps: currentSet.reps };
+          }
+          return set;
+        }),
+      },
+    };
+  });
   const updateSet = (exerciseId: string, setIndex: number, values: Partial<Pick<ExerciseSetLog, 'weight' | 'reps' | 'rpe' | 'rir'>>) => setActiveSession((current) => current ? { ...current, logs: { ...current.logs, [exerciseId]: current.logs[exerciseId].map((set, index) => index === setIndex ? { ...set, ...values } : set) } } : current);
   const setActiveExercise = (activeExercise: number) => setActiveSession((current) => current ? { ...current, activeExercise } : current);
   const updateSessionNote = (note: string) => setActiveSession((current) => current ? { ...current, note } : current);

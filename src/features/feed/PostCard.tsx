@@ -157,10 +157,10 @@ export function PostCard({ post }: PostCardProps) {
   return (
     <article
       ref={articleRef}
-      className="relative mx-auto h-full overflow-hidden bg-surface-container-lowest feed-stage"
+      className="relative mx-auto h-full select-none overflow-hidden bg-surface-container-lowest feed-stage"
     >
       {/* Mídia de fundo: vídeo, imagem única ou carrossel (imagem e/ou vídeo) */}
-      <div className="absolute inset-0" onClick={handleMediaTap}>
+      <div className="absolute inset-0 touch-pan-y" onClick={handleMediaTap}>
         <PostMedia
           media={post.media}
           alt={post.caption || `Post de @${post.author.username}`}

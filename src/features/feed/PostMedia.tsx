@@ -88,6 +88,7 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
           className={mediaClass}
           loop
           playsInline
+          controlsList="nodownload noremoteplayback"
           // Só o slide visível baixa vídeo — os vizinhos esperam a vez, senão
           // todos bufferizam juntos e o scroll engasga em aparelho modesto.
           preload={active ? 'auto' : 'none'}
@@ -103,6 +104,7 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
         <img
           src={media.url}
           alt={alt}
+          draggable={false}
           className={mediaClass}
           loading="lazy"
           onLoad={(event) =>

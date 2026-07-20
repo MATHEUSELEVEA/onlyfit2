@@ -5,11 +5,6 @@ import { useFeed } from './useFeed';
 import { PostCard } from './PostCard';
 import { FeedSportsBar } from './FeedSportsBar';
 
-// Quantos vizinhos do post visível ficam montados de verdade. Como no TikTok,
-// só o atual e os adjacentes existem — o resto vira palco vazio, senão cada
-// <video> da lista bufferiza junto e o scroll engasga em aparelho modesto.
-const MOUNT_WINDOW = 1;
-
 // Arrasto (px) além do qual soltar dispara o refresh.
 const PULL_THRESHOLD = 56;
 // O dedo anda mais que o indicador, como nos pull-to-refresh nativos.
@@ -48,8 +43,6 @@ export function FeedPage() {
 
   const posts = useMemo(() => data?.pages.flatMap((page) => page.posts) ?? [], [data]);
 
-  const [currentIndex, setCurrentIndex] = useState(0);
-
   // Pull-to-refresh: distância atual do arrasto (0 = solto).
   const [pull, setPull] = useState(0);
   const pullStartY = useRef<number | null>(null);
@@ -66,13 +59,10 @@ export function FeedPage() {
   }, [isLoading, posts.length, hasNextPage, loadMore]);
 
   // Busca a próxima página com dois posts de antecedência, para a rolagem não
-  // esbarrar no fim da lista — e acompanha qual post está visível para a
-  // janela de montagem.
+  // esbarrar no fim da lista.
   const handleScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const el = event.currentTarget;
     if (el.scrollHeight - el.scrollTop - el.clientHeight < el.clientHeight * 2) loadMore();
-    const next = Math.round(el.scrollTop / el.clientHeight);
-    setCurrentIndex((prev) => (prev === next ? prev : next));
   };
 
   // Pull-to-refresh manual: o container tem snap obrigatório e overscroll
@@ -183,9 +173,12 @@ export function FeedPage() {
           </div>
         )}
 
-        {posts.map((post, index) => (
+        {posts.map((post) => (
           <div key={post.id} className="h-full snap-start snap-always">
-            {Math.abs(index - currentIndex) <= MOUNT_WINDOW && <PostCard post={post} />}
+            {/* Mantemos os posts já percorridos no DOM. A mídia inativa não
+                faz preload nem toca, mas o usuário pode voltar a qualquer
+                reel sem encontrar um palco vazio. */}
+            <PostCard post={post} />
           </div>
         ))}
       </div>

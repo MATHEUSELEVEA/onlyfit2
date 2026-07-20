@@ -37,7 +37,7 @@ export function PostCaption({ text }: PostCaptionProps) {
   if (expanded) {
     return (
       <div className="no-scrollbar max-h-40 overflow-y-auto">
-        <p className="whitespace-pre-wrap font-sans text-body-sm text-white drop-shadow">
+        <p className="select-none whitespace-pre-wrap font-sans text-body-sm text-white drop-shadow">
           {text}{' '}
           <button
             type="button"
@@ -55,7 +55,7 @@ export function PostCaption({ text }: PostCaptionProps) {
     <div className="relative">
       <p
         ref={paragraphRef}
-        className="line-clamp-2 font-sans text-body-sm text-white drop-shadow"
+        className="select-none line-clamp-2 font-sans text-body-sm text-white drop-shadow"
       >
         {text}
       </p>

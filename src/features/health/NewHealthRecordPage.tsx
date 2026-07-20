@@ -8,20 +8,59 @@ import { FeedbackMessage, HealthPageHeader, HealthPageShell, LoadingRows } from 
 import { extractHealthPhoto, transcribeHealthAudio, uploadAndProcessHealthPdf } from './healthCaptureApi';
 import { healthCategoryLabels, type HealthCaptureMethod, type HealthCategory, type HealthEvent, type HealthFactInput } from './types';
 import { useHealthAudioRecorder } from './useHealthAudioRecorder';
-import { useAppendHealthEvent, useHealthEvent } from './useHealthProfile';
+import { useAppendHealthEvent, useHealthConsents, useHealthEvent, useRecordHealthConsent } from './useHealthProfile';
 
 type EntryMode = 'text' | 'audio' | 'photo' | 'pdf';
 
 const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const PROFILE_CONSENT = 'Autorizo o tratamento das informações que eu registrar para criar e manter minha Ficha de saúde no OnlyFit.';
 
 export function NewHealthRecordPage() {
   const [searchParams] = useSearchParams();
   const correctsId = searchParams.get('corrige') ?? undefined;
   const { data: correctedEvent, isLoading, isError } = useHealthEvent(correctsId);
+  const { data: consents = [], isLoading: consentsLoading, isError: consentsError, refetch: refetchConsents } = useHealthConsents();
+  const hasProfileConsent = consents.find((consent) => consent.purpose === 'profile_storage')?.action === 'granted';
 
   if (correctsId && isLoading) return <HealthPageShell width="form"><HealthPageHeader title="Corrigir informação" backTo={`/perfil/saude/eventos/${correctsId}`} /><main className="px-4 py-6"><LoadingRows /></main></HealthPageShell>;
   if (correctsId && (isError || !correctedEvent)) return <HealthPageShell width="form"><HealthPageHeader title="Corrigir informação" backTo={`/perfil/saude/eventos/${correctsId}`} /><main className="px-4 py-6"><FeedbackMessage type="error">Não foi possível abrir a informação original.</FeedbackMessage></main></HealthPageShell>;
+  if (consentsLoading) return <HealthPageShell width="form"><HealthPageHeader title="Adicionar registro" backTo="/meu-fit" /><main className="px-4 py-6"><LoadingRows /></main></HealthPageShell>;
+  if (consentsError) return <HealthPageShell width="form"><HealthPageHeader title="Adicionar registro" backTo="/meu-fit" /><main className="px-4 py-6"><FeedbackMessage type="error">Não foi possível verificar a autorização da sua Ficha de saúde.</FeedbackMessage><button type="button" onClick={() => void refetchConsents()} className="mt-4 min-h-12 w-full rounded-xl bg-primary font-sans text-label text-on-primary">Tentar novamente</button></main></HealthPageShell>;
+  if (!hasProfileConsent) return <HealthRecordConsentGate />;
   return <HealthRecordForm key={correctedEvent?.id ?? 'new'} correctsId={correctsId} correctedEvent={correctedEvent} />;
+}
+
+function HealthRecordConsentGate() {
+  const navigate = useNavigate();
+  const recordConsent = useRecordHealthConsent();
+  const [checked, setChecked] = useState(false);
+  const [error, setError] = useState('');
+
+  async function authorize() {
+    if (!checked) {
+      setError('Confirme o uso dos dados para salvar seu registro de saúde.');
+      return;
+    }
+    setError('');
+    try {
+      await recordConsent.mutateAsync({ purpose: 'profile_storage', action: 'granted', statement: PROFILE_CONSENT });
+    } catch (value) {
+      setError(value instanceof Error ? value.message : 'Não foi possível registrar sua autorização.');
+    }
+  }
+
+  return <HealthPageShell width="form">
+    <HealthPageHeader title="Antes de registrar" description="Sua Ficha de saúde é privada" onBack={() => navigate('/meu-fit')} />
+    <main className="space-y-5 px-4 py-6">
+      <p className="font-sans text-body text-on-surface-variant">Para salvar check-ins, sintomas e demais registros, precisamos da sua autorização para manter esses dados na sua Ficha de saúde.</p>
+      <label className="flex items-start gap-3 rounded-2xl border border-outline-variant/40 bg-surface-container p-4">
+        <input type="checkbox" checked={checked} onChange={(event) => setChecked(event.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-primary" />
+        <span className="font-sans text-body text-on-surface">{PROFILE_CONSENT}</span>
+      </label>
+      {error ? <FeedbackMessage type="error">{error}</FeedbackMessage> : null}
+      <button type="button" onClick={() => void authorize()} disabled={recordConsent.isPending} className="min-h-12 w-full rounded-xl bg-primary font-sans text-label text-on-primary disabled:opacity-60">{recordConsent.isPending ? 'Salvando autorização...' : 'Continuar para o registro'}</button>
+    </main>
+  </HealthPageShell>;
 }
 
 function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string; correctedEvent?: HealthEvent }) {
@@ -197,15 +236,23 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
       } else {
         navigate('/perfil/saude', { replace: true, state: { success: correctsId ? 'Correção adicionada ao histórico.' : 'Registro adicionado ao histórico.' } });
       }
-    } catch {
-      setError('Não foi possível salvar o registro. Tente novamente sem sair desta tela.');
+    } catch (value) {
+      const message = value instanceof Error ? value.message : '';
+      setError(message === 'health_profile_storage_not_authorized'
+        ? 'Sua autorização de armazenamento não foi encontrada. Volte e confirme a autorização da Ficha de saúde.'
+        : 'Não foi possível salvar o registro. Tente novamente sem sair desta tela.');
     }
   }
 
   const canShowForm = mode === 'text' || mode === 'audio' || (mode === 'pdf' && Boolean(documentId)) || (mode === 'photo' && photoReviewed);
   return (
     <HealthPageShell width="form">
-      <HealthPageHeader title={correctsId ? 'Corrigir informação' : 'Adicionar registro'} description={correctsId ? 'A informação anterior continuará no histórico' : 'Você revisa tudo antes de salvar'} backTo={correctsId ? `/perfil/saude/eventos/${correctsId}` : openedFromMyFit ? '/meu-fit' : '/perfil/saude'} />
+      <HealthPageHeader
+        title={correctsId ? 'Corrigir informação' : 'Adicionar registro'}
+        description={correctsId ? 'A informação anterior continuará no histórico' : 'Você revisa tudo antes de salvar'}
+        backTo={correctsId ? `/perfil/saude/eventos/${correctsId}` : openedFromMyFit ? '/meu-fit' : '/perfil/saude'}
+        onBack={!correctsId && step > 1 ? () => setStep((current) => current - 1) : undefined}
+      />
       <main className="space-y-6 px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-6">
         {!correctsId ? <WizardProgress step={step} /> : null}
         {step > 1 && !correctsId ? <button type="button" onClick={() => setStep((current) => current - 1)} className="-ml-2 flex min-h-11 items-center gap-1 px-2 font-sans text-label text-on-surface-variant"><ArrowLeft size={18} aria-hidden /> Voltar</button> : null}

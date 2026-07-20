@@ -22,17 +22,19 @@ export function HealthPageHeader({
   title,
   description,
   backTo = '/perfil/saude',
+  onBack,
   actions,
 }: {
   title: string;
   description?: string;
   backTo?: string;
+  onBack?: () => void;
   actions?: ReactNode;
 }) {
   return (
     <header className="sticky top-0 z-20 border-b border-outline-variant/30 bg-surface-container-lowest/95 px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-md">
       <div className="flex items-center gap-3">
-        <BackButton fallback={backTo} />
+        <BackButton fallback={backTo} onBack={onBack} />
         <div className="min-w-0 flex-1">
           <h1 className="line-clamp-2 font-sans text-title-lg text-on-surface">{title}</h1>
           {description ? (
