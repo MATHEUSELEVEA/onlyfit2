@@ -1,0 +1,42 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appIDs": [
+          "57U869P75F.com.onlyfitapp"
+        ],
+        "components": [
+          {
+            "/": "/auth/confirm",
+            "comment": "Confirmação de cadastro/login por e-mail no app iOS."
+          },
+          {
+            "/": "/reset-password",
+            "comment": "Recuperação de senha no app iOS."
+          },
+          {
+            "/": "/video/*",
+            "comment": "Posts e vídeos compartilhados."
+          },
+          {
+            "/": "/creator/*",
+            "comment": "Perfil público de criador."
+          },
+          {
+            "/": "/produtos/*",
+            "comment": "Produtos digitais e checkout."
+          },
+          {
+            "/": "/perfil/*",
+            "comment": "Rotas internas de perfil."
+          },
+          {
+            "/": "/meu-fit/*",
+            "comment": "Rotas internas de treino, dieta e saúde."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.onlyfit.mobile',
+  appId: 'com.onlyfitapp',
   appName: 'OnlyFit',
   webDir: 'dist',
   server: {
