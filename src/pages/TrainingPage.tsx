@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Activity, Bike, CalendarDays, ChevronLeft, ChevronRight, Dumbbell, Flame, Footprints, HeartPulse, Leaf, Play, Plus, Radio, RotateCcw, Waves, Watch } from 'lucide-react';
+import { Activity, Bike, CalendarDays, ChevronLeft, ChevronRight, Dumbbell, Flame, Footprints, HeartPulse, Leaf, Play, Plus, RotateCcw, Waves, Watch } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -199,12 +199,6 @@ const surfaces: { value: TrainingSurface; label: string; icon: ReactNode }[] = [
   { value: 'other', label: 'Outro', icon: <Plus size={18} /> },
 ];
 
-const importSources: { value: ActivitySource; label: string; icon: ReactNode }[] = [
-  { value: 'apple_health', label: 'Apple Health', icon: <Watch size={18} /> },
-  { value: 'garmin', label: 'Garmin', icon: <Radio size={18} /> },
-  { value: 'strava', label: 'Strava', icon: <Activity size={18} /> },
-];
-
 function AddActivitySheet({
   open,
   onClose,
@@ -216,17 +210,14 @@ function AddActivitySheet({
   selectedDate: string;
   onAdd: (activity: { date: string; title: string; durationMin: number; surface: TrainingSurface; source: ActivitySource; distanceKm?: number; calories?: number; averageHeartRate?: number; elevationM?: number }) => void;
 }) {
-  const [mode, setMode] = useState<'manual' | 'import'>('manual');
   const [surface, setSurface] = useState<TrainingSurface>('strength');
   const [duration, setDuration] = useState(55);
   const [distance, setDistance] = useState('5,0');
   const [calories, setCalories] = useState('420');
   const [averageHeartRate, setAverageHeartRate] = useState('145');
   const [elevation, setElevation] = useState('');
-  const [source, setSource] = useState<ActivitySource>('apple_health');
 
   const selectedSurface = surfaces.find((item) => item.value === surface) ?? surfaces[0];
-  const selectedSource = importSources.find((item) => item.value === source) ?? importSources[0];
   const isEndurance = enduranceSurfaces.includes(surface);
   const readNumber = (value: string) => Number(String(value).replace(',', '.')) || undefined;
   const activityMetrics = {
@@ -247,47 +238,15 @@ function AddActivitySheet({
     });
   };
 
-  const addImportedMock = () => {
-    onAdd({
-      date: selectedDate,
-      title: `${selectedSurface.label} importada`,
-      durationMin: duration,
-      surface,
-      source,
-      ...activityMetrics,
-    });
-  };
-
   return (
     <BottomSheet
       open={open}
       onClose={onClose}
       title="Adicionar registro"
-      description="Atividade feita fora do Player. Não cria prescrição de treino."
+      description="Registro manual feito fora do Player. Para Apple Health, use o card de conexão real em Treinos."
       panelClassName="max-h-[92%]"
     >
       <div className="space-y-5 px-5 pb-6">
-        <div className="grid grid-cols-2 rounded-xl bg-surface-container p-1" role="tablist" aria-label="Tipo de registro">
-          {([
-            ['manual', 'Manual'],
-            ['import', 'Importar'],
-          ] as const).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              role="tab"
-              aria-selected={mode === value}
-              onClick={() => setMode(value)}
-              className={clsx(
-                'min-h-10 rounded-lg font-sans text-counter',
-                mode === value ? 'bg-surface-container-lowest text-on-surface' : 'text-on-surface-variant',
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
         <div>
           <p className="font-sans text-label text-on-surface">Modalidade</p>
           <div className="mt-3 grid grid-cols-3 gap-2">
@@ -348,39 +307,12 @@ function AddActivitySheet({
           ) : null}
         </div>
 
-        {mode === 'import' ? (
-          <div>
-            <p className="font-sans text-label text-on-surface">Origem</p>
-            <div className="mt-3 space-y-2">
-              {importSources.map((item) => (
-                <button
-                  key={item.value}
-                  type="button"
-                  onClick={() => setSource(item.value)}
-                  className={clsx(
-                    'flex min-h-12 w-full items-center gap-3 rounded-xl border px-4 text-left font-sans text-label',
-                    source === item.value
-                      ? 'border-primary bg-primary text-on-primary'
-                      : 'border-outline-variant/35 bg-surface-container text-on-surface',
-                  )}
-                >
-                  <span className={source === item.value ? 'text-on-primary' : 'text-primary'}>{item.icon}</span>
-                  {item.label}
-                </button>
-              ))}
-            </div>
-            <p className="mt-3 font-sans text-body-sm text-on-surface-variant">
-              Integração real fica para HealthKit e conectores. Este mock já separa origem externa dos treinos OnlyFit.
-            </p>
-          </div>
-        ) : null}
-
         <button
           type="button"
-          onClick={mode === 'manual' ? addManual : addImportedMock}
+          onClick={addManual}
           className="min-h-12 w-full rounded-xl bg-primary font-sans text-label text-on-primary"
         >
-          {mode === 'manual' ? 'Salvar registro' : `Simular importação de ${selectedSource.label}`}
+          Salvar registro
         </button>
       </div>
     </BottomSheet>
