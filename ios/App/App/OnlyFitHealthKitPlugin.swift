@@ -13,12 +13,15 @@ public class OnlyFitHealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "getAuthorizationStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncInitial", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "syncDelta", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "startBackgroundDelivery", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "openSettings", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "disconnect", returnType: CAPPluginReturnPromise)
     ]
 
     private let healthStore = HKHealthStore()
     private let isoFormatter = ISO8601DateFormatter()
     private let calendar = Calendar(identifier: .gregorian)
+    private var observerQueries: [String: HKObserverQuery] = [:]
 
     @objc public func isAvailable(_ call: CAPPluginCall) {
         guard HKHealthStore.isHealthDataAvailable() else {
@@ -48,64 +51,127 @@ public class OnlyFitHealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
             call.resolve(["available": false, "status": "unavailable"])
             return
         }
-        call.resolve(["available": true, "status": "available"])
+        call.resolve([
+            "available": true,
+            "status": "available",
+            "read_authorization_inspectable": false,
+            "data_types": readTypePairs().map { $0.key }
+        ])
     }
 
     @objc public func syncInitial(_ call: CAPPluginCall) {
         let days = max(1, min(call.getInt("days") ?? 90, 365))
         let endDate = Date()
         let startDate = calendar.date(byAdding: .day, value: -days, to: endDate) ?? endDate
-        syncRange(startDate: startDate, endDate: endDate, call: call, mode: "initial")
+        syncRange(startDate: startDate, endDate: endDate, call: call, mode: "initial", anchors: [:])
     }
 
     @objc public func syncDelta(_ call: CAPPluginCall) {
         let endDate = Date()
         let startDate = calendar.date(byAdding: .day, value: -14, to: endDate) ?? endDate
-        syncRange(startDate: startDate, endDate: endDate, call: call, mode: "delta")
+        syncRange(startDate: startDate, endDate: endDate, call: call, mode: "delta", anchors: anchors(from: call))
+    }
+
+    @objc public func startBackgroundDelivery(_ call: CAPPluginCall) {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            call.resolve(["enabled": false, "reason": "Apple Health indisponível neste dispositivo."])
+            return
+        }
+
+        registerObserverQueries()
+
+        let group = DispatchGroup()
+        let failedTypesLock = DispatchQueue(label: "app.onlyfit.healthkit.backgroundDelivery")
+        var failedTypes: [String] = []
+        for pair in readTypePairs() {
+            group.enter()
+            healthStore.enableBackgroundDelivery(for: pair.type, frequency: .immediate) { success, _ in
+                if !success { failedTypesLock.sync { failedTypes.append(pair.key) } }
+                group.leave()
+            }
+        }
+
+        group.notify(queue: .main) {
+            call.resolve([
+                "enabled": failedTypes.isEmpty,
+                "failed_types": failedTypes
+            ])
+        }
+    }
+
+    @objc public func openSettings(_ call: CAPPluginCall) {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else {
+            call.resolve(["opened": false])
+            return
+        }
+
+        DispatchQueue.main.async {
+            UIApplication.shared.open(url) { opened in
+                call.resolve(["opened": opened])
+            }
+        }
     }
 
     @objc public func disconnect(_ call: CAPPluginCall) {
-        call.resolve(["disconnected": true])
+        healthStore.disableAllBackgroundDelivery { _, _ in
+            self.observerQueries.values.forEach { self.healthStore.stop($0) }
+            self.observerQueries.removeAll()
+            call.resolve(["disconnected": true])
+        }
     }
 
     private func readTypes() -> Set<HKObjectType> {
-        var types: Set<HKObjectType> = [HKObjectType.workoutType()]
+        Set(readTypePairs().map { $0.type })
+    }
+
+    private func readTypePairs() -> [(key: String, type: HKSampleType)] {
+        var types: [(key: String, type: HKSampleType)] = [("workouts", HKObjectType.workoutType())]
 
         [
-            HKQuantityTypeIdentifier.activeEnergyBurned,
-            HKQuantityTypeIdentifier.distanceWalkingRunning,
-            HKQuantityTypeIdentifier.distanceCycling,
-            HKQuantityTypeIdentifier.heartRate,
-            HKQuantityTypeIdentifier.restingHeartRate,
-            HKQuantityTypeIdentifier.heartRateVariabilitySDNN,
-            HKQuantityTypeIdentifier.stepCount
-        ].compactMap { HKObjectType.quantityType(forIdentifier: $0) }.forEach { types.insert($0) }
+            ("active_energy", HKQuantityTypeIdentifier.activeEnergyBurned),
+            ("distance_walking_running", HKQuantityTypeIdentifier.distanceWalkingRunning),
+            ("distance_cycling", HKQuantityTypeIdentifier.distanceCycling),
+            ("heart_rate", HKQuantityTypeIdentifier.heartRate),
+            ("resting_heart_rate", HKQuantityTypeIdentifier.restingHeartRate),
+            ("hrv", HKQuantityTypeIdentifier.heartRateVariabilitySDNN),
+            ("steps", HKQuantityTypeIdentifier.stepCount)
+        ].compactMap { pair -> (key: String, type: HKSampleType)? in
+            guard let type = HKObjectType.quantityType(forIdentifier: pair.1) else { return nil }
+            return (pair.0, type)
+        }.forEach { types.append($0) }
 
         if let sleep = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) {
-            types.insert(sleep)
+            types.append(("sleep", sleep))
         }
 
         return types
     }
 
-    private func syncRange(startDate: Date, endDate: Date, call: CAPPluginCall, mode: String) {
+    private func syncRange(startDate: Date, endDate: Date, call: CAPPluginCall, mode: String, anchors: [String: String]) {
         guard HKHealthStore.isHealthDataAvailable() else {
             call.reject("Apple Health indisponível neste dispositivo.")
             return
         }
 
         let group = DispatchGroup()
+        let syncLock = DispatchQueue(label: "app.onlyfit.healthkit.syncRange")
         var activities: [[String: Any]] = []
         var dailySummaries: [[String: Any]] = []
+        var deletedProviderActivityIds: [String] = []
+        var nextAnchors: [String: String] = [:]
         var syncError: Error?
 
         group.enter()
-        fetchWorkouts(startDate: startDate, endDate: endDate) { result in
+        fetchWorkoutsAnchored(startDate: startDate, endDate: endDate, mode: mode, anchor: anchors["workouts"]) { result in
             switch result {
-            case .success(let rows):
-                activities = rows
+            case .success(let payload):
+                syncLock.sync {
+                    activities = payload.rows
+                    deletedProviderActivityIds = payload.deletedIds
+                    if let anchor = payload.anchor { nextAnchors["workouts"] = anchor }
+                }
             case .failure(let error):
-                syncError = error
+                syncLock.sync { syncError = error }
             }
             group.leave()
         }
@@ -114,9 +180,17 @@ public class OnlyFitHealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
         fetchDailySummaries(startDate: startDate, endDate: endDate) { result in
             switch result {
             case .success(let rows):
-                dailySummaries = rows
+                syncLock.sync { dailySummaries = rows }
             case .failure(let error):
-                syncError = error
+                syncLock.sync { syncError = error }
+            }
+            group.leave()
+        }
+
+        group.enter()
+        fetchChangedAnchors(startDate: startDate, endDate: endDate, mode: mode, anchors: anchors) { anchors in
+            syncLock.sync {
+                anchors.forEach { nextAnchors[$0.key] = $0.value }
             }
             group.leave()
         }
@@ -127,11 +201,21 @@ public class OnlyFitHealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
                 return
             }
 
+            let receivedDataTypes = self.receivedDataTypes(activities: activities, dailySummaries: dailySummaries)
+            let expectedDataTypes = self.readTypePairs().map { $0.key }
+            let emptyTypes = expectedDataTypes.filter { !receivedDataTypes.contains($0) }
+
             call.resolve([
                 "activities": activities,
                 "daily_summaries": dailySummaries,
-                "deleted_provider_activity_ids": [],
-                "anchors": [
+                "deleted_provider_activity_ids": deletedProviderActivityIds,
+                "anchors": nextAnchors,
+                "permission_status": [
+                    "status": emptyTypes.count == expectedDataTypes.count ? "unknown" : (emptyTypes.isEmpty ? "granted" : "partial"),
+                    "empty_data_types": emptyTypes,
+                    "read_authorization_inspectable": false
+                ],
+                "sync_metadata": [
                     "mode": mode,
                     "synced_at": self.isoFormatter.string(from: Date()),
                     "from": self.isoFormatter.string(from: startDate),
@@ -141,10 +225,63 @@ public class OnlyFitHealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
-    private func fetchWorkouts(startDate: Date, endDate: Date, completion: @escaping (Result<[[String: Any]], Error>) -> Void) {
-        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [.strictStartDate])
-        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
-        let query = HKSampleQuery(sampleType: HKObjectType.workoutType(), predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, error in
+    private func anchors(from call: CAPPluginCall) -> [String: String] {
+        let raw = call.getObject("anchors") ?? [:]
+        var anchors: [String: String] = [:]
+        raw.forEach { key, value in
+            if let stringValue = value as? String { anchors[key] = stringValue }
+        }
+        return anchors
+    }
+
+    private func encodeAnchor(_ anchor: HKQueryAnchor?) -> String? {
+        guard let anchor = anchor else { return nil }
+        guard let data = try? NSKeyedArchiver.archivedData(withRootObject: anchor, requiringSecureCoding: true) else {
+            return nil
+        }
+        return data.base64EncodedString()
+    }
+
+    private func decodeAnchor(_ value: String?) -> HKQueryAnchor? {
+        guard let value = value, let data = Data(base64Encoded: value) else { return nil }
+        return try? NSKeyedUnarchiver.unarchivedObject(ofClass: HKQueryAnchor.self, from: data)
+    }
+
+    private func registerObserverQueries() {
+        for pair in readTypePairs() where observerQueries[pair.key] == nil {
+            let query = HKObserverQuery(sampleType: pair.type, predicate: nil) { [weak self] _, completionHandler, error in
+                var payload: [String: Any] = [
+                    "data_type": pair.key,
+                    "observed_at": self?.isoFormatter.string(from: Date()) ?? ISO8601DateFormatter().string(from: Date())
+                ]
+                if let error = error { payload["error"] = error.localizedDescription }
+                self?.notifyListeners("healthKitChanged", data: payload)
+                completionHandler()
+            }
+            observerQueries[pair.key] = query
+            healthStore.execute(query)
+        }
+    }
+
+    private func fetchWorkoutsAnchored(
+        startDate: Date,
+        endDate: Date,
+        mode: String,
+        anchor: String?,
+        completion: @escaping (Result<(rows: [[String: Any]], deletedIds: [String], anchor: String?), Error>) -> Void
+    ) {
+        let predicate: NSPredicate?
+        if mode == "initial" {
+            predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [.strictStartDate])
+        } else {
+            predicate = nil
+        }
+        let query = HKAnchoredObjectQuery(
+            type: HKObjectType.workoutType(),
+            predicate: predicate,
+            anchor: mode == "initial" ? nil : decodeAnchor(anchor),
+            limit: HKObjectQueryNoLimit
+        ) { _, samples, deletedObjects, newAnchor, error in
             if let error = error {
                 completion(.failure(error))
                 return
@@ -152,7 +289,7 @@ public class OnlyFitHealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
 
             let workouts = (samples as? [HKWorkout]) ?? []
             if workouts.isEmpty {
-                completion(.success([]))
+                completion(.success(([], (deletedObjects ?? []).map { $0.uuid.uuidString }, self.encodeAnchor(newAnchor))))
                 return
             }
 
@@ -168,10 +305,68 @@ public class OnlyFitHealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
             }
 
             group.notify(queue: .global(qos: .userInitiated)) {
-                completion(.success(rows.filter { !$0.isEmpty }))
+                completion(.success((
+                    rows.filter { !$0.isEmpty }.sorted {
+                        (($0["started_at"] as? String) ?? "") > (($1["started_at"] as? String) ?? "")
+                    },
+                    (deletedObjects ?? []).map { $0.uuid.uuidString },
+                    self.encodeAnchor(newAnchor)
+                )))
             }
         }
         healthStore.execute(query)
+    }
+
+    private func fetchChangedAnchors(
+        startDate: Date,
+        endDate: Date,
+        mode: String,
+        anchors: [String: String],
+        completion: @escaping ([String: String]) -> Void
+    ) {
+        let group = DispatchGroup()
+        let lock = DispatchQueue(label: "app.onlyfit.healthkit.anchors")
+        var nextAnchors: [String: String] = [:]
+
+        for pair in readTypePairs() where pair.key != "workouts" {
+            group.enter()
+            let predicate: NSPredicate?
+            if mode == "initial" {
+                predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [.strictStartDate])
+            } else {
+                predicate = nil
+            }
+            let query = HKAnchoredObjectQuery(
+                type: pair.type,
+                predicate: predicate,
+                anchor: mode == "initial" ? nil : decodeAnchor(anchors[pair.key]),
+                limit: HKObjectQueryNoLimit
+            ) { _, _, _, newAnchor, _ in
+                if let encoded = self.encodeAnchor(newAnchor) {
+                    lock.sync { nextAnchors[pair.key] = encoded }
+                }
+                group.leave()
+            }
+            healthStore.execute(query)
+        }
+
+        group.notify(queue: .global(qos: .userInitiated)) {
+            completion(nextAnchors)
+        }
+    }
+
+    private func receivedDataTypes(activities: [[String: Any]], dailySummaries: [[String: Any]]) -> Set<String> {
+        var received = Set<String>()
+        if !activities.isEmpty { received.insert("workouts") }
+        for summary in dailySummaries {
+            if summary["steps"] != nil { received.insert("steps") }
+            if summary["active_kcal"] != nil { received.insert("active_energy") }
+            if summary["avg_hr"] != nil || summary["max_hr"] != nil { received.insert("heart_rate") }
+            if summary["resting_hr"] != nil { received.insert("resting_heart_rate") }
+            if summary["hrv_rmssd"] != nil { received.insert("hrv") }
+            if summary["sleep_minutes"] != nil { received.insert("sleep") }
+        }
+        return received
     }
 
     private func mapWorkout(_ workout: HKWorkout, heartRate: (avg: Double?, max: Double?)) -> [String: Any] {

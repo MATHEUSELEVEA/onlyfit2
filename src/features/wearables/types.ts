@@ -36,6 +36,12 @@ export interface AppleHealthSyncResult {
   daily_summaries: AppleHealthDailySummaryInput[];
   anchors?: Record<string, string>;
   deleted_provider_activity_ids?: string[];
+  permission_status?: {
+    status: 'granted' | 'partial' | 'denied' | 'unknown';
+    denied?: string[];
+    empty_data_types?: string[];
+    read_authorization_inspectable?: boolean;
+  };
 }
 
 export interface AppleHealthIngestPayload extends AppleHealthSyncResult {
@@ -50,6 +56,7 @@ export interface AppleHealthIngestPayload extends AppleHealthSyncResult {
     ended_at: string;
     anchors?: Record<string, string>;
   };
+  permission_status?: AppleHealthSyncResult['permission_status'];
 }
 
 export interface WearableActivity {

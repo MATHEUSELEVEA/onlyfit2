@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from '@/i18n/I18nProvider';
@@ -40,8 +41,17 @@ type DailySummaryRow = {
   } | null;
 };
 
+type WearableSyncStateRow = {
+  data_type: string;
+  last_anchor: string | null;
+};
+
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || 'mobile-web';
 const QUEUE_KEY = 'onlyfit.apple_health.ingest_queue.v1';
+
+function canPersistOfflineQueue() {
+  return !Capacitor.isNativePlatform();
+}
 
 function randomId() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
@@ -112,6 +122,7 @@ function toWearableActivity(row: ExternalActivityRow): WearableActivity {
 }
 
 function readQueuedPayloads(): AppleHealthIngestPayload[] {
+  if (!canPersistOfflineQueue()) return [];
   try {
     const raw = globalThis.localStorage?.getItem(QUEUE_KEY);
     return raw ? JSON.parse(raw) as AppleHealthIngestPayload[] : [];
@@ -121,6 +132,7 @@ function readQueuedPayloads(): AppleHealthIngestPayload[] {
 }
 
 function writeQueuedPayloads(payloads: AppleHealthIngestPayload[]) {
+  if (!canPersistOfflineQueue()) return;
   try {
     globalThis.localStorage?.setItem(QUEUE_KEY, JSON.stringify(payloads.slice(-10)));
   } catch {
@@ -134,6 +146,7 @@ export function useAppleHealth() {
   const queryClient = useQueryClient();
   const userId = session?.user.id;
   const didAutoSync = useRef(false);
+  const backgroundSyncTimer = useRef<number | null>(null);
   const [shareWithCoach, setShareWithCoach] = useState(true);
   const [lastSyncMessage, setLastSyncMessage] = useState<string | null>(null);
 
@@ -190,6 +203,22 @@ export function useAppleHealth() {
     },
   });
 
+  const syncState = useQuery({
+    queryKey: ['apple-health', 'sync-state', userId],
+    enabled: !!userId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('wearable_sync_state')
+        .select('data_type,last_anchor')
+        .eq('provider', 'healthkit');
+      if (error) throw error;
+      return ((data ?? []) as WearableSyncStateRow[]).reduce<Record<string, string>>((anchors, row) => {
+        if (row.data_type && row.last_anchor) anchors[row.data_type] = row.last_anchor;
+        return anchors;
+      }, {});
+    },
+  });
+
   const ingest = useCallback(async (mode: AppleHealthIngestPayload['sync']['mode'], result: AppleHealthSyncResult) => {
     const now = new Date().toISOString();
     const payload: AppleHealthIngestPayload = {
@@ -204,6 +233,7 @@ export function useAppleHealth() {
         ended_at: new Date().toISOString(),
         anchors: result.anchors,
       },
+      permission_status: result.permission_status,
       activities: result.activities,
       daily_summaries: result.daily_summaries,
       deleted_provider_activity_ids: result.deleted_provider_activity_ids,
@@ -218,7 +248,7 @@ export function useAppleHealth() {
       if (!data?.success) throw new Error(data?.error || t('health.apple.ingestError'));
       return data;
     } catch (error) {
-      if (!globalThis.navigator?.onLine) {
+      if (!globalThis.navigator?.onLine && canPersistOfflineQueue()) {
         writeQueuedPayloads([...readQueuedPayloads(), payload]);
         setLastSyncMessage(t('health.apple.offlineQueued'));
       }
@@ -241,6 +271,7 @@ export function useAppleHealth() {
         queryClient.invalidateQueries({ queryKey: ['apple-health', 'connection', userId] }),
         queryClient.invalidateQueries({ queryKey: ['apple-health', 'activities', userId] }),
         queryClient.invalidateQueries({ queryKey: ['apple-health', 'daily-summaries', userId] }),
+        queryClient.invalidateQueries({ queryKey: ['apple-health', 'sync-state', userId] }),
       ]);
     }
   }, [queryClient, t, userId]);
@@ -254,8 +285,11 @@ export function useAppleHealth() {
       if (!permission.granted) throw new Error(t('health.apple.permissionDenied'));
       const result = mode === 'initial'
         ? await OnlyFitHealthKit.syncInitial({ days: 90 })
-        : await OnlyFitHealthKit.syncDelta({});
+        : await OnlyFitHealthKit.syncDelta({ anchors: syncState.data ?? {} });
       const response = await ingest(mode, result);
+      if (mode === 'initial') {
+        await OnlyFitHealthKit.startBackgroundDelivery();
+      }
       const count = response.counts?.inserted ?? 0;
       const updated = response.counts?.updated ?? 0;
       setLastSyncMessage(t('health.apple.syncResult', { inserted: count, updated }));
@@ -266,6 +300,7 @@ export function useAppleHealth() {
         queryClient.invalidateQueries({ queryKey: ['apple-health', 'connection', userId] }),
         queryClient.invalidateQueries({ queryKey: ['apple-health', 'activities', userId] }),
         queryClient.invalidateQueries({ queryKey: ['apple-health', 'daily-summaries', userId] }),
+        queryClient.invalidateQueries({ queryKey: ['apple-health', 'sync-state', userId] }),
       ]);
     },
   });
@@ -298,9 +333,43 @@ export function useAppleHealth() {
   }, [availability.data?.available, connection.data?.status, sync, userId]);
 
   useEffect(() => {
-    void flushQueue();
+    if (!userId || !availability.data?.available || connection.data?.status !== 'connected') return undefined;
+    let removed = false;
+    let handle: { remove: () => Promise<void> } | null = null;
+
+    void OnlyFitHealthKit.startBackgroundDelivery();
+    void OnlyFitHealthKit.addListener('healthKitChanged', () => {
+      if (removed || sync.isPending) return;
+      if (backgroundSyncTimer.current) window.clearTimeout(backgroundSyncTimer.current);
+      backgroundSyncTimer.current = window.setTimeout(() => {
+        backgroundSyncTimer.current = null;
+        sync.mutate('manual');
+      }, 3000);
+    }).then((listener) => {
+      handle = listener;
+    });
+
+    return () => {
+      removed = true;
+      if (backgroundSyncTimer.current) {
+        window.clearTimeout(backgroundSyncTimer.current);
+        backgroundSyncTimer.current = null;
+      }
+      void handle?.remove();
+    };
+  }, [availability.data?.available, connection.data?.status, sync, userId]);
+
+  useEffect(() => {
+    if (!canPersistOfflineQueue()) {
+      globalThis.localStorage?.removeItem(QUEUE_KEY);
+      return undefined;
+    }
+    const initialFlush = window.setTimeout(() => void flushQueue(), 0);
     globalThis.addEventListener?.('online', flushQueue);
-    return () => globalThis.removeEventListener?.('online', flushQueue);
+    return () => {
+      window.clearTimeout(initialFlush);
+      globalThis.removeEventListener?.('online', flushQueue);
+    };
   }, [flushQueue]);
 
   const progress = useMemo(() => {
@@ -326,6 +395,6 @@ export function useAppleHealth() {
     sync,
     disconnect,
     lastSyncMessage,
-    isLoading: availability.isLoading || connection.isLoading || activities.isLoading,
+    isLoading: availability.isLoading || connection.isLoading || activities.isLoading || syncState.isLoading,
   };
 }
