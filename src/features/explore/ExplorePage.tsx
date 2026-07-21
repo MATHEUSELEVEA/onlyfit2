@@ -427,10 +427,6 @@ function ContentGrid({ items }: { items: ExploreContentItem[] }) {
 }
 
 function CommunityTile({ community }: { community: ExploreCommunity }) {
-  const to = community.creatorUsername
-    ? `/creator/${encodeURIComponent(community.creatorUsername)}`
-    : null;
-
   const inner = (
     <>
       <div className="relative flex aspect-[4/3] w-full items-center justify-center overflow-hidden bg-gradient-to-br from-surface-container-high to-surface-container text-on-surface-variant">
@@ -453,14 +449,13 @@ function CommunityTile({ community }: { community: ExploreCommunity }) {
       </div>
     </>
   );
-  const className =
-    'group flex flex-col overflow-hidden rounded-2xl border border-outline-variant/25 bg-surface-container-lowest';
-  return to ? (
-    <Link to={to} className={className}>
+  return (
+    <Link
+      to={`/comunidades/${community.id}`}
+      className="group flex flex-col overflow-hidden rounded-2xl border border-outline-variant/25 bg-surface-container-lowest"
+    >
       {inner}
     </Link>
-  ) : (
-    <div className={className}>{inner}</div>
   );
 }
 

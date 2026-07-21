@@ -52,8 +52,9 @@ export function CommunityPage() {
   const [tab, setTab] = useState<Tab>('forum');
 
   const isOwner = membership === 'owner';
-  const canSeeContent =
-    isOwner || membership === 'member' || (community?.visibility === 'public' && membership !== 'banned');
+  // Só dono/membro veem o conteúdo interno — quem só está espiando (mesmo em
+  // comunidade pública) vê apenas o header + o gate, nunca fórum/avisos/membros.
+  const canSeeContent = isOwner || membership === 'member';
 
   const { data: joinRequests = [] } = useJoinRequests(communityId, isOwner);
   const deleteMutation = useDeleteCommunity(communityId ?? '');
@@ -96,6 +97,7 @@ export function CommunityPage() {
 
       <main className="mx-auto w-full max-w-[640px] px-4 pb-8 pt-4">
         <CommunityHeader community={community} membership={membership} userId={userId} />
+        <OwnerCard owner={community.owner ?? null} />
 
         {isOwner && (
           <div className="mt-3 flex gap-2">
@@ -153,7 +155,7 @@ export function CommunityPage() {
           ) : tab === 'requests' && isOwner ? (
             <RequestsTab communityId={community.id} />
           ) : !canSeeContent ? (
-            <PrivateGate membership={membership} />
+            <MemberGate membership={membership} />
           ) : tab === 'forum' ? (
             <ForumTab community={community} userId={userId} isOwner={isOwner} isMemberOrOwner={isOwner || membership === 'member'} />
           ) : tab === 'announcements' ? (
@@ -254,7 +256,36 @@ function CommunityHeader({
   );
 }
 
-function PrivateGate({ membership }: { membership: MembershipStatus }) {
+/** Perfil resumido do dono da comunidade — visível para quem só está espiando ou já é membro. */
+function OwnerCard({ owner }: { owner: MemberProfile | null }) {
+  const { t } = useTranslation();
+  if (!owner) return null;
+  const name = owner.full_name || owner.username || t('communities.memberFallback');
+
+  const content = (
+    <>
+      <MemberAvatar profile={owner} />
+      <div className="min-w-0 flex-1">
+        <p className="font-sans text-counter text-on-surface-variant">{t('communities.createdBy')}</p>
+        <p className="truncate font-sans text-body font-medium text-on-surface">{name}</p>
+      </div>
+      {owner.username && <ChevronRight size={18} className="shrink-0 text-on-surface-variant" aria-hidden />}
+    </>
+  );
+  const className =
+    'mt-3 flex items-center gap-3 rounded-2xl bg-surface-container px-4 py-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary';
+
+  return owner.username ? (
+    <Link to={`/creator/${encodeURIComponent(owner.username)}`} className={clsx(className, 'hover:bg-surface-container-high')}>
+      {content}
+    </Link>
+  ) : (
+    <div className={className}>{content}</div>
+  );
+}
+
+/** Gate para quem não é dono/membro — comunidade pública ou privada, sempre esconde o conteúdo interno. */
+function MemberGate({ membership }: { membership: MembershipStatus }) {
   const { t } = useTranslation();
   return (
     <div className="flex items-start gap-3 rounded-2xl bg-surface-container px-4 py-5">
