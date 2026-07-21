@@ -165,6 +165,7 @@ export function useAppleHealth() {
       const { data, error } = await supabase
         .from('health_connections')
         .select('status,last_sync_at,last_error,metadata')
+        .eq('user_id', userId!)
         .eq('provider', 'healthkit')
         .maybeSingle();
       if (error) throw error;
@@ -177,10 +178,13 @@ export function useAppleHealth() {
   const activities = useQuery({
     queryKey: ['apple-health', 'activities', userId],
     enabled: !!userId,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('external_activities')
         .select('id,provider_activity_id,sport,title,started_at,duration_s,distance_m,elevation_gain_m,avg_hr,calories,source_payload')
+        .eq('user_id', userId!)
         .eq('provider', 'healthkit')
         .is('deleted_at', null)
         .order('started_at', { ascending: false })
@@ -193,10 +197,13 @@ export function useAppleHealth() {
   const dailySummaries = useQuery({
     queryKey: ['apple-health', 'daily-summaries', userId],
     enabled: !!userId,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('wearable_samples_agg')
         .select('date,metrics')
+        .eq('user_id', userId!)
         .eq('provider', 'healthkit')
         .order('date', { ascending: false })
         .limit(30);
@@ -212,6 +219,7 @@ export function useAppleHealth() {
       const { data, error } = await supabase
         .from('wearable_sync_state')
         .select('data_type,last_anchor')
+        .eq('user_id', userId!)
         .eq('provider', 'healthkit');
       if (error) throw error;
       return ((data ?? []) as WearableSyncStateRow[]).reduce<Record<string, string>>((anchors, row) => {
@@ -388,19 +396,27 @@ export function useAppleHealth() {
     return { steps, activeKcal, avgSleepMinutes };
   }, [dailySummaries.data]);
 
+  const refetch = useCallback(async () => {
+    await Promise.all([connection.refetch(), activities.refetch(), dailySummaries.refetch(), syncState.refetch()]);
+  }, [activities, connection, dailySummaries, syncState]);
+
   return {
     available: availability.data?.available ?? false,
     availabilityReason: availability.data?.reason,
     isNativeIos: isNativeIos(),
     connection: connection.data,
+    connectionError: connection.error,
     importedActivities: activities.data ?? [],
     dailySummaries: dailySummaries.data ?? [],
+    activitiesError: activities.error,
+    dailySummariesError: dailySummaries.error,
     progress,
     shareWithCoach,
     setShareWithCoach,
     sync,
     disconnect,
+    refetch,
     lastSyncMessage,
-    isLoading: availability.isLoading || connection.isLoading || activities.isLoading || syncState.isLoading,
+    isLoading: availability.isLoading || connection.isLoading || activities.isLoading || dailySummaries.isLoading || syncState.isLoading,
   };
 }

@@ -23,6 +23,8 @@ const pt = {
   'health.apple.unavailable': 'Apple Health indisponível neste dispositivo.',
   'health.apple.permissionDenied': 'Permissão do Apple Health não concedida.',
   'health.apple.noDataReturned': 'Nenhum dado do Apple Health foi encontrado com as permissões atuais. Abra Saúde > Compartilhamento > Apps > OnlyFit e confirme os dados liberados.',
+  'health.apple.noImportedActivities': 'A sincronização foi concluída, mas nenhum treino importado está disponível para esta conta.',
+  'health.apple.historyLoadError': 'Não foi possível carregar o histórico importado. Tente novamente.',
 
   'explore.ambassadors.fallback': 'OnlyFit',
   'explore.loadError': 'Não foi possível carregar o Explorar.',
@@ -1268,6 +1270,8 @@ const en: Record<keyof typeof pt, string> = {
   'health.apple.unavailable': 'Apple Health is unavailable on this device.',
   'health.apple.permissionDenied': 'Apple Health permission was not granted.',
   'health.apple.noDataReturned': 'No Apple Health data was found with the current permissions. Open Health > Sharing > Apps > OnlyFit and confirm the allowed data.',
+  'health.apple.noImportedActivities': 'Sync completed, but no imported workouts are available for this account.',
+  'health.apple.historyLoadError': 'Could not load imported history. Please try again.',
 
   'explore.ambassadors.fallback': 'OnlyFit',
   'explore.loadError': 'Could not load Explore.',

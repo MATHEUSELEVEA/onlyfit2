@@ -534,9 +534,10 @@ function AppleHealthCard({ appleHealth, compact }: { appleHealth: AppleHealthSta
   const hasImportedData = appleHealth.importedActivities.length > 0 || appleHealth.dailySummaries.length > 0;
   const hasCompletedSync = Boolean(appleHealth.connection?.last_sync_at) || hasImportedData;
   const connected = appleHealth.connection?.status === 'connected' && hasCompletedSync;
+  const hasQueryError = appleHealth.connectionError || appleHealth.activitiesError || appleHealth.dailySummariesError;
   const waitingForNativeState = appleHealth.isNativeIos && appleHealth.isLoading && !appleHealth.connection;
   const unavailable = !appleHealth.available && !appleHealth.isLoading;
-  if (!connected && !waitingForNativeState && !appleHealth.isNativeIos) return null;
+  if (!connected && !waitingForNativeState && !appleHealth.isNativeIos && !hasQueryError) return null;
   const syncing = appleHealth.sync.isPending;
   const lastSync = appleHealth.connection?.last_sync_at
     ? new Date(appleHealth.connection.last_sync_at).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -600,6 +601,13 @@ function AppleHealthCard({ appleHealth, compact }: { appleHealth: AppleHealthSta
           ) : null}
 
           {appleHealth.lastSyncMessage ? <p className="mt-3 font-sans text-counter text-primary">{appleHealth.lastSyncMessage}</p> : null}
+          {connected && !appleHealth.isLoading && !hasImportedData && !hasQueryError ? <p className="mt-3 font-sans text-body-sm text-on-surface-variant">{t('health.apple.noImportedActivities')}</p> : null}
+          {hasQueryError ? (
+            <div className="mt-3 flex items-center gap-3">
+              <p className="font-sans text-body-sm text-error">{t('health.apple.historyLoadError')}</p>
+              <button type="button" onClick={() => void appleHealth.refetch()} className="shrink-0 font-sans text-counter font-semibold text-primary">{t('common.retry')}</button>
+            </div>
+          ) : null}
           {error ? <p className="mt-3 font-sans text-body-sm text-error">{error}</p> : null}
         </div>
       </div>
