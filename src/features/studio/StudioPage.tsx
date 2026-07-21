@@ -17,7 +17,7 @@ type Step = 'camera' | 'pick' | 'details';
 // com edição, filtros, música e melhorias por IA sem mexer no resto do app.
 export function StudioPage() {
   const navigate = useNavigate();
-  const { data: profile } = useMyProfile();
+  const { data: profile, isLoading: profileLoading } = useMyProfile();
   const publishStory = usePublishStory();
   // Só Profissional publica para assinantes; Membro só publica conteúdo público.
   const isProfessional = profile?.isProfessional ?? false;
@@ -122,8 +122,8 @@ export function StudioPage() {
     setSports((prev) => (prev.includes(key) ? prev.filter((s) => s !== key) : [...prev, key]));
   };
 
-  const publish = () => {
-    if (!profile) return;
+  const publish = (): boolean => {
+    if (!profile || media.length === 0) return false;
     publishedRef.current = true;
     // enqueuePublish insere o post otimista no feed e sobe a mídia em
     // background — não espera nada, então a navegação é imediata (o post
@@ -134,6 +134,7 @@ export function StudioPage() {
       profile,
     );
     navigate('/feed', { replace: true });
+    return true;
   };
 
   const close = () => {
@@ -193,6 +194,7 @@ export function StudioPage() {
             visibility={visibility}
             onVisibilityChange={setVisibility}
             canPublishToMembers={isProfessional}
+            canPublish={Boolean(profile) && !profileLoading && media.length > 0}
             onPublish={publish}
           />
         )}

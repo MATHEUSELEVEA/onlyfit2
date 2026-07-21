@@ -13,7 +13,8 @@ interface DetailsStepProps {
   visibility: PostVisibility;
   onVisibilityChange: (value: PostVisibility) => void;
   canPublishToMembers: boolean;
-  onPublish: () => void;
+  canPublish: boolean;
+  onPublish: () => boolean;
 }
 
 const VISIBILITY_OPTIONS: { value: PostVisibility; label: string; icon: typeof Globe }[] = [
@@ -29,12 +30,13 @@ export function DetailsStep({
   visibility,
   onVisibilityChange,
   canPublishToMembers,
+  canPublish,
   onPublish,
 }: DetailsStepProps) {
   const { groups } = useAffinityGroups();
-  // A publicação em si (enqueuePublish) é instantânea e não bloqueia — este
-  // estado só evita um duplo-tap disparar dois posts antes de a navegação
-  // para o feed (StudioPage.publish) desmontar esta tela.
+  // A fila de publicação roda fora da tela, mas o botão só fica consumido
+  // depois que o enfileiramento realmente foi aceito. Assim, um perfil ainda
+  // carregando nunca deixa a tela travada em estado enviado.
   const [submitted, setSubmitted] = useState(false);
 
   return (
@@ -98,10 +100,9 @@ export function DetailsStep({
           type="button"
           onClick={() => {
             if (submitted) return;
-            setSubmitted(true);
-            onPublish();
+            if (onPublish()) setSubmitted(true);
           }}
-          disabled={submitted}
+          disabled={submitted || !canPublish}
           className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary font-sans text-label text-on-primary transition-opacity active:opacity-90 disabled:opacity-60"
         >
           Publicar

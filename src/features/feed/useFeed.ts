@@ -225,35 +225,6 @@ export function restorePostCaches(queryClient: QueryClient, snapshot: PostCacheS
   snapshot.forEach(([key, data]) => queryClient.setQueryData(key, data));
 }
 
-// Insere um post otimista (ver features/studio/publishQueue.ts) no topo da
-// primeira página já montada do feed — diferente de updatePostCaches, aqui o
-// post ainda não existe no banco, só no cache local, enquanto o upload+RPC
-// roda em background.
-export function insertOptimisticPost(queryClient: QueryClient, post: FeedPost) {
-  queryClient.setQueriesData<InfiniteData<FeedPage>>({ queryKey: ['feed'] }, (cache) => {
-    if (!cache || cache.pages.length === 0) return cache;
-    const [firstPage, ...rest] = cache.pages;
-    return { ...cache, pages: [{ ...firstPage, posts: [post, ...firstPage.posts] }, ...rest] };
-  });
-}
-
-// Remove um post otimista do cache — no sucesso definitivo do job (o refetch
-// de ['feed'] traz o post real) ou quando o usuário descarta um post que
-// falhou (dismissPublishError).
-export function removeOptimisticPost(queryClient: QueryClient, postId: string) {
-  queryClient.setQueriesData<InfiniteData<FeedPage>>({ queryKey: ['feed'] }, (cache) =>
-    cache
-      ? {
-          ...cache,
-          pages: cache.pages.map((page) => ({
-            ...page,
-            posts: page.posts.filter((post) => post.id !== postId),
-          })),
-        }
-      : cache,
-  );
-}
-
 // O feed é paginado, então o cache é { pages: [{ posts }] } e não uma lista
 // chapada de posts: quem mexe num post tem que descer até page.posts.
 export function updatePostCaches(
