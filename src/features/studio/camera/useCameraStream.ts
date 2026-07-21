@@ -36,13 +36,19 @@ export function useCameraStream(facing: CameraFacing) {
       .then(() => {
         setState((prev) => ({ ...prev, loading: true, error: null }));
         return navigator.mediaDevices.getUserMedia({
+          // Full HD vertical (9:16) para qualidade top: 1080×1920 ideal, com
+          // degradação graciosa em aparelhos que não suportam (ideal, não exact).
           video: {
             facingMode: { ideal: facing },
-            width: { ideal: 720 },
-            height: { ideal: 1280 },
-            frameRate: { ideal: 30, max: 30 },
+            width: { ideal: 1080 },
+            height: { ideal: 1920 },
+            frameRate: { ideal: 30, max: 60 },
           },
-          audio: true,
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
         });
       })
       .then((stream) => {
