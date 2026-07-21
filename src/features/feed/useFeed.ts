@@ -13,6 +13,7 @@ import type { FeedMedia, FeedPost } from './types';
 const PAGE_SIZE = 10;
 
 const POST_SELECT = `id, creator_id, title, description, is_premium, thumbnail_url, video_url,
+   stream_status, stream_playback_url,
    likes, comments, published_at, metadata,
    profiles:creator_id!inner (
      username, full_name, avatar_url,
@@ -28,6 +29,8 @@ interface PostRow {
   is_premium: boolean;
   thumbnail_url: string | null;
   video_url: string | null;
+  stream_status: string | null;
+  stream_playback_url: string | null;
   likes: number | null;
   comments: number | null;
   published_at: string;
@@ -77,7 +80,8 @@ async function fetchPostMedia(postIds: string[]): Promise<Map<string, FeedMedia[
 // thumbnail_url (video_url null), como o Studio do v1 grava.
 function singleMedia(row: PostRow): FeedMedia[] {
   if (row.video_url) {
-    return [{ kind: 'video', url: row.video_url, thumbnailUrl: row.thumbnail_url }];
+    const hlsUrl = row.stream_status === 'ready' ? row.stream_playback_url : null;
+    return [{ kind: 'video', url: row.video_url, thumbnailUrl: row.thumbnail_url, hlsUrl }];
   }
   if (row.thumbnail_url) {
     return [{ kind: 'image', url: row.thumbnail_url, thumbnailUrl: null }];

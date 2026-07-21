@@ -160,6 +160,13 @@ export async function runCreatePost(
   });
   if (postError) throw postError;
 
+  // Normaliza a orientação do vídeo no Cloudflare Stream em segundo plano
+  // (corrige verticais "deitados"). O feed toca o R2 cru até o HLS ficar
+  // pronto; uma falha aqui não impede a publicação.
+  if (cover.kind === 'video') {
+    void supabase.functions.invoke('cloudflare-stream-ingest', { body: { post_id: String(postId) } }).catch(() => {});
+  }
+
   return String(postId);
 }
 

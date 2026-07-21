@@ -39,6 +39,12 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
   const [buffering, setBuffering] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const muted = useVideoMuted();
+  const activeRef = useRef(active);
+  const mutedRef = useRef(muted);
+  useEffect(() => {
+    activeRef.current = active;
+    mutedRef.current = muted;
+  });
 
   const applyFit = useCallback((mediaAspect?: number) => {
     if (mediaAspect) aspectRef.current = mediaAspect;
@@ -72,6 +78,50 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
       void video.play().catch(() => {});
     });
   }, [active, muted]);
+
+  // Fonte do vídeo: prefere o HLS normalizado do Cloudflare Stream (orientação
+  // já em pé). iOS/Safari tocam HLS nativo (src direto); demais navegadores
+  // carregam hls.js sob demanda. Sem HLS pronto, cai no arquivo cru do R2.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || media.kind !== 'video') return;
+    const raw = media.url;
+    const hlsUrl = media.hlsUrl ?? null;
+    const play = () => {
+      if (!activeRef.current) return;
+      video.muted = mutedRef.current;
+      void video.play().catch(() => {
+        video.muted = true;
+        muteAfterAutoplayBlock();
+        void video.play().catch(() => {});
+      });
+    };
+    if (!hlsUrl || video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = hlsUrl ?? raw;
+      return;
+    }
+    let destroyed = false;
+    let hls: import('hls.js').default | null = null;
+    void import('hls.js')
+      .then(({ default: Hls }) => {
+        if (destroyed) return;
+        if (Hls.isSupported()) {
+          hls = new Hls({ enableWorker: true });
+          hls.on(Hls.Events.MANIFEST_PARSED, play);
+          hls.loadSource(hlsUrl);
+          hls.attachMedia(video);
+        } else {
+          video.src = raw;
+        }
+      })
+      .catch(() => {
+        if (!destroyed) video.src = raw;
+      });
+    return () => {
+      destroyed = true;
+      if (hls) hls.destroy();
+    };
+  }, [media.kind, media.url, media.hlsUrl]);
 
   const seek = (seconds: number) => {
     const video = videoRef.current;
@@ -113,7 +163,6 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
       {media.kind === 'video' ? (
         <video
           ref={videoRef}
-          src={media.url}
           poster={media.thumbnailUrl ?? undefined}
           className={mediaClass}
           loop
