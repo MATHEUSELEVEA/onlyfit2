@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Images, RotateCcw, X } from 'lucide-react';
+import { Images, Loader2, RotateCcw, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { CameraModeSwitcher } from './CameraModeSwitcher';
 import { useCameraStream, type CameraFacing } from './useCameraStream';
@@ -13,9 +13,14 @@ interface CameraStepProps {
   onCapturedVideo: (draft: DraftMedia) => void;
   onGalleryFiles: (files: FileList) => void;
   onClose: () => void;
+  // Estado da publicação de story (modo Stories publica direto, sem passar
+  // pela tela de detalhes — ver StudioPage). Enquanto sobe, a tela fica
+  // bloqueada; se falha, mostra a opção de tentar de novo/descartar.
+  storyPublishing?: boolean;
+  storyError?: string | null;
+  onRetryStory?: () => void;
+  onDismissStoryError?: () => void;
 }
-
-const STORIES_NOTICE_MS = 2200;
 
 function capturePhotoBlob(video: HTMLVideoElement): Promise<Blob | null> {
   return new Promise((resolve) => {
@@ -54,14 +59,16 @@ export function CameraStep({
   onCapturedVideo,
   onGalleryFiles,
   onClose,
+  storyPublishing = false,
+  storyError = null,
+  onRetryStory,
+  onDismissStoryError,
 }: CameraStepProps) {
   const [facing, setFacing] = useState<CameraFacing>('environment');
   const { stream, error, retry } = useCameraStream(facing);
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [capturingPhoto, setCapturingPhoto] = useState(false);
-  const [showStoriesNotice, setShowStoriesNotice] = useState(false);
-  const storiesNoticeTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -80,6 +87,8 @@ export function CameraStep({
   });
 
   const handleShutterTap = async () => {
+    if (storyPublishing) return;
+
     if (mode === 'photo') {
       if (!videoRef.current || capturingPhoto) return;
       setCapturingPhoto(true);
@@ -91,26 +100,14 @@ export function CameraStep({
       return;
     }
 
+    // Vídeo e Stories gravam do mesmo jeito (Stories é vídeo com validade de
+    // 24h); o que muda é o destino da mídia, decidido no StudioPage pelo modo.
     if (isRecording) {
       stopRecording();
       return;
     }
-    if (mode === 'video') {
-      void startRecording();
-      return;
-    }
-    // Stories: a publicação de verdade chega num PR seguinte (schema, RLS e
-    // expiração de 24h ainda não existem) — aqui só sinaliza a intenção.
-    setShowStoriesNotice(true);
-    if (storiesNoticeTimerRef.current) window.clearTimeout(storiesNoticeTimerRef.current);
-    storiesNoticeTimerRef.current = window.setTimeout(() => setShowStoriesNotice(false), STORIES_NOTICE_MS);
+    void startRecording();
   };
-
-  useEffect(() => {
-    return () => {
-      if (storiesNoticeTimerRef.current) window.clearTimeout(storiesNoticeTimerRef.current);
-    };
-  }, []);
 
   return (
     <div className="relative flex h-full flex-col bg-black">
@@ -125,6 +122,38 @@ export function CameraStep({
           e.target.value = '';
         }}
       />
+
+      {/* Modo Stories publica direto (sem tela de detalhes): enquanto sobe, a
+          tela toda fica bloqueada; um erro deixa tentar de novo ou descartar. */}
+      {storyPublishing && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-black/75">
+          <Loader2 size={32} className="animate-spin text-white" aria-hidden />
+          <span className="font-sans text-label text-white">Publicando story…</span>
+        </div>
+      )}
+
+      {storyError && !storyPublishing && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-4 bg-black/80 px-8 text-center">
+          <p className="font-sans text-title text-white">Não foi possível publicar o story</p>
+          <p className="text-body-sm text-white/70">{storyError}</p>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onDismissStoryError}
+              className="min-h-[44px] rounded-full bg-white/15 px-6 font-sans text-label text-white"
+            >
+              Descartar
+            </button>
+            <button
+              type="button"
+              onClick={onRetryStory}
+              className="min-h-[44px] rounded-full bg-white px-6 font-sans text-label text-black"
+            >
+              Tentar de novo
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="relative min-h-0 flex-1 overflow-hidden">
         {stream && (
@@ -196,11 +225,6 @@ export function CameraStep({
       </div>
 
       <div className="flex flex-col items-center gap-5 bg-black pb-safe-bottom pt-4">
-        {showStoriesNotice && (
-          <p className="rounded-full bg-white/10 px-4 py-1.5 font-sans text-body-sm text-white">
-            Stories chega em breve
-          </p>
-        )}
         <CameraModeSwitcher mode={mode} onChange={onModeChange} />
 
         <div className="flex w-full items-center justify-center gap-10 px-8 pb-4">

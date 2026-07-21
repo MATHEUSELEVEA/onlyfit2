@@ -12,10 +12,9 @@ const MODES: { value: CaptureMode; label: string }[] = [
   { value: 'stories', label: 'Stories' },
 ];
 
-// Seletor de modo estilo Instagram. A pill "Stories" já fica selecionável
-// neste PR (entrega a UI completa do pedido), mas o efeito de capturar nesse
-// modo ainda é só um aviso — CameraStep.onStoriesCaptureAttempt — até a
-// publicação real de Stories entrar num PR seguinte.
+// Seletor de modo estilo Instagram (POST/STORY na referência). Cada modo muda
+// o destino da captura no StudioPage: Foto/Vídeo entram no fluxo de post
+// (revisão → detalhes → publicar); Stories publica direto como conteúdo de 24h.
 export function CameraModeSwitcher({ mode, onChange }: CameraModeSwitcherProps) {
   return (
     <div role="tablist" aria-label="Modo de captura" className="flex items-center justify-center gap-6">

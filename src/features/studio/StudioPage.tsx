@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, X } from 'lucide-react';
 import { CameraStep } from './camera/CameraStep';
-import { createDraftMedia, moveItem, type CaptureMode, type DraftMedia } from './media';
+import { createDraftMedia, inferMediaKind, moveItem, type CaptureMode, type DraftMedia, type MediaKind } from './media';
 import { enqueuePublish } from './publishQueue';
 import type { PostVisibility } from './useCreatePost';
+import { usePublishStory } from '@/features/stories/usePublishStory';
 import { useMyProfile } from '@/features/profile/useMyProfile';
 import { PickMediaStep } from './steps/PickMediaStep';
 import { DetailsStep } from './steps/DetailsStep';
@@ -17,6 +18,7 @@ type Step = 'camera' | 'pick' | 'details';
 export function StudioPage() {
   const navigate = useNavigate();
   const { data: profile } = useMyProfile();
+  const publishStory = usePublishStory();
   // Só Profissional publica para assinantes; Membro só publica conteúdo público.
   const isProfessional = profile?.isProfessional ?? false;
 
@@ -26,6 +28,9 @@ export function StudioPage() {
   const [caption, setCaption] = useState('');
   const [sports, setSports] = useState<string[]>([]);
   const [visibility, setVisibility] = useState<PostVisibility>('public');
+  // Última mídia de story capturada/escolhida, guardada só para o "tentar de
+  // novo" reenviar o mesmo arquivo se o upload falhar.
+  const [pendingStory, setPendingStory] = useState<{ file: File; kind: MediaKind } | null>(null);
 
   // Guarda se a publicação já foi enfileirada — nesse caso os object URLs dos
   // previews continuam em uso pelo post otimista no feed, e a revogação
@@ -54,9 +59,51 @@ export function StudioPage() {
     setStep('pick');
   };
 
-  const addGalleryFiles = (files: FileList) => {
+  // Publica um story direto (a partir da câmera ou da galeria, no modo
+  // Stories): sobe a mídia e cria o story no banco, depois volta ao feed —
+  // onde o story aparece como mais um item, com o relógio de 24h. Story é
+  // sempre público neste fluxo rápido (sem tela de opções, como no Instagram).
+  const submitStory = (input: { file: File; kind: MediaKind }) => {
+    setPendingStory(input);
+    publishStory.mutate(
+      { file: input.file, kind: input.kind, visibility: 'public' },
+      {
+        onSuccess: () => {
+          setPendingStory(null);
+          navigate('/feed', { replace: true });
+        },
+      },
+    );
+  };
+
+  const handleCameraCapture = (draft: DraftMedia) => {
+    if (captureMode === 'stories') {
+      // O story não usa o previewUrl do draft (publica direto), então revoga já.
+      URL.revokeObjectURL(draft.previewUrl);
+      submitStory({ file: draft.file, kind: draft.kind });
+      return;
+    }
+    addCapturedMedia(draft);
+  };
+
+  const handleGalleryFiles = (files: FileList) => {
+    if (captureMode === 'stories') {
+      const file = files[0];
+      const kind = file ? inferMediaKind(file) : null;
+      if (file && kind) submitStory({ file, kind });
+      return;
+    }
     addFiles(files);
     setStep('pick');
+  };
+
+  const retryStory = () => {
+    if (pendingStory) submitStory(pendingStory);
+  };
+
+  const dismissStoryError = () => {
+    publishStory.reset();
+    setPendingStory(null);
   };
 
   const removeMedia = (id: string) => {
@@ -100,10 +147,14 @@ export function StudioPage() {
       <CameraStep
         mode={captureMode}
         onModeChange={setCaptureMode}
-        onCapturedPhoto={addCapturedMedia}
-        onCapturedVideo={addCapturedMedia}
-        onGalleryFiles={addGalleryFiles}
+        onCapturedPhoto={handleCameraCapture}
+        onCapturedVideo={handleCameraCapture}
+        onGalleryFiles={handleGalleryFiles}
         onClose={() => navigate(-1)}
+        storyPublishing={publishStory.isPending}
+        storyError={publishStory.isError ? 'Verifique sua conexão e tente novamente.' : null}
+        onRetryStory={retryStory}
+        onDismissStoryError={dismissStoryError}
       />
     );
   }
