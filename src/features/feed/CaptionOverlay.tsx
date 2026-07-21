@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { clsx } from 'clsx';
-import { activeCue, captionContainerClass, captionTextClass, type CaptionCue, type CaptionTrack } from '@/lib/captions';
+import { captionContainerClass, captionTextClass, findCueIndex, type CaptionTrack } from '@/lib/captions';
 
-// requestVideoFrameCallback dá o tempo EXATO do frame que está na tela — a
-// forma mais precisa de sincronizar overlay com vídeo. Tipado sem `as any`.
+// requestVideoFrameCallback dá o tempo EXATO do frame na tela — o clock mais
+// preciso para sincronizar overlay com vídeo. Tipado sem `as any`.
 interface VideoFrameMetadata {
   mediaTime: number;
 }
@@ -13,34 +13,43 @@ type FrameCapableVideo = HTMLVideoElement & {
 };
 
 /**
- * Legenda autoral sincronizada com sincronia de nível de frame.
+ * Legenda autoral com sincronia de nível de frame — hardened.
  *
- * Regras de ouro (padrão dos melhores players): (1) relógio único = o próprio
- * <video> (video.currentTime / mediaTime), nunca timer de parede; (2) amostra
- * por FRAME via requestVideoFrameCallback (fallback rAF), que entrega o tempo
- * do frame exibido; (3) cobre seek com vídeo pausado via evento `seeked`;
- * (4) só re-renderiza quando a fala muda. Zero drift, zero atraso perceptível.
+ * Regras: (1) clock único = o próprio <video> (mediaTime/currentTime), nunca
+ * timer de parede; (2) amostra por FRAME via requestVideoFrameCallback (o
+ * mediaTime é o do frame exibido), fallback rAF; (3) busca da fala por cursor
+ * (O(1) no avanço normal, binária no pior caso); (4) cobre seek pausado, troca
+ * de velocidade e (re)carga via eventos; (5) reseta ao sair de tela (nada de
+ * legenda presa no carrossel); (6) rAF não gira à toa com o vídeo pausado;
+ * (7) re-renderiza só quando a fala muda.
  */
 export function CaptionOverlay({ track, videoRef, active }: { track: CaptionTrack; videoRef: RefObject<HTMLVideoElement | null>; active: boolean }) {
-  const [cue, setCue] = useState<CaptionCue | null>(null);
-  const lastKeyRef = useRef<string | null>(null);
+  const [text, setText] = useState<string | null>(null);
+  const cursorRef = useRef(0);
+  const lastIndexRef = useRef(-1);
 
   useEffect(() => {
+    // Slide fora de tela: não roda loop; a exibição é zerada pelo gate de
+    // render abaixo (sem setState síncrono no corpo do efeito).
+    if (!active) {
+      lastIndexRef.current = -1;
+      cursorRef.current = 0;
+      return;
+    }
     const video = videoRef.current as FrameCapableVideo | null;
     if (!video) return;
+
     let stopped = false;
     let rafId = 0;
     let vfcId = 0;
     const supportsVfc = typeof video.requestVideoFrameCallback === 'function';
 
-    // Aplica a cue correta para um instante do relógio do vídeo; troca o
-    // estado só quando a fala muda (evita re-render por frame).
     const apply = (time: number) => {
-      const next = activeCue(track.cues, time);
-      const key = next ? `${next.start}|${next.text}` : null;
-      if (key !== lastKeyRef.current) {
-        lastKeyRef.current = key;
-        setCue(next);
+      const index = findCueIndex(track.cues, time, cursorRef.current);
+      if (index !== -1) cursorRef.current = index;
+      if (index !== lastIndexRef.current) {
+        lastIndexRef.current = index;
+        setText(index === -1 ? null : track.cues[index].text);
       }
     };
 
@@ -51,33 +60,38 @@ export function CaptionOverlay({ track, videoRef, active }: { track: CaptionTrac
     };
     const rafLoop = () => {
       if (stopped) return;
-      apply(video.currentTime);
+      // Pausado, o frame não muda → não reamostra (o seek/ratechange cobrem).
+      if (!video.paused) apply(video.currentTime);
       rafId = requestAnimationFrame(rafLoop);
     };
 
-    // Estado inicial imediato + cobre seek/mudança com o vídeo pausado.
-    apply(video.currentTime);
-    const onSeek = () => apply(video.currentTime);
-    video.addEventListener('seeked', onSeek);
+    // Eventos que mudam o tempo sem novo frame apresentado (seek pausado,
+    // velocidade, (re)carga). Estado inicial deferido (fora do corpo do efeito).
+    const onSync = () => apply(video.currentTime);
+    video.addEventListener('seeked', onSync);
+    video.addEventListener('ratechange', onSync);
+    video.addEventListener('loadedmetadata', onSync);
+    queueMicrotask(() => {
+      if (!stopped) apply(video.currentTime);
+    });
 
-    // Só roda o loop por frame quando o slide está ativo (o vídeo só toca aí).
-    if (active) {
-      if (supportsVfc) vfcId = video.requestVideoFrameCallback!(frameLoop);
-      else rafId = requestAnimationFrame(rafLoop);
-    }
+    if (supportsVfc) vfcId = video.requestVideoFrameCallback!(frameLoop);
+    else rafId = requestAnimationFrame(rafLoop);
 
     return () => {
       stopped = true;
       if (supportsVfc && vfcId) video.cancelVideoFrameCallback?.(vfcId);
       if (rafId) cancelAnimationFrame(rafId);
-      video.removeEventListener('seeked', onSeek);
+      video.removeEventListener('seeked', onSync);
+      video.removeEventListener('ratechange', onSync);
+      video.removeEventListener('loadedmetadata', onSync);
     };
   }, [videoRef, active, track.cues]);
 
-  if (!cue) return null;
+  if (!active || text === null) return null;
   return (
     <div className={clsx('pointer-events-none absolute inset-0 z-[15] flex justify-center px-4', captionContainerClass(track.style))}>
-      <span className={clsx('text-center', captionTextClass(track.style))}>{cue.text}</span>
+      <span className={clsx('text-center', captionTextClass(track.style))}>{text}</span>
     </div>
   );
 }

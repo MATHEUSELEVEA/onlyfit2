@@ -8,7 +8,7 @@ import {
 } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { DEFAULT_CAPTION_STYLE, type CaptionCue, type CaptionTrack } from '@/lib/captions';
+import { DEFAULT_CAPTION_STYLE, sanitizeCues, type CaptionCue, type CaptionTrack } from '@/lib/captions';
 import type { FeedMedia, FeedPost } from './types';
 
 const PAGE_SIZE = 10;
@@ -135,9 +135,10 @@ function readCaptions(metadata: PostRow['metadata']): CaptionTrack | null {
       return typeof cue?.start === 'number' && typeof cue?.end === 'number' && typeof cue?.text === 'string' && cue.text.trim().length > 0;
     })
     .map((c) => ({ start: c.start, end: c.end, text: c.text }));
-  if (cues.length === 0) return null;
+  const sane = sanitizeCues(cues);
+  if (sane.length === 0) return null;
   const style = { ...DEFAULT_CAPTION_STYLE, ...(raw.style as object) } as CaptionTrack['style'];
-  return { cues, style };
+  return { cues: sane, style };
 }
 
 // Nome legível da localização guardada em metadata.location ({name, secondary}).

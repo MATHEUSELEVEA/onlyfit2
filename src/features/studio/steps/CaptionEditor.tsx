@@ -9,6 +9,7 @@ import {
   CAPTION_COLORS,
   CAPTION_PRESETS,
   DEFAULT_CAPTION_STYLE,
+  sanitizeCues,
   type CaptionColor,
   type CaptionCue,
   type CaptionPosition,
@@ -52,8 +53,10 @@ export function CaptionEditor({ media, value, onSave, onClose }: { media: DraftM
 
   const cues = useMemo(() => {
     const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
-    if (autoCues && autoCues.length === lines.length) return autoCues.map((c, i) => ({ ...c, text: lines[i] }));
-    return linesToCues(text, duration || 1);
+    const raw = autoCues && autoCues.length === lines.length
+      ? autoCues.map((c, i) => ({ ...c, text: lines[i] }))
+      : linesToCues(text, duration || 1);
+    return sanitizeCues(raw);
   }, [text, duration, autoCues]);
   const previewTrack: CaptionTrack = { cues, style };
 

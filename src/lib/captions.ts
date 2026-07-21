@@ -95,10 +95,52 @@ export function captionTextClass(style: CaptionStyle): string {
   }
 }
 
-// Cue ativo no instante atual do vídeo.
+// Cue ativo no instante atual do vídeo (linear — usado no preview do editor).
 export function activeCue(cues: CaptionCue[], time: number): CaptionCue | null {
   for (const cue of cues) {
     if (time >= cue.start && time < cue.end) return cue;
   }
   return null;
+}
+
+/**
+ * Saneia as falas: descarta inválidas/vazias, ordena por início e RECORTA
+ * sobreposições (o fim de uma nunca ultrapassa o início da próxima). Garante
+ * que no máximo uma fala está ativa em cada instante — sem flicker de borda
+ * nem duas legendas simultâneas. Fonte única de verdade antes de exibir/salvar.
+ */
+export function sanitizeCues(cues: CaptionCue[]): CaptionCue[] {
+  const clean = cues
+    .filter((c) => Number.isFinite(c.start) && Number.isFinite(c.end) && c.end > c.start && c.text.trim().length > 0)
+    .map((c) => ({ start: Math.max(0, c.start), end: c.end, text: c.text.trim() }))
+    .sort((a, b) => a.start - b.start);
+  for (let i = 0; i < clean.length - 1; i += 1) {
+    if (clean[i].end > clean[i + 1].start) clean[i] = { ...clean[i], end: clean[i + 1].start };
+  }
+  return clean.filter((c) => c.end > c.start);
+}
+
+/**
+ * Índice da fala ativa em `time`, otimizado por cursor: testa a última fala e
+ * as vizinhas (O(1) no caso comum de avanço quadro a quadro) e, só se preciso,
+ * cai numa busca binária (O(log n)). Exige cues saneadas/ordenadas. -1 = nenhuma.
+ */
+export function findCueIndex(cues: CaptionCue[], time: number, hint: number): number {
+  const inside = (i: number) => i >= 0 && i < cues.length && time >= cues[i].start && time < cues[i].end;
+  if (inside(hint)) return hint;
+  if (inside(hint + 1)) return hint + 1;
+  if (inside(hint - 1)) return hint - 1;
+  let lo = 0;
+  let hi = cues.length - 1;
+  let candidate = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (cues[mid].start <= time) {
+      candidate = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return candidate >= 0 && time < cues[candidate].end ? candidate : -1;
 }
