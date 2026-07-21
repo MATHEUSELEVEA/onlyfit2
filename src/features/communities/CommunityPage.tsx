@@ -96,8 +96,9 @@ export function CommunityPage() {
       <PageTopBar title={community.name ?? t('communities.title')} backFallback="/comunidades" />
 
       <main className="mx-auto w-full max-w-[640px] px-4 pb-8 pt-4">
-        <CommunityHeader community={community} membership={membership} userId={userId} />
+        <CommunityHeader community={community} />
         <OwnerCard owner={community.owner ?? null} />
+        <CommunityActions community={community} membership={membership} userId={userId} />
 
         {isOwner && (
           <div className="mt-3 flex gap-2">
@@ -169,68 +170,14 @@ export function CommunityPage() {
   );
 }
 
-function CommunityHeader({
-  community,
-  membership,
-  userId,
-}: {
-  community: Community;
-  membership: MembershipStatus;
-  userId: string | undefined;
-}) {
+function CommunityHeader({ community }: { community: Community }) {
   const { t } = useTranslation();
-  const joinMutation = useJoinCommunity(community.id);
-  const leaveMutation = useLeaveCommunity(community.id, userId);
   const memberCount = community.member_count ?? 0;
 
   const meta = [
     community.visibility === 'private' ? t('communities.private') : t('communities.public'),
     t(memberCount === 1 ? 'communities.memberCountOne' : 'communities.memberCount').replace('{count}', String(memberCount)),
   ].join(' · ');
-
-  function actionButton() {
-    if (membership === 'owner') return null;
-    if (membership === 'banned') {
-      return (
-        <p role="status" className="font-sans text-body-sm text-error">
-          {t('communities.bannedNotice')}
-        </p>
-      );
-    }
-    if (membership === 'member') {
-      return (
-        <button
-          type="button"
-          disabled={leaveMutation.isPending}
-          onClick={() => {
-            if (window.confirm(t('communities.leaveConfirm'))) leaveMutation.mutate();
-          }}
-          className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-surface-container-high px-5 font-sans text-label text-on-surface transition-colors hover:bg-surface-container-highest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-60"
-        >
-          {leaveMutation.isPending ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <LogOut size={16} aria-hidden />}
-          {t('communities.leave')}
-        </button>
-      );
-    }
-    if (membership === 'pending') {
-      return (
-        <span className="inline-flex min-h-11 items-center justify-center rounded-xl bg-surface-container px-5 font-sans text-label text-on-surface-variant">
-          {t('communities.requestPending')}
-        </span>
-      );
-    }
-    return (
-      <button
-        type="button"
-        disabled={joinMutation.isPending}
-        onClick={() => joinMutation.mutate()}
-        className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-primary px-5 font-sans text-label text-on-primary transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-60"
-      >
-        {joinMutation.isPending && <Loader2 size={16} className="animate-spin" aria-hidden />}
-        {community.visibility === 'private' ? t('communities.requestJoin') : t('communities.join')}
-      </button>
-    );
-  }
 
   return (
     <div className="rounded-2xl bg-surface-container p-4">
@@ -251,8 +198,68 @@ function CommunityHeader({
       {community.description && (
         <p className="mt-3 font-sans text-body-sm text-on-surface-variant">{community.description}</p>
       )}
-      <div className="mt-4">{actionButton()}</div>
     </div>
+  );
+}
+
+/** CTA de participação — mesmo padrão visual do botão "Participar" da tela de desafio. */
+function CommunityActions({
+  community,
+  membership,
+  userId,
+}: {
+  community: Community;
+  membership: MembershipStatus;
+  userId: string | undefined;
+}) {
+  const { t } = useTranslation();
+  const joinMutation = useJoinCommunity(community.id);
+  const leaveMutation = useLeaveCommunity(community.id, userId);
+
+  if (membership === 'owner') return null;
+
+  if (membership === 'banned') {
+    return (
+      <p role="status" className="mt-3 font-sans text-body-sm text-error">
+        {t('communities.bannedNotice')}
+      </p>
+    );
+  }
+
+  if (membership === 'member') {
+    return (
+      <button
+        type="button"
+        disabled={leaveMutation.isPending}
+        onClick={() => {
+          if (window.confirm(t('communities.leaveConfirm'))) leaveMutation.mutate();
+        }}
+        className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-surface-container-high font-sans text-label text-on-surface transition-colors hover:bg-surface-container-highest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-60"
+      >
+        {leaveMutation.isPending ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <LogOut size={16} aria-hidden />}
+        {t('communities.leave')}
+      </button>
+    );
+  }
+
+  if (membership === 'pending') {
+    return (
+      <span className="mt-3 inline-flex min-h-12 w-full items-center justify-center rounded-xl bg-surface-container font-sans text-label text-on-surface-variant">
+        {t('communities.requestPending')}
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={joinMutation.isPending}
+      onClick={() => joinMutation.mutate()}
+      className="mt-3 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary font-sans text-label text-on-primary transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-60"
+    >
+      {joinMutation.isPending && <Loader2 size={16} className="animate-spin" aria-hidden />}
+      {community.visibility === 'private' ? t('communities.requestJoin') : t('communities.join')}
+    </button>
   );
 }
 
