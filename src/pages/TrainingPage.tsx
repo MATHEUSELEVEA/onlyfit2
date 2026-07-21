@@ -51,10 +51,28 @@ const surfaceTranslationKey: Record<TrainingSurface, TranslationKey> = {
 const weekdayFull = (value: string) => new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long' });
 const historyDate = (value: string) => new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
 
-function formatActivityMeta(activity: { durationMin: number; distanceKm?: number; calories?: number; averageHeartRate?: number; elevationM?: number }) {
+// Ritmo (pace) é a métrica-mãe de corrida: min/km, não km/h. Corrida e
+// caminhada mostram ritmo; bike mostra velocidade; nado cai na velocidade.
+const PACE_SURFACES: TrainingSurface[] = ['running', 'walking'];
+
+/** Ritmo em min/km a partir de distância (km) e tempo (min). Ex.: "5:30". */
+function paceMinPerKm(distanceKm?: number, minutes?: number): string | null {
+  if (!distanceKm || !minutes || distanceKm <= 0 || minutes <= 0) return null;
+  const secPerKm = Math.round((minutes * 60) / distanceKm);
+  if (!Number.isFinite(secPerKm) || secPerKm <= 0) return null;
+  return `${Math.floor(secPerKm / 60)}:${String(secPerKm % 60).padStart(2, '0')}`;
+}
+
+function formatActivityMeta(activity: { surface?: TrainingSurface; durationMin: number; distanceKm?: number; calories?: number; averageHeartRate?: number; averageSpeedKmh?: number; movingTimeMin?: number; elevationM?: number }) {
+  const pace = paceMinPerKm(activity.distanceKm, activity.movingTimeMin ?? activity.durationMin);
+  const showPace = activity.surface ? PACE_SURFACES.includes(activity.surface) : Boolean(pace);
+  const rhythm = showPace && pace
+    ? `${pace} /km`
+    : activity.averageSpeedKmh ? `${activity.averageSpeedKmh.toLocaleString('pt-BR')} km/h` : null;
   return [
     activity.durationMin ? `${activity.durationMin} min` : null,
     activity.distanceKm ? `${activity.distanceKm.toLocaleString('pt-BR')} km` : null,
+    rhythm,
     activity.calories ? `${activity.calories} kcal` : null,
     activity.averageHeartRate ? `${activity.averageHeartRate} bpm` : null,
     activity.elevationM ? `${activity.elevationM} m alt.` : null,
@@ -354,10 +372,13 @@ function ImportedActivitySheet({ activity, onClose }: { activity: ImportedActivi
   const source = formatActivitySource(activity);
   const speed = activity.averageSpeedKmh ? `${activity.averageSpeedKmh.toLocaleString('pt-BR')} km/h` : null;
   const distance = activity.distanceKm ? `${activity.distanceKm.toLocaleString('pt-BR')} km` : null;
+  const pace = paceMinPerKm(activity.distanceKm, activity.movingTimeMin ?? activity.durationMin);
+  const paceLabel = pace ? `${pace} /km` : null;
   const details: Array<[string, string | null]> = [
     ['Tempo total', activity.durationMin ? `${activity.durationMin} min` : null],
     ['Tempo em movimento', activity.movingTimeMin ? `${activity.movingTimeMin} min` : null],
     ['Distância', distance],
+    ['Ritmo', paceLabel],
     ['Velocidade média', speed],
     ['Calorias', activity.calories ? `${activity.calories} kcal` : null],
     ['FC média', activity.averageHeartRate ? `${activity.averageHeartRate} bpm` : null],
@@ -387,7 +408,11 @@ function ImportedActivitySheet({ activity, onClose }: { activity: ImportedActivi
             {[
               ['Tempo', activity.durationMin ? `${activity.durationMin} min` : '—'],
               ['Distância', distance ?? '—'],
-              ['Calorias', activity.calories ? `${activity.calories} kcal` : '—'],
+              PACE_SURFACES.includes(activity.surface)
+                ? ['Ritmo', paceLabel ?? '—']
+                : activity.surface === 'cycling'
+                  ? ['Velocidade', speed ?? '—']
+                  : ['Calorias', activity.calories ? `${activity.calories} kcal` : '—'],
               ['FC média', activity.averageHeartRate ? `${activity.averageHeartRate} bpm` : '—'],
             ].map(([label, value]) => <div key={label} className="rounded-xl border border-outline-variant/30 bg-surface-container p-3"><p className="font-sans text-counter text-on-surface-variant">{label}</p><p className="mt-1 font-sans text-label tabular-nums text-on-surface">{value}</p></div>)}
           </div>
