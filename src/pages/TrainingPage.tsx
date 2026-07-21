@@ -49,7 +49,7 @@ const surfaceTranslationKey: Record<TrainingSurface, TranslationKey> = {
 };
 
 const weekdayFull = (value: string) => new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long' });
-const dayMonth = (value: string) => new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+const historyDate = (value: string) => new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
 
 function formatActivityMeta(activity: { durationMin: number; distanceKm?: number; calories?: number; averageHeartRate?: number; elevationM?: number }) {
   return [
@@ -117,7 +117,7 @@ function TrainingContent() {
       <div className="grid grid-cols-4 rounded-xl bg-surface-container p-1" role="tablist" aria-label={t('meufit.training.tabs.aria')}>{([['today', t('meufit.training.tabs.today')], ['history', t('meufit.training.tabs.history')], ['progress', t('meufit.training.tabs.progress')], ['library', t('meufit.training.tabs.library')]] as [Tab, string][]).map(([value, label]) => <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={clsx('min-h-[40px] rounded-lg font-sans text-counter transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', tab === value ? 'bg-surface-container-lowest text-on-surface' : 'text-on-surface-variant')}>{label}</button>)}</div>
       {tab !== 'today' ? <AppleHealthCard appleHealth={appleHealth} compact /> : null}
       {tab === 'today' && <Today items={todayItems} active={activeItem ?? null} />}
-      {tab === 'history' && <HistoryList imported={allImported} healthDays={healthDays} onOpenDay={(value) => setDetailDate(value)} onOpenActivity={setDetailActivity} onRecord={() => setRecordOpen(true)} />}
+      {tab === 'history' && <HistoryList imported={allImported} onOpenDay={(value) => setDetailDate(value)} onOpenActivity={setDetailActivity} onRecord={() => setRecordOpen(true)} />}
       {tab === 'progress' && <Progress appleHealth={appleHealth} healthDays={healthDays} scheduled={scheduled} selectedDate={selectedDate} onSelect={(value) => { setSelectedDate(value); setDetailDate(value); }} />}
       {tab === 'library' && <Library />}
     </main>
@@ -699,10 +699,10 @@ function AppleHealthCard({ appleHealth, compact }: { appleHealth: AppleHealthSta
   );
 }
 
-/** Histórico cronológico agrupado por dia, com contexto de saúde no cabeçalho do dia. */
+/** Histórico cronológico agrupado por dia; métricas adicionais ficam no detalhe. */
 type HistoryEntry = { id: string; title: string; meta: string; status: TrainingStatus; surface: TrainingSurface; importedFromWatch: boolean; activity?: ImportedActivity };
 
-function HistoryList({ imported, healthDays, onOpenDay, onOpenActivity, onRecord }: { imported: ImportedActivity[]; healthDays: Map<string, HealthDay>; onOpenDay: (date: string) => void; onOpenActivity: (activity: ImportedActivity) => void; onRecord: () => void }) {
+function HistoryList({ imported, onOpenDay, onOpenActivity, onRecord }: { imported: ImportedActivity[]; onOpenDay: (date: string) => void; onOpenActivity: (activity: ImportedActivity) => void; onRecord: () => void }) {
   const { t } = useTranslation();
   const { scheduled } = useTraining();
   const byDate = useMemo(() => {
@@ -724,7 +724,6 @@ function HistoryList({ imported, healthDays, onOpenDay, onOpenActivity, onRecord
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="font-sans text-title text-on-surface">Histórico</h2>
-          <p className="mt-1 font-sans text-body-sm text-on-surface-variant">Treinos e atividades por dia.</p>
         </div>
         <button type="button" onClick={onRecord} className="flex min-h-10 shrink-0 items-center gap-2 rounded-full bg-primary px-4 font-sans text-counter text-on-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background" aria-label={t('meufit.training.history.record')}>
           <Plus size={16} aria-hidden />
@@ -734,17 +733,12 @@ function HistoryList({ imported, healthDays, onOpenDay, onOpenActivity, onRecord
       <div className="mt-4 space-y-5">
         {days.length ? days.map((date) => {
           const entries = byDate.get(date)!;
-          const day = healthDays.get(date);
-          const kcal = day?.activeKcal ? `${Math.round(day.activeKcal)} kcal` : null;
-          const steps = day?.steps ? `${day.steps.toLocaleString('pt-BR')} passos` : null;
-          const context = [kcal, steps].filter(Boolean).join(' · ');
           return (
             <div key={date}>
-              <button type="button" onClick={() => onOpenDay(date)} className="flex w-full items-baseline justify-between gap-3 text-left">
-                <span className="font-sans text-label capitalize text-on-surface">{weekdayFull(date)}, {dayMonth(date)}</span>
-                {context ? <span className="font-sans text-counter text-on-surface-variant">{context}</span> : null}
+              <button type="button" onClick={() => onOpenDay(date)} className="flex w-full items-baseline gap-3 text-left">
+                <span className="font-sans text-counter font-semibold uppercase tracking-[0.12em] text-on-surface-variant">{historyDate(date)}</span>
               </button>
-              <div className="mt-2 space-y-2">
+              <div className="mt-1 divide-y divide-outline-variant/25 border-y border-outline-variant/20">
                 {entries.map((item) => <HistoryRow key={item.id} {...item} onOpenActivity={onOpenActivity} />)}
               </div>
             </div>
@@ -756,9 +750,9 @@ function HistoryList({ imported, healthDays, onOpenDay, onOpenActivity, onRecord
 }
 
 function HistoryRow({ title, meta, status, surface, importedFromWatch, activity, onOpenActivity }: HistoryEntry & { onOpenActivity: (activity: ImportedActivity) => void }) {
-  const content = <><TrainingBadge surface={surface} status={status} /><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="min-w-0 break-words font-sans text-label leading-snug text-on-surface">{title}</span>{importedFromWatch ? <WatchOriginChip /> : null}</span><span className="mt-1 block break-words font-sans text-body-sm leading-snug text-on-surface-variant">{meta}</span></span>{activity ? <ChevronRight size={18} className="mt-1 shrink-0 text-on-surface-variant" aria-hidden /> : null}</>;
-  if (!activity) return <div className="flex items-start gap-3 rounded-xl border border-outline-variant/40 bg-surface-container p-3">{content}</div>;
-  return <button type="button" onClick={() => onOpenActivity(activity)} aria-label={`Abrir detalhes de ${title}`} className="flex w-full items-start gap-3 rounded-xl border border-outline-variant/40 bg-surface-container p-3 text-left transition-colors hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{content}</button>;
+  const content = <><TrainingBadge surface={surface} status={status} /><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="min-w-0 break-words font-sans text-label leading-snug text-on-surface">{title}</span>{importedFromWatch ? <WatchOriginChip /> : null}</span><span className="mt-1 block break-words font-sans text-body-sm leading-snug text-on-surface-variant">{meta}</span></span></>;
+  if (!activity) return <div className="flex items-start gap-3 px-1 py-3.5">{content}</div>;
+  return <button type="button" onClick={() => onOpenActivity(activity)} aria-label={`Abrir detalhes de ${title}`} className="flex w-full items-start gap-3 px-1 py-3.5 text-left transition-colors hover:bg-surface-container/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{content}</button>;
 }
 
 /** Calendário mensal heatmap: intensidade real por dia; tocar abre o detalhe. */
