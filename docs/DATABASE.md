@@ -31,6 +31,10 @@ Leitura:
 - `health_events` + `health_event_facts` → histórico de saúde confirmado e seus fatos atômicos, sempre filtrados pela RLS do próprio usuário.
 - `health_documents` + `health_document_processing_runs` → metadados de PDFs privados e propostas de extração; o arquivo original fica no R2 `onlyfit-private`.
 - RPC `get_my_health_consents()` → estado mais recente de cada finalidade de tratamento.
+- `health_connections` → estado da conexão Apple Health/HealthKit (`provider = 'healthkit'`), última sincronização, erro e preferências de compartilhamento.
+- `external_activities` → treinos importados do Apple Health, mantendo `provider_activity_id`, métricas e `source_payload`.
+- `wearable_samples_agg` → agregados diários importados do Apple Health, como passos, calorias ativas, sono, FC e HRV.
+- `wearable_sync_state` → anchors de sincronização incremental do HealthKit por tipo de dado.
 
 Leitura + escrita (sempre a linha do próprio usuário, garantida por RLS):
 
@@ -47,6 +51,10 @@ Edge Functions do Perfil de Saúde:
 - `health-anamnesis-interpret` → interpreta apenas respostas objetivas ambíguas, com consentimento de IA.
 - `health-audio-transcribe` → transcreve em memória; o áudio não é persistido.
 - `health-document-upload-url` / `health-document-process` / `health-document-download-url` → upload PDF-only, extração/revisão e leitura temporária do original privado.
+
+Edge Functions de wearables:
+
+- `wearables-ingest` → recebe payloads do app iOS com dados do Apple Health, faz upsert das atividades/agregados, persiste anchors e marca deleções enviadas pelo HealthKit.
 
 > Posts **salvos** ainda não têm tabela no banco: ficam em `localStorage` por usuário (`useSavedPost`). Quando a tabela existir, só o hook muda.
 

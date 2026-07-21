@@ -24,7 +24,7 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>com.onlyfitapp</string>
+			<string>app.onlyfit.mobile</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>com.onlyfitapp</string>
@@ -44,10 +44,16 @@
 	<string>O OnlyFit usa a camera para criar posts e atualizar sua foto de perfil.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>O OnlyFit lê apenas os dados que você autorizar no Apple Health — treinos, passos, calorias, sono, frequência cardíaca e HRV — para montar seu histórico, progresso e acompanhamento com seu profissional.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>O OnlyFit usa esta permissão para manter a integração com o Apple Health preparada para registrar dados de treino e saúde quando você autorizar.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>O OnlyFit usa o microfone ao gravar videos para posts.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>O OnlyFit pode salvar midias criadas por voce na biblioteca de fotos quando solicitado.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>O OnlyFit acessa suas fotos e videos para publicar conteudo e atualizar seu perfil.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -59,8 +65,6 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>

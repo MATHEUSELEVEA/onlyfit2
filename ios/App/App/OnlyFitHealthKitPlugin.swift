@@ -31,7 +31,7 @@ public class OnlyFitHealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve(["available": true])
     }
 
-    @objc public func requestPermissions(_ call: CAPPluginCall) {
+    @objc public override func requestPermissions(_ call: CAPPluginCall) {
         guard HKHealthStore.isHealthDataAvailable() else {
             call.resolve(["granted": false, "denied": ["unavailable"]])
             return

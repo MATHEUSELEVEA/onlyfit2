@@ -48,7 +48,6 @@ import {
 } from './useCreatorHub';
 
 type TabKey = 'free' | 'exclusive' | 'products' | 'challenges' | 'communities' | 'followers';
-
 type BooleanRpcClient = {
   rpc: (
     fn: 'is_user_pair_blocked',

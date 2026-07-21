@@ -4,13 +4,14 @@ Este repo (`onlyfit-mobile`) é a fonte do app iOS nativo para TestFlight/App St
 
 ## Identidade do app
 
-- Bundle ID: `com.onlyfitapp`
-- Apple Developer Team ID: `57U869P75F`
+- Bundle ID: `app.onlyfit.mobile`
+- Apple Developer Team ID: `RAK9X84NNT`
 - Domínio primário de links do app: `mobile.onlyfitapp.com`
+- Custom URL schemes registrados: `app.onlyfit.mobile` e `com.onlyfitapp` (legado, mantido para deep links antigos)
 
 ## Capabilities obrigatórias no Apple Developer
 
-Habilitar no App Identifier `com.onlyfitapp`:
+Habilitar no App Identifier `app.onlyfit.mobile`:
 
 - Associated Domains
 - HealthKit
@@ -82,4 +83,4 @@ Se falhar no archive/TestFlight, verificar primeiro:
 - provisioning profile atualizado;
 - capabilities do App Identifier;
 - versão/build number;
-- App Store Connect com Bundle ID `com.onlyfitapp`.
+- App Store Connect com Bundle ID `app.onlyfit.mobile`.

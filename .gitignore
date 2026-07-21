@@ -6,3 +6,7 @@ dist
 .DS_Store
 .claude/settings.local.json
 __pycache__/
+
+# iOS
+ios-native/
+.swiftpm/

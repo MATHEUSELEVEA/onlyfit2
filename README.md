@@ -9,6 +9,7 @@ Nova versão do OnlyFit — plataforma de assinatura, comunidade e marketplace f
 - **Supabase** (`lygynazgwdxhecgceffc` — mesmo projeto do v1)
 - **TanStack Query** para dados, **React Router** para navegação
 - **Netlify** para deploy (`netlify.toml`)
+- **Capacitor iOS** em `ios/App`
 
 ## Rodar localmente
 
@@ -18,6 +19,32 @@ npm run dev   # http://localhost:5180
 ```
 
 O `.env` já aponta para o Supabase real (apenas chaves públicas `anon`). Faça login com uma conta real do app — o RLS exige usuário autenticado para ler o feed.
+
+## iOS
+
+O app iOS usa Capacitor e empacota o build Vite dentro de `ios/App`.
+
+```bash
+npm run ios:sync
+npm run ios:open
+```
+
+Use `npm run cap:sync:ios` ou `npx cap sync ios` quando quiser apenas atualizar o projeto nativo com o `dist/` já existente.
+
+Para TestFlight, abra `ios/App/App.xcworkspace`, selecione o target **App**, confira o signing do bundle `app.onlyfit.mobile`, escolha **Any iOS Device (arm64)** e faça **Product → Archive**.
+
+### Apple Health
+
+O target iOS inclui `HealthKit.framework`, entitlement `com.apple.developer.healthkit`, `NSHealthShareUsageDescription` e o plugin nativo `OnlyFitHealthKit`.
+
+Fluxo esperado:
+
+1. O usuário entra em **Meu Fit → Treinos** e toca em **Conectar Apple Health**.
+2. O app pede permissão de leitura para treinos, passos, calorias ativas, distância, batimentos, HRV e sono.
+3. O plugin lê HealthKit e envia o payload para a Edge Function `wearables-ingest`.
+4. O app mostra atividades importadas em agenda, histórico e progresso.
+
+Para subir um novo build ao TestFlight, incremente `CURRENT_PROJECT_VERSION` em `ios/App/App.xcodeproj/project.pbxproj`.
 
 ## Temas
 
@@ -86,4 +113,5 @@ src/
 - [ ] Checkout de assinatura no app
 - [ ] Banner de produto no post (venda)
 - [ ] Treino, Produtos, conteúdos no perfil do creator
-- [ ] Capacitor (iOS/Android) quando a base web estabilizar
+- [x] Capacitor iOS pronto para build/TestFlight
+- [x] Apple Health/HealthKit preparado no app iOS

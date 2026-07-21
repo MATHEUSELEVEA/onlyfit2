@@ -42,7 +42,7 @@ function formatActivityMeta(activity: { durationMin: number; source: string; dis
 
 function WatchOriginChip() {
   return (
-    <span className="inline-flex min-h-6 shrink-0 items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2 font-sans text-[10px] font-semibold uppercase tracking-[0.08em] text-primary">
+    <span className="inline-flex min-h-6 shrink-0 items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2 font-sans text-counter text-primary">
       <Watch size={12} aria-hidden />
       Watch
     </span>
@@ -269,7 +269,7 @@ function AddActivitySheet({
                 className={clsx(
                   'flex min-h-[76px] flex-col items-center justify-center gap-2 rounded-xl border font-sans text-counter',
                   surface === item.value
-                    ? 'border-primary bg-primary text-on-primary shadow-[0_0_0_1px_rgba(188,255,0,0.22)]'
+                    ? 'border-primary bg-primary text-on-primary'
                     : 'border-outline-variant/35 bg-surface-container text-on-surface-variant',
                 )}
               >

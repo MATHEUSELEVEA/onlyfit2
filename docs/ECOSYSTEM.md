@@ -24,7 +24,7 @@ Sensação-alvo da UX: **acesso premium, proximidade e pertencimento** a uma com
 
 Reescrita **limpa e mobile-first** do front, do zero, consumindo o **mesmo banco Supabase de produção do v1**. Objetivo: base enxuta e sustentável, sem a dívida do v1, sobre os dados reais que já existem.
 
-- **v2 (aqui / `onlyfit/`):** front novo, foco atual em feed + temas + auth, evoluindo para interações reais (curtir, seguir, assinar), venda no post e telas completas. Web primeiro; Capacitor (iOS/Android) quando a base estabilizar.
+- **v2 (aqui / `onlyfit-mobile`):** front novo, foco atual em feed + temas + auth, evoluindo para interações reais (curtir, seguir, assinar), venda no post e telas completas. Web primeiro, com app iOS via Capacitor em `ios/App` para empacotar o mesmo Vite build e manter abertura para plugins nativos.
 - **v1 (`../onlyfit-original/`):** app legado, dono histórico do schema, das integrações de pagamento (Asaas: checkout, split, recorrência), motores de treino/nutrição, i18n e da vasta documentação em `onlyfit-original/docs/`.
 
 ## Fronteiras (o que é e o que NÃO é deste app)
