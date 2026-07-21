@@ -129,8 +129,8 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
   const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
   // React Query is the external source; keep the session-capable local projection in sync.
   // Só atualiza se o conteúdo mudou — evita loop quando a dependência vem com nova referência.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync de store externo (React Query) com override local; guardado por comparação de conteúdo.
     setTemplates((current) => {
       if (
         current.length === realTemplates.length
@@ -147,8 +147,8 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     });
   }, [realTemplates]);
   // Preserve transient session status while refreshing the server-backed schedule.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sync de store externo (React Query) preservando status de sessão local; guardado por comparação de conteúdo.
     setScheduled((current) => {
       const next = realScheduled.map((item) => {
         const existing = current.find((entry) => entry.id === item.id);

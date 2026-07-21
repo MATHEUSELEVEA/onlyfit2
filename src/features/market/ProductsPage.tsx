@@ -473,7 +473,7 @@ function OfficialStoresRail({
                           store.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('')
                         )}
                       </span>
-                      <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full border border-primary/20 bg-background/70 px-1.5 py-0.5 font-sans text-[9px] font-semibold leading-none text-primary shadow-sm backdrop-blur-md">
+                      <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full border border-primary/20 bg-background/70 px-1.5 py-0.5 font-sans text-nav leading-none text-primary shadow-sm backdrop-blur-md">
                         <BadgeCheck size={12} aria-hidden />
                         {t('market.official')}
                       </span>

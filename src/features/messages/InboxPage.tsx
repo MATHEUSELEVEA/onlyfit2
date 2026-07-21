@@ -130,7 +130,7 @@ export function InboxPage() {
                     </p>
                   </div>
                   {chat.unread > 0 && (
-                    <span className="flex min-w-5 shrink-0 items-center justify-center rounded-full bg-error px-1.5 py-0.5 font-sans text-eyebrow font-bold tabular-nums text-on-error">
+                    <span className="flex min-w-5 shrink-0 items-center justify-center rounded-full bg-error px-1.5 py-0.5 font-sans text-counter tabular-nums text-on-error">
                       {chat.unread > 99 ? '99+' : chat.unread}
                     </span>
                   )}

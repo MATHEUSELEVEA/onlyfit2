@@ -35,7 +35,7 @@ export function IconChip({
     >
       <Icon size={compact ? 18 : 19} aria-hidden />
       {badge && badge > 0 ? (
-        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#ff1744] px-1 font-sans text-[10px] font-bold leading-none tabular-nums text-white ring-2 ring-surface">
+        <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1 font-sans text-counter leading-none tabular-nums text-on-error ring-2 ring-surface">
           {badge > 99 ? '99+' : badge}
         </span>
       ) : null}

@@ -96,7 +96,7 @@ export function ProfilePage() {
                 >
                   <MessageCircle size={21} aria-hidden />
                   {unreadCount > 0 && (
-                    <span className="absolute right-0.5 top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1 font-sans text-[10px] font-bold leading-none text-on-error ring-2 ring-background">
+                    <span className="absolute right-0.5 top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-error px-1 font-sans text-counter leading-none text-on-error ring-2 ring-background">
                       {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                   )}
