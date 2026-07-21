@@ -5,6 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 /** Códigos de dia usados por student_workout_assignments.days_of_week. */
 export const DAY_CODES = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'] as const;
 
+export type WorkoutTrainingType = 'strength' | 'running' | 'cycling' | 'walking' | 'swimming' | 'functional' | 'hiit' | 'yoga' | 'pilates' | 'other';
+
 /** Um treino aplicado pelo profissional (assignment + workout). */
 export interface StudentWorkout {
   assignmentId: string;
@@ -14,6 +16,7 @@ export interface StudentWorkout {
   startsAt: string | null;
   endsAt: string | null;
   exerciseCount: number;
+  trainingType: WorkoutTrainingType;
 }
 
 type AssignmentRow = {
@@ -30,6 +33,25 @@ type AssignmentRow = {
   } | null;
 };
 
+/**
+ * `workouts.category` nasceu como objetivo do treino (ex.: Hipertrofia), não
+ * como uma taxonomia rígida de modalidade. Categorias antigas do builder são
+ * treinos de força; só promovemos para outro grupo quando o valor declara essa
+ * modalidade de forma inequívoca.
+ */
+export function workoutTrainingType(category: string | null | undefined): WorkoutTrainingType {
+  const value = (category ?? '').trim().toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (/corrida|running/.test(value)) return 'running';
+  if (/ciclismo|cycling|bike/.test(value)) return 'cycling';
+  if (/caminhada|walking/.test(value)) return 'walking';
+  if (/natacao|swimming/.test(value)) return 'swimming';
+  if (/funcional|functional/.test(value)) return 'functional';
+  if (/\bhiit\b/.test(value)) return 'hiit';
+  if (/\byoga\b/.test(value)) return 'yoga';
+  if (/pilates/.test(value)) return 'pilates';
+  return 'strength';
+}
+
 function toStudentWorkout(row: AssignmentRow): StudentWorkout {
   return {
     assignmentId: row.id,
@@ -39,6 +61,7 @@ function toStudentWorkout(row: AssignmentRow): StudentWorkout {
     startsAt: row.starts_at,
     endsAt: row.ends_at,
     exerciseCount: row.workout?.workout_exercises?.[0]?.count ?? 0,
+    trainingType: workoutTrainingType(row.workout?.category),
   };
 }
 
@@ -80,7 +103,7 @@ const dayIndex = (code: string) => DAY_CODES.indexOf(code as typeof DAY_CODES[nu
 export function uniqueWorkouts(workouts: StudentWorkout[]): StudentWorkout[] {
   const byTitle = new Map<string, StudentWorkout>();
   for (const workout of workouts) {
-    const key = workout.title.trim().toLowerCase();
+    const key = `${workout.trainingType}:${workout.title.trim().toLowerCase()}`;
     const existing = byTitle.get(key);
     if (existing) {
       existing.daysOfWeek = [...new Set([...existing.daysOfWeek, ...workout.daysOfWeek])].sort((a, b) => dayIndex(a) - dayIndex(b));

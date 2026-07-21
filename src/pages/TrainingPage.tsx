@@ -6,7 +6,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { PageTopBar } from '@/components/layout/PageTopBar';
 import { ActivityRing, MetricStat } from '@/components/health/HealthVisuals';
 import { type ActivitySource, type ImportedActivity, type ScheduledWorkout, type TrainingStatus, type TrainingSurface, useTraining } from '@/features/training/TrainingProvider';
-import { DAY_CODES, uniqueWorkouts, useStudentWorkouts } from '@/features/training/useStudentWorkouts';
+import { DAY_CODES, uniqueWorkouts, useStudentWorkouts, type StudentWorkout, type WorkoutTrainingType } from '@/features/training/useStudentWorkouts';
 import { useAppleHealth } from '@/features/wearables/useAppleHealth';
 import { buildHealthDays, formatSleep, type HealthDay } from '@/features/wearables/healthDays';
 import { localDateKey, todayKey } from '@/lib/localDate';
@@ -357,18 +357,69 @@ function WeekdayStrip({ days }: { days: string[] }) {
   );
 }
 
-/** Biblioteca: treinos reais aplicados pelo profissional (design inicial). */
+type WorkoutGroup = { type: WorkoutTrainingType; workouts: StudentWorkout[]; exerciseCount: number };
+
+/** Biblioteca: primeiro os tipos; depois, os treinos daquele grupo. */
 function Library() {
+  const { t } = useTranslation();
   const { workouts, isLoading } = useStudentWorkouts();
   const items = useMemo(() => uniqueWorkouts(workouts), [workouts]);
+  const [selectedType, setSelectedType] = useState<WorkoutTrainingType | null>(null);
+  const groups = useMemo<WorkoutGroup[]>(() => {
+    const byType = new Map<WorkoutTrainingType, StudentWorkout[]>();
+    for (const workout of items) {
+      const group = byType.get(workout.trainingType) ?? [];
+      group.push(workout);
+      byType.set(workout.trainingType, group);
+    }
+    return [...byType.entries()].map(([type, groupedWorkouts]) => ({
+      type,
+      workouts: groupedWorkouts,
+      exerciseCount: groupedWorkouts.reduce((total, workout) => total + workout.exerciseCount, 0),
+    }));
+  }, [items]);
+  const selectedGroup = selectedType ? groups.find((group) => group.type === selectedType) ?? null : null;
+
+  if (selectedGroup) {
+    return (
+      <section className="mt-6">
+        <button type="button" onClick={() => setSelectedType(null)} className="inline-flex min-h-11 items-center gap-2 font-sans text-label text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label={t('meufit.training.library.backToTypes')}>
+          <ChevronLeft size={18} aria-hidden />
+          {t('meufit.training.library.backToTypes')}
+        </button>
+        <div className="mt-3 flex items-center gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant" aria-hidden>{surfaceIcon[selectedGroup.type]}</span>
+          <div>
+            <h2 className="font-sans text-title-lg text-on-surface">{t(surfaceTranslationKey[selectedGroup.type])}</h2>
+            <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{t(selectedGroup.workouts.length === 1 ? 'meufit.training.library.workoutCount' : 'meufit.training.library.workoutCountPlural', { count: selectedGroup.workouts.length })}</p>
+          </div>
+        </div>
+        <div className="mt-5 space-y-3">
+          {selectedGroup.workouts.map((workout) => (
+            <article key={workout.workoutId ?? workout.assignmentId} className="rounded-2xl border border-outline-variant/40 bg-surface-container p-4">
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary" aria-hidden>{surfaceIcon[workout.trainingType]}</span>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-sans text-label leading-snug text-on-surface">{workout.title}</h3>
+                  <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{t(workout.exerciseCount === 1 ? 'meufit.training.library.exerciseCount' : 'meufit.training.library.exerciseCountPlural', { count: workout.exerciseCount })}</p>
+                </div>
+              </div>
+              {workout.daysOfWeek.length ? <div className="mt-3 border-t border-outline-variant/30 pt-3"><WeekdayStrip days={workout.daysOfWeek} /></div> : null}
+            </article>
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className="mt-6 space-y-5">
       <div className="flex items-baseline justify-between gap-3">
         <div>
-          <h2 className="font-sans text-title text-on-surface">Sua biblioteca</h2>
-          <p className="mt-1 font-sans text-body-sm text-on-surface-variant">Treinos aplicados pra você pelo seu profissional.</p>
+          <h2 className="font-sans text-title text-on-surface">{t('meufit.training.library.chooseType')}</h2>
+          <p className="mt-1 font-sans text-body-sm text-on-surface-variant">{t('meufit.training.library.chooseTypeDescription')}</p>
         </div>
-        {items.length ? <span className="shrink-0 font-sans text-counter text-on-surface-variant">{items.length} treinos</span> : null}
+        {items.length ? <span className="shrink-0 font-sans text-counter text-on-surface-variant">{t(items.length === 1 ? 'meufit.training.library.workoutCount' : 'meufit.training.library.workoutCountPlural', { count: items.length })}</span> : null}
       </div>
       {isLoading ? (
         <div className="space-y-3">{[0, 1, 2].map((index) => <div key={index} className="h-[104px] animate-pulse rounded-2xl bg-surface-container motion-reduce:animate-none" />)}</div>
@@ -376,21 +427,20 @@ function Library() {
         <p className="rounded-xl border border-dashed border-outline-variant/50 px-4 py-6 font-sans text-body-sm text-on-surface-variant">Nenhum treino aplicado ainda. Quando seu profissional montar seu treino, ele aparece aqui.</p>
       ) : (
         <div className="space-y-3">
-          {items.map((workout) => (
-            <article key={workout.workoutId ?? workout.assignmentId} className="rounded-2xl border border-outline-variant/40 bg-surface-container p-4">
-              <div className="flex items-start gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/35 bg-primary/10 text-primary"><Dumbbell size={18} aria-hidden /></span>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-sans text-label leading-snug text-on-surface">{workout.title}</h3>
-                  <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{workout.exerciseCount} exercícios</p>
-                </div>
-              </div>
-              {workout.daysOfWeek.length ? <div className="mt-3 border-t border-outline-variant/30 pt-3"><WeekdayStrip days={workout.daysOfWeek} /></div> : null}
-            </article>
+          {groups.map((group) => (
+            <button key={group.type} type="button" onClick={() => setSelectedType(group.type)} className="flex min-h-[76px] w-full items-center gap-4 rounded-2xl border border-outline-variant/40 bg-surface-container px-4 py-3 text-left transition-colors hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label={t('meufit.training.library.openType', { type: t(surfaceTranslationKey[group.type]) })}>
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant" aria-hidden>{surfaceIcon[group.type]}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block font-sans text-label text-on-surface">{t(surfaceTranslationKey[group.type])}</span>
+                <span className="mt-1 block font-sans text-body-sm text-on-surface-variant">
+                  {t(group.workouts.length === 1 ? 'meufit.training.library.workoutCount' : 'meufit.training.library.workoutCountPlural', { count: group.workouts.length })} · {t(group.exerciseCount === 1 ? 'meufit.training.library.exerciseCount' : 'meufit.training.library.exerciseCountPlural', { count: group.exerciseCount })}
+                </span>
+              </span>
+              <ChevronRight size={20} className="shrink-0 text-on-surface-variant" aria-hidden />
+            </button>
           ))}
         </div>
       )}
-      <p className="rounded-xl border border-dashed border-outline-variant/50 px-4 py-4 font-sans text-body-sm text-on-surface-variant">Em breve: abrir o treino e executar série a série no Player, com seus exercícios e cargas. <span className="text-on-surface-variant/70">(design inicial)</span></p>
     </section>
   );
 }
@@ -606,7 +656,7 @@ function TrainingBadge({ surface, status }: { surface: TrainingSurface; status: 
 }
 
 const surfaces: { value: TrainingSurface; label: string; icon: ReactNode }[] = [
-  { value: 'strength', label: 'Musculação', icon: <Dumbbell size={18} /> },
+  { value: 'strength', label: 'Força', icon: <Dumbbell size={18} /> },
   { value: 'running', label: 'Corrida', icon: <Activity size={18} /> },
   { value: 'cycling', label: 'Bike', icon: <Bike size={18} /> },
   { value: 'walking', label: 'Caminhada', icon: <Footprints size={18} /> },
@@ -645,7 +695,7 @@ function AddActivitySheet({
   const addManual = () => {
     onAdd({
       date: selectedDate,
-      title: selectedSurface.value === 'strength' ? 'Musculação registrada' : `${selectedSurface.label} registrada`,
+      title: selectedSurface.value === 'strength' ? 'Treino de força registrado' : `${selectedSurface.label} registrada`,
       durationMin: duration,
       surface,
       source: 'manual',
