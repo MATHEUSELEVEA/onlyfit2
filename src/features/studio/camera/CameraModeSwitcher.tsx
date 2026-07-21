@@ -26,11 +26,14 @@ export function CameraModeSwitcher({ mode, onChange }: CameraModeSwitcherProps) 
           aria-selected={mode === item.value}
           onClick={() => onChange(item.value)}
           className={clsx(
-            'font-sans text-label drop-shadow-lg transition-colors',
+            'relative px-1 font-sans text-label drop-shadow-lg transition-colors',
             mode === item.value ? 'text-white' : 'text-white/55',
           )}
         >
           {item.label}
+          {mode === item.value && (
+            <span className="absolute -bottom-2 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-white" aria-hidden />
+          )}
         </button>
       ))}
     </div>

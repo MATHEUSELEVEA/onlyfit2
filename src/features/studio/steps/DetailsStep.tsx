@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Lock, Globe } from 'lucide-react';
+import { Globe, Loader2, Lock, Play } from 'lucide-react';
 import { clsx } from 'clsx';
 import { FilterChip } from '@/components/ui/FilterChip';
 import { useAffinityGroups } from '@/lib/sports';
+import type { DraftMedia } from '../media';
 import type { PostVisibility } from '../useCreatePost';
 
 interface DetailsStepProps {
+  media: DraftMedia[];
   caption: string;
   onCaptionChange: (value: string) => void;
   sports: string[];
@@ -22,7 +24,10 @@ const VISIBILITY_OPTIONS: { value: PostVisibility; label: string; icon: typeof G
   { value: 'paid_members', label: 'Assinantes', icon: Lock },
 ];
 
+const CAPTION_MAX = 2200;
+
 export function DetailsStep({
+  media,
   caption,
   onCaptionChange,
   sports,
@@ -38,21 +43,45 @@ export function DetailsStep({
   // depois que o enfileiramento realmente foi aceito. Assim, um perfil ainda
   // carregando nunca deixa a tela travada em estado enviado.
   const [submitted, setSubmitted] = useState(false);
+  const cover = media[0];
 
   return (
     <div className="flex h-full flex-col">
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
-        <label className="block space-y-2">
-          <span className="font-sans text-label text-on-surface">Legenda</span>
-          <textarea
-            value={caption}
-            onChange={(e) => onCaptionChange(e.target.value)}
-            rows={4}
-            maxLength={2200}
-            placeholder="Escreva uma legenda…"
-            className="w-full resize-none rounded-xl border border-outline-variant/50 bg-surface-container-low p-3 text-body text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none"
-          />
-        </label>
+        {/* Capa + legenda lado a lado (estilo Instagram): contexto do que se
+            está publicando enquanto escreve. */}
+        <div className="flex gap-3">
+          {cover && (
+            <div className="relative h-24 w-[76px] shrink-0 overflow-hidden rounded-xl bg-surface-container">
+              {cover.kind === 'video' ? (
+                <>
+                  <video src={cover.previewUrl} className="h-full w-full object-cover" muted preload="metadata" />
+                  <span className="absolute bottom-1 right-1 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]"><Play size={11} fill="currentColor" aria-hidden /></span>
+                </>
+              ) : (
+                <img src={cover.previewUrl} alt="" className="h-full w-full object-cover" />
+              )}
+              {media.length > 1 && (
+                <span className="absolute left-1 top-1 rounded-full bg-black/55 px-1.5 py-0.5 font-sans text-nav text-white backdrop-blur-sm">
+                  1/{media.length}
+                </span>
+              )}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <textarea
+              value={caption}
+              onChange={(e) => onCaptionChange(e.target.value)}
+              rows={4}
+              maxLength={CAPTION_MAX}
+              placeholder="Escreva uma legenda…"
+              className="h-24 w-full resize-none rounded-xl border border-outline-variant/50 bg-surface-container-low p-3 text-body text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none"
+            />
+            <div className="mt-1 text-right font-sans text-nav tabular-nums text-on-surface-variant">
+              {caption.length}/{CAPTION_MAX}
+            </div>
+          </div>
+        </div>
 
         <div className="space-y-2">
           <span className="font-sans text-label text-on-surface">Modalidades</span>
@@ -103,9 +132,16 @@ export function DetailsStep({
             if (onPublish()) setSubmitted(true);
           }}
           disabled={submitted || !canPublish}
-          className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary font-sans text-label text-on-primary transition-opacity active:opacity-90 disabled:opacity-60"
+          className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-primary font-sans text-label text-on-primary transition-opacity enabled:active:opacity-90 disabled:opacity-60"
         >
-          Publicar
+          {submitted ? (
+            <>
+              <Loader2 size={18} className="animate-spin motion-reduce:animate-none" aria-hidden />
+              Publicando…
+            </>
+          ) : (
+            'Publicar'
+          )}
         </button>
       </div>
     </div>
