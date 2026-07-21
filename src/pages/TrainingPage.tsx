@@ -183,7 +183,6 @@ function TodayWorkoutCard({ item }: { item: ScheduledWorkout }) {
   const exerciseCount = template?.exercises.length ?? 0;
   const isActive = activeSession?.scheduledId === item.id;
   const canStart = item.canStart !== false && (item.status === 'planned' || item.status === 'active' || item.status === 'partial');
-  const anotherWorkoutIsActive = Boolean(activeSession && !isActive);
   const highlighted = isActive || item.status === 'active';
 
   return (
@@ -220,9 +219,9 @@ function TodayWorkoutCard({ item }: { item: ScheduledWorkout }) {
 
       <div className="p-4">
         {canStart ? (
-          <button type="button" disabled={anotherWorkoutIsActive} onClick={() => { startSession(item.id); navigate('/meu-fit/treino/player'); }} className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-primary font-sans text-label text-on-primary transition-opacity duration-150 enabled:hover:opacity-90 enabled:active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container disabled:cursor-not-allowed disabled:bg-surface-container-high disabled:text-on-surface-variant">
+          <button type="button" onClick={() => { startSession(item.id); navigate('/meu-fit/treino/player'); }} className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-primary font-sans text-label text-on-primary transition-opacity duration-150 enabled:hover:opacity-90 enabled:active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container disabled:cursor-not-allowed disabled:bg-surface-container-high disabled:text-on-surface-variant">
             <Play size={18} fill="currentColor" aria-hidden />
-            {t(anotherWorkoutIsActive ? 'meufit.training.today.finishCurrent' : isActive ? 'meufit.training.today.continue' : 'meufit.training.today.start')}
+            {t(isActive ? 'meufit.training.today.continue' : 'meufit.training.today.start')}
           </button>
         ) : null}
         {item.status === 'planned' ? (
@@ -545,7 +544,6 @@ function Library() {
           {selectedGroup.workouts.map((workout) => {
             const template = playerTemplate(workout);
             const isCurrentWorkout = activeSession?.templateId === template.id;
-            const anotherWorkoutIsActive = Boolean(activeSession && !isCurrentWorkout);
             const hasExercises = template.exercises.length > 0;
             const hasPrescription = Boolean(workout.prescription);
             return (
@@ -563,14 +561,13 @@ function Library() {
                   {hasPrescription && <button type="button" onClick={() => setPrescriptionWorkout(workout)} className={clsx('min-h-12 flex-1 rounded-xl px-3 font-sans text-label focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', hasExercises ? 'bg-surface-container-high text-primary' : 'bg-primary text-on-primary')}>{t('meufit.training.library.viewPrescription')}</button>}
                   {hasExercises && <button
                     type="button"
-                    disabled={anotherWorkoutIsActive}
                     onClick={() => {
                       if (startWorkoutNow(template, workout.trainingType)) navigate('/meu-fit/treino/player');
                     }}
                     className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-3 font-sans text-label text-on-primary transition-opacity duration-150 enabled:hover:opacity-90 enabled:active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container disabled:cursor-not-allowed disabled:bg-surface-container-high disabled:text-on-surface-variant"
                   >
                     <Play size={18} fill="currentColor" aria-hidden />
-                    {t(anotherWorkoutIsActive ? 'meufit.training.today.finishCurrent' : isCurrentWorkout ? 'meufit.training.library.continue' : 'meufit.training.library.doNow')}
+                    {t(isCurrentWorkout ? 'meufit.training.library.continue' : 'meufit.training.library.doNow')}
                   </button>}
                 </div>
               </article>
