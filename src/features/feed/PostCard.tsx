@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Dumbbell,
   Heart,
+  MapPin,
   MessageCircle,
   Plus,
   RotateCw,
@@ -220,6 +221,13 @@ export function PostCard({ post }: PostCardProps) {
                 <BadgeCheck size={18} className="shrink-0 text-primary" aria-label="Verificado" />
               )}
             </Link>
+
+            {post.location && (
+              <span className="-mt-1.5 flex min-w-0 items-center gap-1 self-start font-sans text-body-sm text-white/85 drop-shadow">
+                <MapPin size={13} className="shrink-0" aria-hidden />
+                <span className="truncate">{post.location}</span>
+              </span>
+            )}
 
             <PostCaption text={post.caption} />
 

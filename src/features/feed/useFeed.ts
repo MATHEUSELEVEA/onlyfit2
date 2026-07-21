@@ -117,9 +117,16 @@ function toFeedPost(
     commentCount: row.comments ?? 0,
     createdAt: row.published_at,
     product: null, // banner de produto entra na próxima etapa
+    location: readLocationName(row.metadata),
     likedByMe: likedPostIds.has(row.id),
     commentsDisabled: row.metadata?.comments_disabled === true,
   };
+}
+
+// Nome legível da localização guardada em metadata.location ({name, secondary}).
+function readLocationName(metadata: PostRow['metadata']): string | null {
+  const loc = metadata?.location as { name?: unknown } | undefined;
+  return loc && typeof loc.name === 'string' && loc.name.trim() ? loc.name.trim() : null;
 }
 
 async function fetchLikedPostIds(userId: string, postIds: string[]): Promise<Set<string>> {

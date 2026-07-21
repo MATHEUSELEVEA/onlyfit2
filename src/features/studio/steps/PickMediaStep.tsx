@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { ArrowLeft, ArrowRight, Play, Plus, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ImagePlay, Play, Plus, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { DraftMedia } from '../media';
+import { CoverPicker } from './CoverPicker';
 
 interface PickMediaStepProps {
   media: DraftMedia[];
   onRemove: (id: string) => void;
   onMove: (from: number, to: number) => void;
+  onSetCover: (id: string, posterBlob: Blob) => void;
   /** Reabre a câmera (CameraStep) — é lá que também vive o acesso à galeria. */
   onAddMore: () => void;
   onNext: () => void;
@@ -15,8 +17,9 @@ interface PickMediaStepProps {
 // Revisão WYSIWYG: o item selecionado aparece no MESMO formato do feed (9:16
 // full-bleed), não em miniatura quadrada — o que você enquadra é o que publica.
 // A tira embaixo gerencia o carrossel (selecionar, reordenar, remover, +).
-export function PickMediaStep({ media, onRemove, onMove, onAddMore, onNext }: PickMediaStepProps) {
+export function PickMediaStep({ media, onRemove, onMove, onSetCover, onAddMore, onNext }: PickMediaStepProps) {
   const [selected, setSelected] = useState(0);
+  const [coverPicking, setCoverPicking] = useState<DraftMedia | null>(null);
 
   if (media.length === 0) {
     return (
@@ -87,6 +90,17 @@ export function PickMediaStep({ media, onRemove, onMove, onAddMore, onNext }: Pi
             </button>
           </div>
         )}
+
+        {/* Escolher o frame de capa do vídeo (poster/thumbnail do post). */}
+        {current.kind === 'video' && (
+          <button
+            type="button"
+            onClick={() => setCoverPicking(current)}
+            className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full bg-black/45 px-3 py-1.5 font-sans text-counter text-white backdrop-blur-sm transition-transform active:scale-95"
+          >
+            <ImagePlay size={14} aria-hidden /> Escolher capa
+          </button>
+        )}
       </div>
 
       {/* Tira de miniaturas: selecionar página + adicionar. */}
@@ -132,6 +146,14 @@ export function PickMediaStep({ media, onRemove, onMove, onAddMore, onNext }: Pi
           Continuar
         </button>
       </div>
+
+      {coverPicking && (
+        <CoverPicker
+          media={coverPicking}
+          onPick={(blob) => { onSetCover(coverPicking.id, blob); setCoverPicking(null); }}
+          onClose={() => setCoverPicking(null)}
+        />
+      )}
     </div>
   );
 }

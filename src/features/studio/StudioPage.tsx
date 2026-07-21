@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, X } from 'lucide-react';
 import { CameraStep } from './camera/CameraStep';
-import { createDraftMedia, inferMediaKind, moveItem, type CaptureMode, type DraftMedia, type MediaKind } from './media';
+import { createDraftMedia, inferMediaKind, moveItem, type CaptureMode, type DraftMedia, type MediaKind, type PostLocation } from './media';
 import { enqueuePublish } from './publishQueue';
 import type { PostVisibility } from './useCreatePost';
 import { usePublishStory } from '@/features/stories/usePublishStory';
@@ -27,6 +27,7 @@ export function StudioPage() {
   const [media, setMedia] = useState<DraftMedia[]>([]);
   const [caption, setCaption] = useState('');
   const [sports, setSports] = useState<string[]>([]);
+  const [location, setLocation] = useState<PostLocation | null>(null);
   const [visibility, setVisibility] = useState<PostVisibility>('public');
   // Última mídia de story capturada/escolhida, guardada só para o "tentar de
   // novo" reenviar o mesmo arquivo se o upload falhar.
@@ -118,6 +119,11 @@ export function StudioPage() {
     setMedia((prev) => moveItem(prev, from, to));
   };
 
+  // Define o frame de capa (poster) de um vídeo escolhido no CoverPicker.
+  const setCover = (id: string, posterBlob: Blob) => {
+    setMedia((prev) => prev.map((item) => (item.id === id ? { ...item, posterBlob } : item)));
+  };
+
   const toggleSport = (key: string) => {
     setSports((prev) => (prev.includes(key) ? prev.filter((s) => s !== key) : [...prev, key]));
   };
@@ -130,7 +136,7 @@ export function StudioPage() {
     // ainda não existe no banco, por isso não navegamos mais para /video/:id).
     enqueuePublish(
       // Trava servidor-agnóstica: Membro nunca envia paid_members.
-      { media, caption, sports, visibility: isProfessional ? visibility : 'public' },
+      { media, caption, sports, location, visibility: isProfessional ? visibility : 'public' },
       profile,
     );
     navigate('/feed', { replace: true });
@@ -182,6 +188,7 @@ export function StudioPage() {
             media={media}
             onRemove={removeMedia}
             onMove={reorderMedia}
+            onSetCover={setCover}
             onAddMore={() => setStep('camera')}
             onNext={() => setStep('details')}
           />
@@ -192,6 +199,8 @@ export function StudioPage() {
             onCaptionChange={setCaption}
             sports={sports}
             onToggleSport={toggleSport}
+            location={location}
+            onLocationChange={setLocation}
             visibility={visibility}
             onVisibilityChange={setVisibility}
             canPublishToMembers={isProfessional}
