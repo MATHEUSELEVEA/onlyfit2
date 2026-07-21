@@ -24,8 +24,6 @@ const pt = {
   'health.apple.permissionDenied': 'Permissão do Apple Health não concedida.',
   'health.apple.noDataReturned': 'Nenhum dado do Apple Health foi encontrado com as permissões atuais. Abra Saúde > Compartilhamento > Apps > OnlyFit e confirme os dados liberados.',
 
-  'explore.ambassadors.eyebrow': 'Embaixadores',
-  'explore.ambassadors.title': 'Embaixadores',
   'explore.ambassadors.fallback': 'OnlyFit',
   'explore.loadError': 'Não foi possível carregar o Explorar.',
   'explore.empty.title': 'Nada encontrado',
@@ -988,8 +986,6 @@ const en: Record<keyof typeof pt, string> = {
   'health.apple.permissionDenied': 'Apple Health permission was not granted.',
   'health.apple.noDataReturned': 'No Apple Health data was found with the current permissions. Open Health > Sharing > Apps > OnlyFit and confirm the allowed data.',
 
-  'explore.ambassadors.eyebrow': 'Ambassadors',
-  'explore.ambassadors.title': 'Ambassadors',
   'explore.ambassadors.fallback': 'OnlyFit',
   'explore.loadError': 'Could not load Explore.',
   'explore.empty.title': 'Nothing found',
@@ -2001,8 +1997,6 @@ const es: Record<keyof typeof pt, string> = {
   'health.apple.unavailable': 'Apple Health no está disponible en este dispositivo.',
   'health.apple.permissionDenied': 'Permiso de Apple Health no concedido.',
   'health.apple.noDataReturned': 'No se encontraron datos de Apple Health con los permisos actuales. Abre Salud > Compartir > Apps > OnlyFit y confirma los datos permitidos.',
-  'explore.ambassadors.eyebrow': 'Embajadores',
-  'explore.ambassadors.title': 'Embajadores',
   'explore.loadError': 'No se pudo cargar Explorar.',
   'explore.empty.title': 'No se encontró nada',
   'explore.empty.description': 'Prueba otra búsqueda o elimina los filtros.',

@@ -9,7 +9,6 @@ import {
   Play,
   Search,
   SlidersHorizontal,
-  Sparkles,
   Trophy,
   UsersRound,
   Volume2,
@@ -163,15 +162,8 @@ function AmbassadorRail({
   if (!loading && ambassadors.length === 0) return null;
 
   return (
-    <section className="pt-4" aria-labelledby="ambassadors-title">
-      <div className="px-4">
-        <p id="ambassadors-title" className="inline-flex items-center gap-1 font-sans text-eyebrow uppercase text-primary">
-          <Sparkles size={14} aria-hidden />
-          {t('explore.ambassadors.eyebrow')}
-        </p>
-      </div>
-
-      <div className="mt-2 grid grid-flow-col grid-rows-2 gap-x-5 gap-y-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <section className="pt-4">
+      <div className="grid grid-flow-col grid-rows-2 gap-x-5 gap-y-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {loading
           ? Array.from({ length: 8 }).map((_, index) => (
               <div key={index} className="w-[84px]" aria-hidden>
@@ -188,14 +180,12 @@ function AmbassadorRail({
                 : nameParts[0] || ambassador.name;
               const inner = (
                 <>
-                  <span className="mx-auto block h-16 w-16 rounded-full bg-gradient-to-br from-primary via-primary/50 to-surface-container p-[1.5px] shadow-[0_0_0_3px_hsl(var(--primary)/0.08)]">
-                    <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full border border-background bg-surface-container-high font-sans text-title font-semibold text-primary">
-                      {ambassador.avatarUrl ? (
-                        <img src={ambassador.avatarUrl} alt={ambassador.name} loading="lazy" className="h-full w-full object-cover" />
-                      ) : (
-                        ambassador.name.slice(0, 1).toUpperCase()
-                      )}
-                    </span>
+                  <span className="mx-auto flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-surface-container-high font-sans text-title text-on-surface">
+                    {ambassador.avatarUrl ? (
+                      <img src={ambassador.avatarUrl} alt={ambassador.name} loading="lazy" className="h-full w-full object-cover" />
+                    ) : (
+                      ambassador.name.slice(0, 1).toUpperCase()
+                    )}
                   </span>
                   <span className="mt-2 block truncate font-sans text-counter text-on-surface">
                     {compactName}
