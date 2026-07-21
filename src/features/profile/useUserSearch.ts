@@ -16,7 +16,7 @@ interface SuggestionRow {
   username: string | null;
   full_name: string | null;
   avatar_url: string | null;
-  professional_shell_enabled: boolean | null;
+  is_professional: boolean | null;
 }
 
 /** Abaixo disso a busca não roda: 1 letra traz meio banco e não ajuda ninguém. */
@@ -63,7 +63,7 @@ export function useUserSearch(term: string) {
     queryFn: async (): Promise<UserSuggestion[]> => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, username, full_name, avatar_url, professional_shell_enabled')
+        .select('id, username, full_name, avatar_url, is_professional')
         .not('username', 'is', null)
         .neq('id', userId!)
         .or(`username.ilike.%${normalized}%,full_name.ilike.%${normalized}%`)
@@ -77,7 +77,7 @@ export function useUserSearch(term: string) {
           username: row.username,
           name: row.full_name || row.username,
           avatarUrl: row.avatar_url,
-          isProfessional: Boolean(row.professional_shell_enabled),
+          isProfessional: Boolean(row.is_professional),
         }))
         .sort((a, b) => rank(a, normalized) - rank(b, normalized))
         .slice(0, 8);
