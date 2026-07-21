@@ -13,6 +13,7 @@ import { FramingStep } from './steps/FramingStep';
 import { CoverPicker } from './steps/CoverPicker';
 import { DetailsStep } from './steps/DetailsStep';
 import { cropImageToBlob } from './imageCrop';
+import type { CaptionTrack } from '@/lib/captions';
 
 type Step = 'camera' | 'frame' | 'cover' | 'details';
 
@@ -38,6 +39,7 @@ export function StudioPage() {
   const [caption, setCaption] = useState('');
   const [sports, setSports] = useState<string[]>([]);
   const [location, setLocation] = useState<PostLocation | null>(null);
+  const [captions, setCaptions] = useState<CaptionTrack | null>(null);
   const [visibility, setVisibility] = useState<PostVisibility>('public');
   // Última mídia de story capturada/escolhida, guardada só para o "tentar de
   // novo" reenviar o mesmo arquivo se o upload falhar.
@@ -142,7 +144,7 @@ export function StudioPage() {
     // ainda não existe no banco, por isso não navegamos mais para /video/:id).
     enqueuePublish(
       // Trava servidor-agnóstica: Membro nunca envia paid_members.
-      { media, caption, sports, location, visibility: isProfessional ? visibility : 'public' },
+      { media, caption, sports, location, captions, visibility: isProfessional ? visibility : 'public' },
       profile,
     );
     navigate('/feed', { replace: true });
@@ -243,6 +245,8 @@ export function StudioPage() {
             onCaptionChange={setCaption}
             sports={sports}
             onToggleSport={toggleSport}
+            captions={captions}
+            onCaptionsChange={setCaptions}
             location={location}
             onLocationChange={setLocation}
             visibility={visibility}

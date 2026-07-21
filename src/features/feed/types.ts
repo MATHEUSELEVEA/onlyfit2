@@ -23,6 +23,8 @@ export interface FeedMedia {
   // HLS já normalizado pelo Cloudflare Stream (orientação em pé). Quando
   // presente, o player prefere isto ao `url` cru do R2. Só vídeos.
   hlsUrl?: string | null;
+  // Legenda autoral (falas + estilo) sobreposta ao vídeo, sincronizada.
+  captions?: import('@/lib/captions').CaptionTrack | null;
 }
 
 export interface FeedPost {

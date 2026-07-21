@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { captureVideoPoster, uploadAsset } from './upload';
 import { contentTypeForMedia, fileExtension, type DraftMedia, type PostLocation } from './media';
+import type { CaptionTrack } from '@/lib/captions';
 import type { MyProfile } from '@/features/profile/useMyProfile';
 import type { FeedPost } from '@/features/feed/types';
 
@@ -11,6 +12,7 @@ export interface CreatePostInput {
   caption: string;
   sports: string[];
   location?: PostLocation | null;
+  captions?: CaptionTrack | null;
   visibility: PostVisibility;
 }
 
@@ -158,6 +160,7 @@ export async function runCreatePost(
       metadata: {
         media_kind: isCarousel ? 'carousel' : cover.kind,
         ...(input.location ? { location: { name: input.location.name, secondary: input.location.secondary ?? null, lat: input.location.lat ?? null, lon: input.location.lon ?? null } } : {}),
+        ...(input.captions && input.captions.cues.length > 0 ? { captions: input.captions } : {}),
       },
     },
     p_media: rows,
@@ -190,10 +193,11 @@ export function buildOptimisticPost(input: CreatePostInput, profile: MyProfile, 
       verified: false,
     },
     caption: input.caption,
-    media: input.media.map((draft) => ({
+    media: input.media.map((draft, i) => ({
       kind: draft.kind,
       url: draft.previewUrl,
       thumbnailUrl: draft.kind === 'video' ? draft.previewUrl : null,
+      captions: i === 0 && draft.kind === 'video' ? input.captions ?? null : null,
     })),
     likeCount: 0,
     commentCount: 0,
