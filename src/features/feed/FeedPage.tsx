@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useFeed } from './useFeed';
 import { PostCard } from './PostCard';
 import { FeedSportsBar } from './FeedSportsBar';
+import { StoriesBar } from '@/features/stories/StoriesBar';
 
 // Arrasto (px) além do qual soltar dispara o refresh.
 const PULL_THRESHOLD = 56;
@@ -182,6 +183,8 @@ export function FeedPage() {
           </div>
         ))}
       </div>
+
+      <StoriesBar />
 
       {/* Cluster de controles do topo: som (no PostCard) → filtro → criar */}
       <FeedSportsBar selected={sports} onSelect={setSports} />
