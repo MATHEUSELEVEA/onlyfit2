@@ -43,7 +43,6 @@ export function CaptionEditor({ media, value, onSave, onClose }: { media: DraftM
   const [text, setText] = useState(() => (value?.cues ?? []).map((c) => c.text).join('\n'));
   const [style, setStyle] = useState<CaptionStyle>(value?.style ?? DEFAULT_CAPTION_STYLE);
   const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
   // Cues com tempo real vindos da auto-transcrição (preservam o timing exato
   // enquanto o nº de linhas bater; ao mudar o nº de linhas, cai na distribuição
   // uniforme). Slice 2.
@@ -113,9 +112,8 @@ export function CaptionEditor({ media, value, onSave, onClose }: { media: DraftM
           autoPlay
           preload="metadata"
           onLoadedMetadata={(e) => setDuration(Number.isFinite(e.currentTarget.duration) ? e.currentTarget.duration : 0)}
-          onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
         />
-        {cues.length > 0 && <CaptionOverlay track={previewTrack} currentTime={currentTime} />}
+        {cues.length > 0 && <CaptionOverlay track={previewTrack} videoRef={videoRef} active />}
       </div>
 
       <div className="space-y-4 border-t border-white/10 bg-black px-4 pb-safe-bottom pt-4">

@@ -208,7 +208,7 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
       )}
 
       {media.kind === 'video' && media.captions && media.captions.cues.length > 0 && (
-        <CaptionOverlay track={media.captions} currentTime={currentTime} />
+        <CaptionOverlay track={media.captions} videoRef={videoRef} active={active} />
       )}
 
       {media.kind === 'video' && active && buffering && !videoError && (
