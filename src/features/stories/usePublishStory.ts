@@ -77,6 +77,12 @@ export function usePublishStory() {
         },
       });
       if (error) throw error;
+      // Normaliza a orientação/qualidade do vídeo de story no Cloudflare Stream
+      // (mesmo pipeline dos posts). Em segundo plano; o StoryCard toca o R2 cru
+      // até o HLS ficar pronto. Falha aqui não impede a publicação do story.
+      if (input.kind === 'video') {
+        void supabase.functions.invoke('cloudflare-stream-ingest', { body: { story_id: String(storyId) } }).catch(() => {});
+      }
       return String(storyId);
     },
     onSuccess: () => {

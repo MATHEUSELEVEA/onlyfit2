@@ -11,6 +11,8 @@ export interface StoryFeedItem {
   mediaType: StoryMediaKind;
   mediaUrl: string;
   thumbnailUrl: string | null;
+  // HLS normalizado do Cloudflare Stream (orientação em pé), quando pronto.
+  hlsUrl: string | null;
   createdAt: string;
   expiresAt: string;
 }
