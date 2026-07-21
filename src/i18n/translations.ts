@@ -536,7 +536,6 @@ const pt = {
   'challenges.about.rules': 'Regras',
   'challenges.about.completion': 'Critério de conclusão',
   'challenges.about.completionRule': 'Conclui o desafio quem cumprir pelo menos {percent}% das tarefas obrigatórias.',
-  'challenges.about.creator': 'Criador',
 
   'challenges.manage.closeEnrollment': 'Encerrar inscrições',
   'challenges.manage.openEnrollment': 'Reabrir inscrições',
@@ -1823,7 +1822,6 @@ const en: Record<keyof typeof pt, string> = {
   'challenges.about.rules': 'Rules',
   'challenges.about.completion': 'Completion criteria',
   'challenges.about.completionRule': 'The challenge is completed by anyone who finishes at least {percent}% of the required tasks.',
-  'challenges.about.creator': 'Creator',
 
   'challenges.manage.closeEnrollment': 'Close enrollment',
   'challenges.manage.openEnrollment': 'Reopen enrollment',

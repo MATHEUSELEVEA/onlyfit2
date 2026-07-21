@@ -149,14 +149,7 @@ export function ChallengePage() {
           {tab === 'checklist' && <ChallengeChecklist run={run} isParticipant={isMember} />}
           {tab === 'feed' && <ChallengeFeed run={run} userId={userId} isParticipant={isMember} isOwner={isOwner} />}
           {tab === 'ranking' && <ChallengeRanking run={run} />}
-          {tab === 'about' && (
-            <AboutTab
-              run={run}
-              creator={creator}
-              creatorName={displayName(creator ?? null, t('challenges.creatorFallback'))}
-              isMember={isMember}
-            />
-          )}
+          {tab === 'about' && <AboutTab run={run} isMember={isMember} />}
           {tab === 'manage' && isOwner && <ChallengeManage run={run} userId={userId} />}
         </section>
       </main>
@@ -261,13 +254,9 @@ function CancelRequestButton({ runId }: { runId: string }) {
 
 function AboutTab({
   run,
-  creator,
-  creatorName,
   isMember,
 }: {
   run: ChallengeRun;
-  creator: ChallengeProfile | null | undefined;
-  creatorName: string;
   isMember: boolean;
 }) {
   const { t } = useTranslation();
@@ -297,22 +286,6 @@ function AboutTab({
         <p className="font-sans text-body text-on-surface">
           {t('challenges.about.completionRule').replace('{percent}', String(run.completion_threshold))}
         </p>
-      </AboutSection>
-      <AboutSection title={t('challenges.about.creator')}>
-        {creator?.username ? (
-          <Link
-            to={`/creator/${encodeURIComponent(creator.username)}`}
-            aria-label={`Ver perfil de @${creator.username}`}
-            className="inline-flex items-center gap-2 font-sans text-body text-on-surface transition-colors hover:text-primary"
-          >
-            {creator.avatar_url ? (
-              <img src={creator.avatar_url} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />
-            ) : null}
-            {creatorName}
-          </Link>
-        ) : (
-          <p className="font-sans text-body text-on-surface">{creatorName}</p>
-        )}
       </AboutSection>
 
       {isMember && (

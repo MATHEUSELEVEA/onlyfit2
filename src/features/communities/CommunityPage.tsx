@@ -698,7 +698,7 @@ function AboutTab({
   }
 
   return (
-    <div className="space-y-4 rounded-2xl bg-surface-container p-4">
+    <div className="space-y-4">
       <AboutBlock title={t('communities.about.description')}>
         {community.description || t('communities.about.emptyValue')}
       </AboutBlock>
@@ -726,10 +726,10 @@ function AboutTab({
 
 function AboutBlock({ title, children }: { title: string; children: string }) {
   return (
-    <div>
-      <h3 className="font-sans text-label text-on-surface">{title}</h3>
-      <p className="mt-1 whitespace-pre-wrap font-sans text-body-sm text-on-surface-variant">{children}</p>
-    </div>
+    <section className="rounded-2xl bg-surface-container p-4">
+      <h3 className="mb-1.5 font-sans text-body-sm font-medium text-on-surface-variant">{title}</h3>
+      <p className="whitespace-pre-wrap font-sans text-body text-on-surface">{children}</p>
+    </section>
   );
 }
 
