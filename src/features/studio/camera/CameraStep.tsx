@@ -140,7 +140,7 @@ export function CameraStep({
   };
 
   return (
-    <div className="relative flex h-full flex-col bg-black">
+    <div className="relative h-full overflow-hidden bg-black">
       <input
         ref={fileInputRef}
         type="file"
@@ -152,6 +152,52 @@ export function CameraStep({
           e.target.value = '';
         }}
       />
+
+      {/* Preview full-bleed 9:16: a câmera ocupa a tela inteira (mesmo palco do
+          feed), e os controles flutuam por cima — estilo Reels/TikTok. */}
+      {stream && (
+        <video
+          ref={videoRef}
+          muted
+          playsInline
+          autoPlay
+          className={clsx('absolute inset-0 h-full w-full object-cover', facing === 'user' && '-scale-x-100')}
+        />
+      )}
+
+      {error && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-4 px-8 text-center">
+          <p className="font-sans text-title text-white">
+            {error === 'denied' ? 'Câmera sem permissão' : 'Câmera indisponível'}
+          </p>
+          <p className="text-body-sm text-white/70">
+            {error === 'denied'
+              ? 'Ative o acesso à câmera nas Configurações do iOS para gravar por aqui.'
+              : 'Não foi possível abrir a câmera neste aparelho. Você ainda pode escolher da galeria.'}
+          </p>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={retry}
+              className="min-h-[44px] rounded-full bg-white/15 px-6 font-sans text-label text-white"
+            >
+              Tentar de novo
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="min-h-[44px] rounded-full bg-white px-6 font-sans text-label text-black"
+            >
+              Escolher da galeria
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Scrims sutis topo/base: legibilidade dos controles flutuantes sem
+          esconder a mídia (a estrela é o enquadramento). */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-36 bg-gradient-to-b from-black/55 to-transparent" aria-hidden />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-72 bg-gradient-to-t from-black/70 via-black/25 to-transparent" aria-hidden />
 
       {/* Flash de tela: clarão branco por um instante para iluminar a selfie. */}
       {screenFlash && <div className="pointer-events-none absolute inset-0 z-40 bg-white" aria-hidden />}
@@ -188,88 +234,47 @@ export function CameraStep({
         </div>
       )}
 
-      <div className="relative min-h-0 flex-1 overflow-hidden">
-        {stream && (
-          <video
-            ref={videoRef}
-            muted
-            playsInline
-            autoPlay
-            className={clsx('h-full w-full object-cover', facing === 'user' && '-scale-x-100')}
-          />
-        )}
+      {/* Barra superior flutuante: fechar (esq.) · flash ou tempo (centro) */}
+      <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 pb-3 pt-safe-top">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Fechar câmera"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-sm transition-transform active:scale-95"
+        >
+          <X size={20} aria-hidden />
+        </button>
 
-        {error && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center">
-            <p className="font-sans text-title text-white">
-              {error === 'denied' ? 'Câmera sem permissão' : 'Câmera indisponível'}
-            </p>
-            <p className="text-body-sm text-white/70">
-              {error === 'denied'
-                ? 'Ative o acesso à câmera nas Configurações do iOS para gravar por aqui.'
-                : 'Não foi possível abrir a câmera neste aparelho. Você ainda pode escolher da galeria.'}
-            </p>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={retry}
-                className="min-h-[44px] rounded-full bg-white/15 px-6 font-sans text-label text-white"
-              >
-                Tentar de novo
-              </button>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="min-h-[44px] rounded-full bg-white px-6 font-sans text-label text-black"
-              >
-                Escolher da galeria
-              </button>
-            </div>
+        {isRecording ? (
+          <div className="flex items-center gap-2 rounded-full bg-black/45 px-3 py-1.5 backdrop-blur-sm">
+            <span className="h-2 w-2 animate-pulse rounded-full bg-error motion-reduce:animate-none" aria-hidden />
+            <span className="font-sans text-counter tabular-nums text-white">{formatElapsed(elapsedMs)}</span>
           </div>
-        )}
-
-        {/* Barra superior: fechar (esq.) · flash ou tempo de gravação (centro) */}
-        <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 pb-3 pt-safe-top">
+        ) : (
           <button
             type="button"
-            onClick={onClose}
-            aria-label="Fechar câmera"
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-black/30 text-white"
+            onClick={() => setFlashOn((prev) => !prev)}
+            aria-label={flashOn ? 'Desligar flash' : 'Ligar flash'}
+            aria-pressed={flashOn}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-sm transition-transform active:scale-95"
           >
-            <X size={20} aria-hidden />
+            {flashOn ? <Zap size={20} aria-hidden /> : <ZapOff size={20} aria-hidden />}
           </button>
+        )}
 
-          {isRecording ? (
-            <div className="flex items-center gap-2 rounded-full bg-black/40 px-3 py-1.5">
-              <span className="h-2 w-2 rounded-full bg-error" aria-hidden />
-              <span className="font-sans text-counter text-white">{formatElapsed(elapsedMs)}</span>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setFlashOn((prev) => !prev)}
-              aria-label={flashOn ? 'Desligar flash' : 'Ligar flash'}
-              aria-pressed={flashOn}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-black/30 text-white"
-            >
-              {flashOn ? <Zap size={20} aria-hidden /> : <ZapOff size={20} aria-hidden />}
-            </button>
-          )}
-
-          <div className="h-10 w-10" aria-hidden />
-        </div>
+        <div className="h-10 w-10" aria-hidden />
       </div>
 
-      <div className="flex flex-col items-center gap-5 bg-black pb-safe-bottom pt-4">
+      {/* Controles flutuantes na base (sobre o scrim): modos + galeria/obturador/virar. */}
+      <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-5 pb-safe-bottom pt-4">
         <CameraModeSwitcher mode={mode} onChange={onModeChange} />
 
-        {/* Galeria (esq.) · obturador (centro) · virar câmera (dir.) */}
-        <div className="grid w-full grid-cols-3 items-center px-8 pb-4">
+        <div className="grid w-full grid-cols-3 items-center px-8 pb-5">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             aria-label="Escolher da galeria"
-            className="flex h-12 w-12 items-center justify-center justify-self-start overflow-hidden rounded-xl border-2 border-white/70 bg-white/5 text-white"
+            className="flex h-12 w-12 items-center justify-center justify-self-start overflow-hidden rounded-xl border-2 border-white/80 bg-white/10 text-white backdrop-blur-sm transition-transform active:scale-95"
           >
             <Images size={22} aria-hidden />
           </button>
@@ -278,14 +283,14 @@ export function CameraStep({
             type="button"
             onClick={handleShutterTap}
             aria-label={mode === 'photo' ? 'Capturar foto' : isRecording ? 'Parar gravação' : 'Iniciar gravação'}
-            className="flex h-[72px] w-[72px] items-center justify-center justify-self-center rounded-full border-4 border-white bg-white/10 transition-transform active:scale-95"
+            className="flex h-[76px] w-[76px] items-center justify-center justify-self-center rounded-full border-[5px] border-white bg-white/10 transition-transform active:scale-95"
           >
             <span
               className={clsx(
-                'transition-all',
-                isRecording && 'h-6 w-6 rounded-md bg-error',
-                !isRecording && mode === 'photo' && 'h-14 w-14 rounded-full bg-white',
-                !isRecording && mode !== 'photo' && 'h-14 w-14 rounded-full bg-error',
+                'transition-all duration-200',
+                isRecording && 'h-7 w-7 rounded-md bg-error',
+                !isRecording && mode === 'photo' && 'h-[58px] w-[58px] rounded-full bg-white',
+                !isRecording && mode !== 'photo' && 'h-[58px] w-[58px] rounded-full bg-error',
               )}
               aria-hidden
             />
@@ -296,7 +301,7 @@ export function CameraStep({
             onClick={() => setFacing((prev) => (prev === 'user' ? 'environment' : 'user'))}
             aria-label="Virar câmera"
             disabled={isRecording}
-            className="flex h-12 w-12 items-center justify-center justify-self-end rounded-full bg-white/15 text-white disabled:opacity-40"
+            className="flex h-12 w-12 items-center justify-center justify-self-end rounded-full bg-white/15 text-white backdrop-blur-sm transition-transform active:scale-95 disabled:opacity-40"
           >
             <SwitchCamera size={22} aria-hidden />
           </button>
