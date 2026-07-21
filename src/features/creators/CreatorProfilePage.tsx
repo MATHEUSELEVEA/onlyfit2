@@ -924,12 +924,12 @@ function CommunitiesList({ creatorId }: { creatorId: string | null }) {
           description={c.description}
           meta={`${formatCount(c.memberCount)} membros${c.visibility === 'private' ? ' · Privada' : ''}`}
           action={
-            <button
-              type="button"
+            <Link
+              to={`/comunidades/${c.id}`}
               className="inline-flex min-h-[36px] items-center rounded-full bg-primary px-5 font-sans text-label text-on-primary active:scale-[0.98]"
             >
               {c.visibility === 'private' ? 'Solicitar entrada' : 'Entrar'}
-            </button>
+            </Link>
           }
         />
       ))}

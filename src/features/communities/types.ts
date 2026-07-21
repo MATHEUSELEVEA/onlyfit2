@@ -10,6 +10,8 @@ export interface Community {
   member_count: number | null;
   sports: string[];
   created_at: string | null;
+  /** Só vem preenchido quando a query pede o join com `profiles` (ver useCommunity). */
+  owner?: MemberProfile | null;
 }
 
 /** Relação do usuário logado com uma comunidade. */

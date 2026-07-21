@@ -12,11 +12,11 @@ export function useCommunity(communityId: string | undefined) {
     queryFn: async (): Promise<Community | null> => {
       const { data, error } = await supabase
         .from('communities')
-        .select(COMMUNITY_COLUMNS)
+        .select(`${COMMUNITY_COLUMNS}, owner:creator_id(${MEMBER_PROFILE})`)
         .eq('id', communityId!)
         .maybeSingle();
       if (error) throw error;
-      return (data as Community) ?? null;
+      return (data as unknown as Community) ?? null;
     },
   });
 }
