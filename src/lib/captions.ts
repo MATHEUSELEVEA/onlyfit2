@@ -64,9 +64,10 @@ const COLOR_TEXT: Record<CaptionColor, string> = {
 };
 
 const POSITION_CLASS: Record<CaptionPosition, string> = {
-  top: 'items-start pt-[18%]',
+  top: 'items-start pt-[16%]',
   center: 'items-center',
-  bottom: 'items-end pb-[24%]',
+  // Safe area: acima do cluster de nome/legenda/ações e do fio de progresso.
+  bottom: 'items-end feed-caption-bottom',
 };
 
 // Classe do container (alinhamento vertical) por posição.

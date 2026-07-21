@@ -234,13 +234,14 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
           esperar o loop. A área de toque fica totalmente acima da BottomNav. */}
       {media.kind === 'video' && active && duration > 0 && (
         <label
-          className="feed-progress-control absolute inset-x-0 z-20 flex h-11 items-center px-3"
+          className="feed-progress-control absolute inset-x-0 z-20 flex items-end"
           onClick={(event) => event.stopPropagation()}
         >
           <span className="sr-only">Progresso do vídeo</span>
-          <span className="pointer-events-none absolute inset-x-3 h-1 overflow-hidden rounded-full bg-white/25" aria-hidden>
+          {/* Fio fino colado na borda de baixo: engrossa levemente ao arrastar. */}
+          <span className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px] overflow-hidden bg-white/20" aria-hidden>
             <span
-              className="block h-full rounded-full bg-white/90 transition-[width] duration-200 ease-linear motion-reduce:transition-none"
+              className="block h-full bg-white/85 transition-[width] duration-200 ease-linear motion-reduce:transition-none"
               style={{ width: `${Math.min(100, currentTime / duration * 100)}%` }}
             />
           </span>
@@ -253,7 +254,7 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
             onChange={(event) => seek(Number(event.target.value))}
             aria-label="Progresso do vídeo"
             aria-valuetext={`${formatVideoTime(currentTime)} de ${formatVideoTime(duration)}`}
-            className="feed-progress-input relative h-11 w-full cursor-pointer appearance-none bg-transparent text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+            className="feed-progress-input relative h-full w-full cursor-pointer appearance-none bg-transparent text-white focus-visible:outline-none"
           />
         </label>
       )}

@@ -52,6 +52,9 @@
     /* A BottomNav já inclui pb-safe-bottom na própria altura medida. */
     --feed-inset-b: var(--feed-nav-h);
     --feed-inset-t: env(safe-area-inset-top);
+    /* Altura da faixa de toque do progresso (o fio fica na base dela). O
+     * conteúdo (nome/legenda/ações) reserva essa faixa como safe area. */
+    --feed-progress-h: 26px;
   }
 
   .feed-stage {
@@ -62,7 +65,15 @@
   /* Zona inferior: meta (creator + legenda + produto) e rail lado a lado,
    * alinhados pelo fundo. A legenda expande e o rail sobe junto — sem JS. */
   .feed-bottom-zone {
-    bottom: calc(var(--feed-inset-b) + 8px);
+    /* Sobe acima do fio de progresso — safe area, sem sobreposição. */
+    bottom: calc(var(--feed-inset-b) + var(--feed-progress-h) + 6px);
+  }
+
+  /* Safe area da legenda de vídeo (posição "base"): fica acima do cluster de
+   * nome/legenda/ações e do fio de progresso. */
+  .feed-caption-bottom {
+    /* fallbacks para quando fora do .feed-viewport (ex.: preview do editor). */
+    padding-bottom: calc(var(--feed-inset-b, 56px) + var(--feed-progress-h, 26px) + 118px);
   }
 
   .feed-actions-rail {
@@ -88,39 +99,56 @@
     top: calc(var(--feed-inset-t) + 112px);
   }
 
-  /* Scrubber do vídeo. A área de 44px termina 12px acima da nav e, portanto,
-   * antes do botão elevado de My Fit, sem disputa de gesto. */
+  /* Progresso do vídeo estilo Reels: um FIO fino colado na borda de baixo
+   * (fora da zona de conteúdo). A faixa de toque tem --feed-progress-h de
+   * altura mas é invisível; o thumb só aparece ao arrastar. Discreto e chique. */
   .feed-progress-control {
-    bottom: calc(var(--feed-inset-b) + 12px);
+    bottom: var(--feed-inset-b);
+    height: var(--feed-progress-h);
     touch-action: pan-x;
   }
 
   .feed-progress-input::-webkit-slider-runnable-track {
-    height: 4px;
+    height: var(--feed-progress-h);
     background: transparent;
   }
 
+  /* Thumb oculto no repouso; surge pequeno só ao interagir (arrastar/focar). */
   .feed-progress-input::-webkit-slider-thumb {
-    width: 14px;
-    height: 14px;
-    margin-top: -5px;
+    width: 12px;
+    height: 12px;
+    margin-top: 12px; /* alinha o thumb ao fio na base da faixa */
     appearance: none;
-    border: 2px solid currentColor;
+    border: 2px solid rgb(255 255 255 / 0.9);
     border-radius: 9999px;
-    background: rgb(var(--color-surface-container-lowest) / 0.9);
+    background: rgb(var(--color-surface-container-lowest) / 0.95);
+    opacity: 0;
+    transition: opacity 150ms ease;
+  }
+
+  .feed-progress-input:active::-webkit-slider-thumb,
+  .feed-progress-input:focus-visible::-webkit-slider-thumb {
+    opacity: 1;
   }
 
   .feed-progress-input::-moz-range-track {
-    height: 4px;
+    height: var(--feed-progress-h);
     background: transparent;
   }
 
   .feed-progress-input::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
-    border: 2px solid currentColor;
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgb(255 255 255 / 0.9);
     border-radius: 9999px;
-    background: rgb(var(--color-surface-container-lowest) / 0.9);
+    background: rgb(var(--color-surface-container-lowest) / 0.95);
+    opacity: 0;
+    transition: opacity 150ms ease;
+  }
+
+  .feed-progress-input:active::-moz-range-thumb,
+  .feed-progress-input:focus-visible::-moz-range-thumb {
+    opacity: 1;
   }
 
   /* Overlay de "Publicando…"/erro do post ainda subindo (publishQueue.ts),
