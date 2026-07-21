@@ -137,7 +137,7 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
         && current.every((item, index) => {
           const next = realTemplates[index];
           return item.id === next?.id
-            && item.name === next.name
+            && item.title === next.title
             && item.exercises.length === next.exercises.length;
         })
       ) {
