@@ -19,14 +19,26 @@ type HealthConnectionRow = {
 type ExternalActivityRow = {
   id: string;
   provider_activity_id: string | null;
+  provider: string;
   sport: string;
+  engine: string;
+  activity_type: string | null;
   title: string | null;
   started_at: string;
+  ended_at: string | null;
   duration_s: number | null;
+  moving_time_s: number | null;
   distance_m: number | null;
   elevation_gain_m: number | null;
   avg_hr: number | null;
+  max_hr: number | null;
+  avg_power_w: number | null;
+  weighted_power_w: number | null;
+  avg_speed_mps: number | null;
   calories: number | null;
+  tss: number | null;
+  rpe: number | null;
+  streams_available: boolean | null;
   source_payload: Record<string, unknown> | null;
 };
 
@@ -107,14 +119,26 @@ function toWearableActivity(row: ExternalActivityRow): WearableActivity {
     date: localDateKey(row.started_at),
     title: row.title || labelFromSport(row.sport),
     durationMin: row.duration_s ? Math.round(row.duration_s / 60) : 0,
+    movingTimeMin: row.moving_time_s ? Math.round(row.moving_time_s / 60) : undefined,
     surface: surfaceFromSport(row.sport),
     source: 'healthkit',
+    provider: row.provider,
+    engine: row.engine as WearableActivity['engine'],
+    activityType: row.activity_type ?? undefined,
     externalId: row.provider_activity_id ?? undefined,
     startedAt: row.started_at,
+    endedAt: row.ended_at ?? undefined,
     distanceKm: row.distance_m ? Math.round((row.distance_m / 1000) * 10) / 10 : undefined,
     calories: row.calories ? Math.round(row.calories) : undefined,
     averageHeartRate: row.avg_hr ? Math.round(row.avg_hr) : undefined,
+    maxHeartRate: row.max_hr ? Math.round(row.max_hr) : undefined,
+    averageSpeedKmh: row.avg_speed_mps ? Math.round(row.avg_speed_mps * 3.6 * 10) / 10 : undefined,
+    averagePowerW: row.avg_power_w ? Math.round(row.avg_power_w) : undefined,
+    weightedPowerW: row.weighted_power_w ? Math.round(row.weighted_power_w) : undefined,
     elevationM: row.elevation_gain_m ? Math.round(row.elevation_gain_m) : undefined,
+    trainingLoad: row.tss ? Math.round(row.tss) : undefined,
+    rpe: row.rpe ?? undefined,
+    sourcePayload: row.source_payload ?? undefined,
     importedFromWatch: isAppleWatchPayload(row.source_payload),
   };
 }
@@ -183,7 +207,7 @@ export function useAppleHealth() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('external_activities')
-        .select('id,provider_activity_id,sport,title,started_at,duration_s,distance_m,elevation_gain_m,avg_hr,calories,source_payload')
+        .select('id,provider,provider_activity_id,sport,engine,activity_type,title,started_at,ended_at,duration_s,moving_time_s,distance_m,elevation_gain_m,avg_hr,max_hr,avg_power_w,weighted_power_w,avg_speed_mps,calories,tss,rpe,streams_available,source_payload')
         .eq('user_id', userId!)
         .eq('provider', 'healthkit')
         .is('deleted_at', null)

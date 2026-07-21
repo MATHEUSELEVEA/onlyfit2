@@ -25,7 +25,7 @@ export interface ScheduledWorkout { id: string; date: string; templateId?: strin
 /** Boundary for wearable adapters. External data never becomes a prescribed workout. */
 export interface ImportedActivity {
   id: string; date: string; title: string; durationMin: number; surface: TrainingSurface; source: ActivitySource;
-  externalId?: string; startedAt?: string; distanceKm?: number; calories?: number; averageHeartRate?: number; elevationM?: number;
+  movingTimeMin?: number; externalId?: string; startedAt?: string; endedAt?: string; distanceKm?: number; calories?: number; averageHeartRate?: number; maxHeartRate?: number; averageSpeedKmh?: number; averagePowerW?: number; weightedPowerW?: number; elevationM?: number; trainingLoad?: number; rpe?: number; provider?: string; engine?: string; activityType?: string; sourcePayload?: Record<string, unknown>;
   importedFromWatch?: boolean;
 }
 export interface WorkoutSession { id: string; scheduledId: string; templateId: string; startedAt: number; activeExercise: number; logs: Record<string, ExerciseSetLog[]>; note: string; }

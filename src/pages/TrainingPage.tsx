@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Activity, Bike, CalendarDays, CalendarX2, ChevronLeft, ChevronRight, Dumbbell, Flame, Footprints, HeartPulse, Leaf, Moon, Play, Plus, RotateCcw, Sparkles, Waves, Watch } from 'lucide-react';
+import { Activity, Bike, CalendarDays, CalendarX2, ChevronLeft, ChevronRight, Dumbbell, Flame, Footprints, HeartPulse, Info, Leaf, MapPin, Moon, Play, Plus, RotateCcw, Sparkles, Waves, Watch, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -51,15 +51,27 @@ const surfaceTranslationKey: Record<TrainingSurface, TranslationKey> = {
 const weekdayFull = (value: string) => new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long' });
 const dayMonth = (value: string) => new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
 
-function formatActivityMeta(activity: { durationMin: number; source: string; distanceKm?: number; calories?: number; averageHeartRate?: number; elevationM?: number }) {
+function formatActivityMeta(activity: { durationMin: number; distanceKm?: number; calories?: number; averageHeartRate?: number; elevationM?: number }) {
   return [
-    `${activity.durationMin} min`,
+    activity.durationMin ? `${activity.durationMin} min` : null,
     activity.distanceKm ? `${activity.distanceKm.toLocaleString('pt-BR')} km` : null,
     activity.calories ? `${activity.calories} kcal` : null,
     activity.averageHeartRate ? `${activity.averageHeartRate} bpm` : null,
     activity.elevationM ? `${activity.elevationM} m alt.` : null,
-    sourceLabel(activity.source),
   ].filter(Boolean).join(' · ');
+}
+
+function formatActivityDateTime(value?: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function formatActivitySource(activity: ImportedActivity) {
+  const source = sourceLabel(activity.source);
+  const device = typeof activity.sourcePayload?.device_name === 'string' ? activity.sourcePayload.device_name : null;
+  return device ? `${source} · ${device}` : source;
 }
 
 // Intensidade (0..1) → nível de preenchimento do heatmap. Passos discretos em
@@ -90,6 +102,7 @@ function TrainingContent() {
   const [tab, setTab] = useState<Tab>('today');
   const [selectedDate, setSelectedDate] = useState(today());
   const [detailDate, setDetailDate] = useState<string | null>(null);
+  const [detailActivity, setDetailActivity] = useState<ImportedActivity | null>(null);
   const [recordOpen, setRecordOpen] = useState(false);
   const { scheduled, imported, activeSession, addActivity } = useTraining();
   const appleHealth = useAppleHealth();
@@ -104,11 +117,12 @@ function TrainingContent() {
       <div className="grid grid-cols-4 rounded-xl bg-surface-container p-1" role="tablist" aria-label={t('meufit.training.tabs.aria')}>{([['today', t('meufit.training.tabs.today')], ['history', t('meufit.training.tabs.history')], ['progress', t('meufit.training.tabs.progress')], ['library', t('meufit.training.tabs.library')]] as [Tab, string][]).map(([value, label]) => <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={clsx('min-h-[40px] rounded-lg font-sans text-counter transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', tab === value ? 'bg-surface-container-lowest text-on-surface' : 'text-on-surface-variant')}>{label}</button>)}</div>
       {tab !== 'today' ? <AppleHealthCard appleHealth={appleHealth} compact /> : null}
       {tab === 'today' && <Today items={todayItems} active={activeItem ?? null} />}
-      {tab === 'history' && <HistoryList imported={allImported} healthDays={healthDays} onOpenDay={(value) => setDetailDate(value)} onRecord={() => setRecordOpen(true)} />}
+      {tab === 'history' && <HistoryList imported={allImported} healthDays={healthDays} onOpenDay={(value) => setDetailDate(value)} onOpenActivity={setDetailActivity} onRecord={() => setRecordOpen(true)} />}
       {tab === 'progress' && <Progress appleHealth={appleHealth} healthDays={healthDays} scheduled={scheduled} selectedDate={selectedDate} onSelect={(value) => { setSelectedDate(value); setDetailDate(value); }} />}
       {tab === 'library' && <Library />}
     </main>
-    <DayDetailSheet date={detailDate} onClose={() => setDetailDate(null)} healthDays={healthDays} scheduled={scheduled} />
+    <DayDetailSheet date={detailDate} onClose={() => setDetailDate(null)} healthDays={healthDays} scheduled={scheduled} onOpenActivity={setDetailActivity} />
+    <ImportedActivitySheet activity={detailActivity} onClose={() => setDetailActivity(null)} />
     <AddActivitySheet open={recordOpen} onClose={() => setRecordOpen(false)} selectedDate={today()} onAdd={(activity) => { addActivity(activity); setRecordOpen(false); }} />
   </div>;
 }
@@ -232,7 +246,7 @@ function Today({ items, active }: { items: ScheduledWorkout[]; active: Scheduled
 }
 
 /** Conteúdo do dia: anel de energia, métricas, atividades e treinos, usado nos detalhes do Histórico e Progresso. */
-function DayDetailContent({ date, healthDays, scheduled, showScheduled = true }: { date: string; healthDays: Map<string, HealthDay>; scheduled: ScheduledWorkout[]; showScheduled?: boolean }) {
+function DayDetailContent({ date, healthDays, scheduled, showScheduled = true, onOpenActivity }: { date: string; healthDays: Map<string, HealthDay>; scheduled: ScheduledWorkout[]; showScheduled?: boolean; onOpenActivity?: (activity: ImportedActivity) => void }) {
   const navigate = useNavigate();
   const { startSession, reschedule } = useTraining();
   const day = healthDays.get(date);
@@ -297,7 +311,7 @@ function DayDetailContent({ date, healthDays, scheduled, showScheduled = true }:
       ))}
 
       {(day?.activities ?? []).map((activity) => (
-        <div key={activity.id} className="flex items-center gap-3 rounded-xl border border-outline-variant/40 bg-surface p-3">
+        <button key={activity.id} type="button" onClick={() => onOpenActivity?.(activity)} className="flex w-full items-center gap-3 rounded-xl border border-outline-variant/40 bg-surface p-3 text-left transition-colors hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
           <TrainingBadge surface={activity.surface} status="imported" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -306,16 +320,86 @@ function DayDetailContent({ date, healthDays, scheduled, showScheduled = true }:
             </div>
             <p className="mt-0.5 break-words font-sans text-body-sm text-on-surface-variant">{formatActivityMeta(activity)}</p>
           </div>
-        </div>
+          <ChevronRight size={18} className="shrink-0 text-on-surface-variant" aria-hidden />
+        </button>
       ))}
     </div>
   );
 }
 
-function DayDetailSheet({ date, onClose, healthDays, scheduled }: { date: string | null; onClose: () => void; healthDays: Map<string, HealthDay>; scheduled: ScheduledWorkout[] }) {
+function DayDetailSheet({ date, onClose, healthDays, scheduled, onOpenActivity }: { date: string | null; onClose: () => void; healthDays: Map<string, HealthDay>; scheduled: ScheduledWorkout[]; onOpenActivity: (activity: ImportedActivity) => void }) {
   return (
     <BottomSheet open={!!date} onClose={onClose} title={date ? weekdayFull(date) : ''} description={date ? new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }) : undefined} panelClassName="max-h-[88%]">
-      <div className="px-5 pb-8 pt-1">{date ? <DayDetailContent date={date} healthDays={healthDays} scheduled={scheduled} /> : null}</div>
+      <div className="px-5 pb-8 pt-1">{date ? <DayDetailContent date={date} healthDays={healthDays} scheduled={scheduled} onOpenActivity={onOpenActivity} /> : null}</div>
+    </BottomSheet>
+  );
+}
+
+function ActivityDetailRow({ label, value }: { label: string; value?: string | null }) {
+  if (!value) return null;
+  return <div className="flex items-center justify-between gap-4 border-b border-outline-variant/25 py-3 last:border-b-0"><span className="font-sans text-body-sm text-on-surface-variant">{label}</span><span className="text-right font-sans text-body-sm font-semibold text-on-surface">{value}</span></div>;
+}
+
+function ImportedActivitySheet({ activity, onClose }: { activity: ImportedActivity | null; onClose: () => void }) {
+  if (!activity) return null;
+  const sourcePayload = activity.sourcePayload ?? {};
+  const deviceName = typeof sourcePayload.device_name === 'string' ? sourcePayload.device_name : null;
+  const sourceName = typeof sourcePayload.source_name === 'string' ? sourcePayload.source_name : null;
+  const appVersion = typeof sourcePayload.app_version === 'string' ? sourcePayload.app_version : null;
+  const startedAt = formatActivityDateTime(activity.startedAt);
+  const endedAt = formatActivityDateTime(activity.endedAt);
+  const source = formatActivitySource(activity);
+  const speed = activity.averageSpeedKmh ? `${activity.averageSpeedKmh.toLocaleString('pt-BR')} km/h` : null;
+  const distance = activity.distanceKm ? `${activity.distanceKm.toLocaleString('pt-BR')} km` : null;
+  const details: Array<[string, string | null]> = [
+    ['Tempo total', activity.durationMin ? `${activity.durationMin} min` : null],
+    ['Tempo em movimento', activity.movingTimeMin ? `${activity.movingTimeMin} min` : null],
+    ['Distância', distance],
+    ['Velocidade média', speed],
+    ['Calorias', activity.calories ? `${activity.calories} kcal` : null],
+    ['FC média', activity.averageHeartRate ? `${activity.averageHeartRate} bpm` : null],
+    ['FC máxima', activity.maxHeartRate ? `${activity.maxHeartRate} bpm` : null],
+    ['Elevação acumulada', activity.elevationM ? `${activity.elevationM} m` : null],
+    ['Potência média', activity.averagePowerW ? `${activity.averagePowerW} W` : null],
+    ['Potência ponderada', activity.weightedPowerW ? `${activity.weightedPowerW} W` : null],
+    ['Carga de treino', activity.trainingLoad ? `${activity.trainingLoad}` : null],
+    ['RPE', activity.rpe ? `${activity.rpe}/10` : null],
+  ];
+
+  return (
+    <BottomSheet open onClose={onClose} title={activity.title} description={[startedAt, source].filter(Boolean).join(' · ')} panelClassName="max-h-[92%]">
+      <div className="space-y-5 px-5 pb-8 pt-2">
+        <div className="flex items-center gap-3 rounded-2xl border border-primary/20 bg-primary/[0.06] p-4">
+          <TrainingBadge surface={activity.surface} status="imported" />
+          <div className="min-w-0 flex-1">
+            <p className="font-sans text-label text-on-surface">Registro importado</p>
+            <p className="mt-1 font-sans text-body-sm text-on-surface-variant">Dados preservados da integração, organizados por modalidade.</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Fechar detalhes" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant"><X size={17} aria-hidden /></button>
+        </div>
+
+        <div>
+          <div className="mb-2 flex items-center gap-2"><Info size={15} className="text-primary" aria-hidden /><h3 className="font-sans text-counter font-semibold uppercase tracking-[0.12em] text-on-surface-variant">Resumo</h3></div>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              ['Tempo', activity.durationMin ? `${activity.durationMin} min` : '—'],
+              ['Distância', distance ?? '—'],
+              ['Calorias', activity.calories ? `${activity.calories} kcal` : '—'],
+              ['FC média', activity.averageHeartRate ? `${activity.averageHeartRate} bpm` : '—'],
+            ].map(([label, value]) => <div key={label} className="rounded-xl border border-outline-variant/30 bg-surface-container p-3"><p className="font-sans text-counter text-on-surface-variant">{label}</p><p className="mt-1 font-sans text-label tabular-nums text-on-surface">{value}</p></div>)}
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-2 flex items-center gap-2"><MapPin size={15} className="text-primary" aria-hidden /><h3 className="font-sans text-counter font-semibold uppercase tracking-[0.12em] text-on-surface-variant">Dados da atividade</h3></div>
+          <div className="rounded-xl border border-outline-variant/30 bg-surface-container px-4"><ActivityDetailRow label="Início" value={startedAt} /><ActivityDetailRow label="Fim" value={endedAt} />{details.map(([label, value]) => <ActivityDetailRow key={label} label={label} value={value} />)}</div>
+        </div>
+
+        <div>
+          <div className="mb-2 flex items-center gap-2"><Watch size={15} className="text-primary" aria-hidden /><h3 className="font-sans text-counter font-semibold uppercase tracking-[0.12em] text-on-surface-variant">Origem</h3></div>
+          <div className="rounded-xl border border-outline-variant/30 bg-surface-container px-4"><ActivityDetailRow label="Fonte" value={source} /><ActivityDetailRow label="Dispositivo" value={deviceName} /><ActivityDetailRow label="Nome da origem" value={sourceName} /><ActivityDetailRow label="Versão da integração" value={appVersion} /><ActivityDetailRow label="ID externo" value={activity.externalId} /></div>
+        </div>
+      </div>
     </BottomSheet>
   );
 }
@@ -537,7 +621,7 @@ function AppleHealthCard({ appleHealth, compact }: { appleHealth: AppleHealthSta
   const hasQueryError = appleHealth.connectionError || appleHealth.activitiesError || appleHealth.dailySummariesError;
   const waitingForNativeState = appleHealth.isNativeIos && appleHealth.isLoading && !appleHealth.connection;
   const unavailable = !appleHealth.available && !appleHealth.isLoading;
-  if (!connected && !waitingForNativeState && !appleHealth.isNativeIos && !hasQueryError) return null;
+  if (!appleHealth.isNativeIos && !hasQueryError) return null;
   const syncing = appleHealth.sync.isPending;
   const lastSync = appleHealth.connection?.last_sync_at
     ? new Date(appleHealth.connection.last_sync_at).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -566,7 +650,7 @@ function AppleHealthCard({ appleHealth, compact }: { appleHealth: AppleHealthSta
                     : t('health.apple.description')}
               </p>
             </div>
-            {connected ? (
+            {connected && appleHealth.isNativeIos ? (
               <button
                 type="button"
                 onClick={() => appleHealth.sync.mutate('manual')}
@@ -616,18 +700,20 @@ function AppleHealthCard({ appleHealth, compact }: { appleHealth: AppleHealthSta
 }
 
 /** Histórico cronológico agrupado por dia, com contexto de saúde no cabeçalho do dia. */
-function HistoryList({ imported, healthDays, onOpenDay, onRecord }: { imported: ImportedActivity[]; healthDays: Map<string, HealthDay>; onOpenDay: (date: string) => void; onRecord: () => void }) {
+type HistoryEntry = { id: string; title: string; meta: string; status: TrainingStatus; surface: TrainingSurface; importedFromWatch: boolean; activity?: ImportedActivity };
+
+function HistoryList({ imported, healthDays, onOpenDay, onOpenActivity, onRecord }: { imported: ImportedActivity[]; healthDays: Map<string, HealthDay>; onOpenDay: (date: string) => void; onOpenActivity: (activity: ImportedActivity) => void; onRecord: () => void }) {
   const { t } = useTranslation();
   const { scheduled } = useTraining();
   const byDate = useMemo(() => {
-    const map = new Map<string, { id: string; title: string; meta: string; status: TrainingStatus; surface: TrainingSurface; importedFromWatch: boolean }[]>();
-    const push = (date: string, entry: { id: string; title: string; meta: string; status: TrainingStatus; surface: TrainingSurface; importedFromWatch: boolean }) => {
+    const map = new Map<string, HistoryEntry[]>();
+    const push = (date: string, entry: HistoryEntry) => {
       const list = map.get(date) ?? [];
       list.push(entry);
       map.set(date, list);
     };
     scheduled.filter((item) => ['completed', 'partial', 'missed'].includes(item.status)).forEach((item) => push(item.date, { id: item.id, title: item.title, meta: item.summary ?? `${item.durationMin} min · ${statusLabel[item.status].toLowerCase()}`, status: item.status, surface: item.surface, importedFromWatch: false }));
-    imported.forEach((item) => push(item.date, { id: item.id, title: item.title, meta: formatActivityMeta(item), status: 'imported', surface: item.surface, importedFromWatch: Boolean(item.importedFromWatch) }));
+    imported.forEach((item) => push(item.date, { id: item.id, title: item.title, meta: formatActivityMeta(item), status: 'imported', surface: item.surface, importedFromWatch: Boolean(item.importedFromWatch), activity: item }));
     return map;
   }, [imported, scheduled]);
 
@@ -659,7 +745,7 @@ function HistoryList({ imported, healthDays, onOpenDay, onRecord }: { imported: 
                 {context ? <span className="font-sans text-counter text-on-surface-variant">{context}</span> : null}
               </button>
               <div className="mt-2 space-y-2">
-                {entries.map((item) => <HistoryRow key={item.id} {...item} />)}
+                {entries.map((item) => <HistoryRow key={item.id} {...item} onOpenActivity={onOpenActivity} />)}
               </div>
             </div>
           );
@@ -669,8 +755,10 @@ function HistoryList({ imported, healthDays, onOpenDay, onRecord }: { imported: 
   );
 }
 
-function HistoryRow({ title, meta, status, surface, importedFromWatch }: { title: string; meta: string; status: TrainingStatus; surface: TrainingSurface; importedFromWatch?: boolean }) {
-  return <div className="flex items-start gap-3 rounded-xl border border-outline-variant/40 bg-surface-container p-3"><TrainingBadge surface={surface} status={status} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="min-w-0 break-words font-sans text-label leading-snug text-on-surface">{title}</p>{importedFromWatch ? <WatchOriginChip /> : null}</div><p className="mt-0.5 break-words font-sans text-body-sm leading-snug text-on-surface-variant">{meta}</p></div></div>;
+function HistoryRow({ title, meta, status, surface, importedFromWatch, activity, onOpenActivity }: HistoryEntry & { onOpenActivity: (activity: ImportedActivity) => void }) {
+  const content = <><TrainingBadge surface={surface} status={status} /><span className="min-w-0 flex-1"><span className="flex flex-wrap items-center gap-2"><span className="min-w-0 break-words font-sans text-label leading-snug text-on-surface">{title}</span>{importedFromWatch ? <WatchOriginChip /> : null}</span><span className="mt-1 block break-words font-sans text-body-sm leading-snug text-on-surface-variant">{meta}</span></span>{activity ? <ChevronRight size={18} className="mt-1 shrink-0 text-on-surface-variant" aria-hidden /> : null}</>;
+  if (!activity) return <div className="flex items-start gap-3 rounded-xl border border-outline-variant/40 bg-surface-container p-3">{content}</div>;
+  return <button type="button" onClick={() => onOpenActivity(activity)} aria-label={`Abrir detalhes de ${title}`} className="flex w-full items-start gap-3 rounded-xl border border-outline-variant/40 bg-surface-container p-3 text-left transition-colors hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">{content}</button>;
 }
 
 /** Calendário mensal heatmap: intensidade real por dia; tocar abre o detalhe. */
