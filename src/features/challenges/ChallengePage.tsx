@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { clsx } from 'clsx';
-import { CalendarDays, Globe2, Loader2, Lock, Pencil, UsersRound } from 'lucide-react';
+import { CalendarDays, ChevronRight, Globe2, Loader2, Lock, Pencil, UserRound, UsersRound } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from '@/i18n/I18nProvider';
 import type { TranslationKey } from '@/i18n/translations';
@@ -99,7 +99,8 @@ export function ChallengePage() {
       />
 
       <main className="mx-auto w-full max-w-[640px] px-4 pb-8 pt-4">
-        <Header run={run} creator={creator} creatorName={displayName(creator ?? null, t('challenges.creatorFallback'))} />
+        <Header run={run} />
+        <CreatorCard creator={creator} creatorName={displayName(creator ?? null, t('challenges.creatorFallback'))} />
 
         {/* CTA de participação */}
         {!isOwner && !isMember && (
@@ -163,15 +164,7 @@ export function ChallengePage() {
   );
 }
 
-function Header({
-  run,
-  creator,
-  creatorName,
-}: {
-  run: ChallengeRun;
-  creator: ChallengeProfile | null | undefined;
-  creatorName: string;
-}) {
+function Header({ run }: { run: ChallengeRun }) {
   const { t } = useTranslation();
   const { labelFor } = useAffinityGroups();
   const isPrivate = run.access_audience === 'invite_only';
@@ -188,7 +181,6 @@ function Header({
             <Globe2 size={15} className="shrink-0 text-on-surface-variant" aria-label={t('challenges.public')} />
           )}
         </div>
-        <CreatorByline creator={creator} creatorName={creatorName} />
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-sans text-body-sm text-on-surface-variant">
           <span className="inline-flex items-center gap-1">
             <CalendarDays size={14} aria-hidden />
@@ -208,7 +200,7 @@ function Header({
   );
 }
 
-function CreatorByline({
+function CreatorCard({
   creator,
   creatorName,
 }: {
@@ -216,23 +208,39 @@ function CreatorByline({
   creatorName: string;
 }) {
   const { t } = useTranslation();
-  const label = t('challenges.byCreator').replace('{name}', creatorName);
+  const content = (
+    <>
+      <CreatorAvatar profile={creator} />
+      <div className="min-w-0 flex-1">
+        <p className="font-sans text-counter text-on-surface-variant">{t('challenges.createdBy')}</p>
+        <p className="truncate font-sans text-body font-medium text-on-surface">{creatorName}</p>
+      </div>
+      {creator?.username && <ChevronRight size={18} className="shrink-0 text-on-surface-variant" aria-hidden />}
+    </>
+  );
+  const className =
+    'mt-3 flex items-center gap-3 rounded-2xl bg-surface-container px-4 py-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary';
 
-  if (!creator?.username) {
-    return <p className="mt-0.5 truncate font-sans text-body-sm text-on-surface-variant">{label}</p>;
-  }
-
-  return (
+  return creator?.username ? (
     <Link
       to={`/creator/${encodeURIComponent(creator.username)}`}
       aria-label={`Ver perfil de @${creator.username}`}
-      className="mt-0.5 flex min-w-0 items-center gap-1.5 self-start truncate font-sans text-body-sm text-on-surface-variant transition-colors hover:text-on-surface"
+      className={clsx(className, 'hover:bg-surface-container-high')}
     >
-      {creator.avatar_url ? (
-        <img src={creator.avatar_url} alt="" className="h-4 w-4 shrink-0 rounded-full object-cover" />
-      ) : null}
-      <span className="truncate">{label}</span>
+      {content}
     </Link>
+  ) : (
+    <div className={className}>{content}</div>
+  );
+}
+
+function CreatorAvatar({ profile }: { profile: ChallengeProfile | null | undefined }) {
+  return profile?.avatar_url ? (
+    <img src={profile.avatar_url} alt="" className="h-10 w-10 shrink-0 rounded-full object-cover" />
+  ) : (
+    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant">
+      <UserRound size={18} aria-hidden />
+    </span>
   );
 }
 
