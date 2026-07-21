@@ -115,6 +115,9 @@ function toStudentWorkout(row: AssignmentRow): StudentWorkout {
   };
 }
 
+/** Referência estável para o fallback sem dados — evita `[]` novo a cada render. */
+const EMPTY_WORKOUTS: StudentWorkout[] = [];
+
 /**
  * Treinos ativos aplicados ao aluno pelo profissional. Fonte real (RLS garante
  * que o aluno só lê os próprios assignments). O Player e o histórico de sessões
@@ -140,7 +143,7 @@ export function useStudentWorkouts() {
     },
   });
 
-  return { workouts: query.data ?? [], isLoading: query.isLoading, error: query.error };
+  return { workouts: query.data ?? EMPTY_WORKOUTS, isLoading: query.isLoading, error: query.error };
 }
 
 const dayIndex = (code: string) => DAY_CODES.indexOf(code as typeof DAY_CODES[number]);

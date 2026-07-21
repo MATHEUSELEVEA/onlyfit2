@@ -128,14 +128,49 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
   const [imported, setImported] = useState<ImportedActivity[]>([]);
   const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
   // React Query is the external source; keep the session-capable local projection in sync.
+  // Só atualiza se o conteúdo mudou — evita loop quando a dependência vem com nova referência.
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => setTemplates(realTemplates), [realTemplates]);
+  useEffect(() => {
+    setTemplates((current) => {
+      if (
+        current.length === realTemplates.length
+        && current.every((item, index) => {
+          const next = realTemplates[index];
+          return item.id === next?.id
+            && item.name === next.name
+            && item.exercises.length === next.exercises.length;
+        })
+      ) {
+        return current;
+      }
+      return realTemplates;
+    });
+  }, [realTemplates]);
   // Preserve transient session status while refreshing the server-backed schedule.
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => setScheduled((current) => realScheduled.map((item) => {
-    const existing = current.find((entry) => entry.id === item.id);
-    return existing && existing.status !== 'planned' ? { ...item, status: existing.status, summary: existing.summary } : item;
-  })), [realScheduled]);
+  useEffect(() => {
+    setScheduled((current) => {
+      const next = realScheduled.map((item) => {
+        const existing = current.find((entry) => entry.id === item.id);
+        return existing && existing.status !== 'planned'
+          ? { ...item, status: existing.status, summary: existing.summary }
+          : item;
+      });
+      if (
+        current.length === next.length
+        && current.every((item, index) => {
+          const candidate = next[index];
+          return item.id === candidate?.id
+            && item.status === candidate.status
+            && item.date === candidate.date
+            && item.templateId === candidate.templateId;
+        })
+      ) {
+        return current;
+      }
+      return next;
+    });
+  }, [realScheduled]);
   const startSession = (scheduledId: string) => {
     const item = scheduled.find((entry) => entry.id === scheduledId); const template = templates.find((entry) => entry.id === item?.templateId);
     if (!item || !template || !template.exercises.length) return;
