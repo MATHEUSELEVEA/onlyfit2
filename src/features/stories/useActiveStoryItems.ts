@@ -9,6 +9,8 @@ interface StoryWithProfileRow {
   media_type: StoryMediaKind;
   media_url: string;
   thumbnail_url: string | null;
+  stream_status: string | null;
+  stream_playback_url: string | null;
   created_at: string;
   expires_at: string;
   profiles: { username: string | null; avatar_url: string | null } | { username: string | null; avatar_url: string | null }[] | null;
@@ -26,7 +28,7 @@ async function fetchActiveStoryItems(): Promise<StoryFeedItem[]> {
   const { data, error } = await supabase
     .from('stories')
     .select(
-      `id, creator_id, media_type, media_url, thumbnail_url, created_at, expires_at,
+      `id, creator_id, media_type, media_url, thumbnail_url, stream_status, stream_playback_url, created_at, expires_at,
        profiles:creator_id!inner ( username, avatar_url )`,
     )
     .gt('expires_at', new Date().toISOString())
@@ -43,6 +45,7 @@ async function fetchActiveStoryItems(): Promise<StoryFeedItem[]> {
       mediaType: row.media_type,
       mediaUrl: row.media_url,
       thumbnailUrl: row.thumbnail_url,
+      hlsUrl: row.stream_status === 'ready' ? row.stream_playback_url : null,
       createdAt: row.created_at,
       expiresAt: row.expires_at,
     };

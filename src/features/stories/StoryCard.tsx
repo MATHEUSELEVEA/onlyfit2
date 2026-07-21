@@ -41,7 +41,7 @@ export function StoryCard({ story }: StoryCardProps) {
     >
       <div className="absolute inset-0">
         <PostMedia
-          media={[{ kind: story.mediaType, url: story.mediaUrl, thumbnailUrl: story.thumbnailUrl }]}
+          media={[{ kind: story.mediaType, url: story.mediaUrl, thumbnailUrl: story.thumbnailUrl, hlsUrl: story.hlsUrl }]}
           alt={`Story de @${story.username}`}
           active={inView}
         />
