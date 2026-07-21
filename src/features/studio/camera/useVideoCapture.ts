@@ -35,7 +35,7 @@ function grabPosterFrame(video: HTMLVideoElement): Promise<Blob | null> {
       return;
     }
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.85);
+    canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.9);
   });
 }
 
@@ -85,10 +85,19 @@ export function useVideoCapture({ stream, previewVideoRef, onCaptured, maxDurati
   const start = useCallback(async () => {
     if (!stream || recorderRef.current) return;
     const mime = pickVideoMimeType();
+    // Bitrate proporcional à resolução real do stream (~0.1 bit/pixel/frame),
+    // com teto de 10 Mbps: nitidez alta em 1080p sem gerar arquivo gigante.
+    // A fonte em alta qualidade importa porque o Cloudflare Stream re-encoda
+    // em adaptativo a partir dela.
+    const settings = stream.getVideoTracks()[0]?.getSettings?.() ?? {};
+    const width = settings.width ?? 1080;
+    const height = settings.height ?? 1920;
+    const frameRate = settings.frameRate ?? 30;
+    const videoBitsPerSecond = Math.max(4_000_000, Math.min(10_000_000, Math.round(width * height * frameRate * 0.1)));
     const recorder = new MediaRecorder(stream, {
       mimeType: mime,
-      videoBitsPerSecond: 2_500_000,
-      audioBitsPerSecond: 128_000,
+      videoBitsPerSecond,
+      audioBitsPerSecond: 160_000,
     });
     recorderRef.current = recorder;
     chunksRef.current = [];

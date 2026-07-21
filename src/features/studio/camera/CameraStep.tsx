@@ -41,7 +41,7 @@ function capturePhotoBlob(video: HTMLVideoElement): Promise<Blob | null> {
       return;
     }
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.9);
+    canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.95);
   });
 }
 
