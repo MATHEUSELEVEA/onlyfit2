@@ -561,6 +561,7 @@ function Library() {
                   <div className="min-w-0 flex-1">
                     <h3 className="font-sans text-label leading-snug text-on-surface">{workout.title}</h3>
                     <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{t(workout.exerciseCount === 1 ? 'meufit.training.library.exerciseCount' : 'meufit.training.library.exerciseCountPlural', { count: workout.exerciseCount })}</p>
+                    {workout.weeks.length ? <span className="mt-2 inline-flex items-center rounded-full bg-surface-container-high px-2.5 py-1 font-sans text-counter text-on-surface-variant">{workout.weeks.length === 1 ? t('meufit.training.library.weekSingle', { n: workout.weeks[0] }) : t('meufit.training.library.weekRange', { from: workout.weeks[0], to: workout.weeks[workout.weeks.length - 1] })}</span> : null}
                   </div>
                 </div>
                 {workout.daysOfWeek.length ? <div className="mt-3 border-t border-outline-variant/30 pt-3"><WeekdayStrip days={workout.daysOfWeek} /></div> : null}

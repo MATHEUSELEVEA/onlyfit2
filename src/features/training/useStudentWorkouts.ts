@@ -27,6 +27,8 @@ export interface StudentWorkout {
   workoutId: string | null;
   title: string;
   daysOfWeek: string[];
+  /** Semanas do mesociclo em que este treino aparece (protocolo multi-semana). */
+  weeks: number[];
   startsAt: string | null;
   endsAt: string | null;
   exerciseCount: number;
@@ -38,6 +40,7 @@ export interface StudentWorkout {
 type AssignmentRow = {
   id: string;
   days_of_week: string[] | null;
+  week_number: number | null;
   starts_at: string | null;
   ends_at: string | null;
   workout: {
@@ -106,6 +109,7 @@ function toStudentWorkout(row: AssignmentRow): StudentWorkout {
     workoutId: row.workout?.id ?? null,
     title: row.workout?.student_display_name || row.workout?.title || 'Treino',
     daysOfWeek: row.days_of_week ?? [],
+    weeks: typeof row.week_number === 'number' ? [row.week_number] : [],
     startsAt: row.starts_at,
     endsAt: row.ends_at,
     exerciseCount: exercises.length,
@@ -134,7 +138,7 @@ export function useStudentWorkouts() {
     queryFn: async (): Promise<StudentWorkout[]> => {
       const { data, error } = await supabase
         .from('student_workout_assignments')
-        .select('id,days_of_week,starts_at,ends_at,workout:workouts(id,title,student_display_name,category,workout_exercises(id,exercise_name,student_display_name,muscle_group,sets,reps,notes,tempo_notes,pro_video_url,position),workout_prescriptions(modality,prescription))')
+        .select('id,days_of_week,week_number,starts_at,ends_at,workout:workouts(id,title,student_display_name,category,workout_exercises(id,exercise_name,student_display_name,muscle_group,sets,reps,notes,tempo_notes,pro_video_url,position),workout_prescriptions(modality,prescription))')
         .eq('student_user_id', userId as string)
         .eq('status', 'active')
         .order('created_at', { ascending: false });
@@ -160,10 +164,15 @@ export function uniqueWorkouts(workouts: StudentWorkout[]): StudentWorkout[] {
     const existing = byTitle.get(key);
     if (existing) {
       existing.daysOfWeek = [...new Set([...existing.daysOfWeek, ...workout.daysOfWeek])].sort((a, b) => dayIndex(a) - dayIndex(b));
+      existing.weeks = [...new Set([...existing.weeks, ...workout.weeks])].sort((a, b) => a - b);
       existing.exerciseCount = Math.max(existing.exerciseCount, workout.exerciseCount);
       if (workout.exercises.length > existing.exercises.length) existing.exercises = workout.exercises;
     } else {
-      byTitle.set(key, { ...workout, daysOfWeek: [...new Set(workout.daysOfWeek)].sort((a, b) => dayIndex(a) - dayIndex(b)) });
+      byTitle.set(key, {
+        ...workout,
+        daysOfWeek: [...new Set(workout.daysOfWeek)].sort((a, b) => dayIndex(a) - dayIndex(b)),
+        weeks: [...new Set(workout.weeks)].sort((a, b) => a - b),
+      });
     }
   }
   return [...byTitle.values()];
