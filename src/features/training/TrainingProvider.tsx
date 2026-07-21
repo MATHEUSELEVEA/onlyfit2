@@ -50,6 +50,15 @@ interface TrainingContextValue {
 const TrainingContext = createContext<TrainingContextValue | null>(null);
 const day = (offset: number) => { const date = new Date(); date.setDate(date.getDate() + offset); return localDateKey(date); };
 
+function currentWeekFromStart(startsAt: string | null, date: string): number {
+  if (!startsAt) return 1;
+  const start = new Date(`${startsAt.slice(0, 10)}T12:00:00`);
+  const current = new Date(`${date}T12:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(current.getTime())) return 1;
+  const diffDays = Math.floor((current.getTime() - start.getTime()) / 86_400_000);
+  return Math.max(1, Math.floor(diffDays / 7) + 1);
+}
+
 function createSession(scheduledId: string, template: WorkoutTemplate): WorkoutSession {
   return {
     id: `session-${scheduledId}`,
@@ -104,6 +113,7 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     const date = localDateKey(current);
     return workouts
       .filter((workout) => workout.daysOfWeek.includes(todayCode))
+      .filter((workout) => !workout.weeks.length || workout.weeks.includes(currentWeekFromStart(workout.startsAt, date)))
       .filter((workout) => !workout.startsAt || workout.startsAt.slice(0, 10) <= date)
       .filter((workout) => !workout.endsAt || workout.endsAt.slice(0, 10) >= date)
       .map((workout) => {
