@@ -31,6 +31,7 @@ export interface BusinessOffering {
   billing_interval: 'month' | '2month' | 'quarter' | 'semester' | 'year' | null;
   price: number | null;
   currency: string;
+  settings: Record<string, unknown>;
   created_at: string;
 }
 
@@ -58,7 +59,7 @@ export function useBusinessOfferings(businessId: string | undefined) {
     queryFn: async (): Promise<BusinessOffering[]> => {
       const { data, error } = await supabase
         .from('business_offerings')
-        .select('id,organization_id,offering_type,name,description,status,billing_type,billing_interval,price,currency,created_at')
+        .select('id,organization_id,offering_type,name,description,status,billing_type,billing_interval,price,currency,settings,created_at')
         .eq('organization_id', businessId!)
         .neq('status', 'archived')
         .order('created_at', { ascending: true });
@@ -78,7 +79,7 @@ export function useBusinessOffering(businessId: string | undefined, offeringId: 
     queryFn: async (): Promise<BusinessOffering | null> => {
       const { data, error } = await supabase
         .from('business_offerings')
-        .select('id,organization_id,offering_type,name,description,status,billing_type,billing_interval,price,currency,created_at')
+        .select('id,organization_id,offering_type,name,description,status,billing_type,billing_interval,price,currency,settings,created_at')
         .eq('id', offeringId!)
         .eq('organization_id', businessId!)
         .maybeSingle();

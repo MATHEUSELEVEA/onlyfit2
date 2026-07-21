@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import type { WorkoutPrescription } from '@/features/profile/offerings/workoutPrescription';
 
 /** Códigos de dia usados por student_workout_assignments.days_of_week. */
 export const DAY_CODES = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'] as const;
@@ -31,6 +32,7 @@ export interface StudentWorkout {
   exerciseCount: number;
   exercises: StudentWorkoutExercise[];
   trainingType: WorkoutTrainingType;
+  prescription: WorkoutPrescription | null;
 }
 
 type AssignmentRow = {
@@ -55,6 +57,10 @@ type AssignmentRow = {
       pro_video_url: string | null;
       position: number | null;
     }> | null;
+    workout_prescriptions: Array<{
+      modality: WorkoutTrainingType;
+      prescription: WorkoutPrescription;
+    }> | { modality: WorkoutTrainingType; prescription: WorkoutPrescription } | null;
   } | null;
 };
 
@@ -74,10 +80,13 @@ export function workoutTrainingType(category: string | null | undefined): Workou
   if (/\bhiit\b/.test(value)) return 'hiit';
   if (/\byoga\b/.test(value)) return 'yoga';
   if (/pilates/.test(value)) return 'pilates';
+  if (/outro|other/.test(value)) return 'other';
   return 'strength';
 }
 
 function toStudentWorkout(row: AssignmentRow): StudentWorkout {
+  const rawPrescription = row.workout?.workout_prescriptions;
+  const prescriptionRow = Array.isArray(rawPrescription) ? rawPrescription[0] : rawPrescription;
   const exercises = (row.workout?.workout_exercises ?? [])
     .map((exercise) => ({
       id: exercise.id,
@@ -101,7 +110,8 @@ function toStudentWorkout(row: AssignmentRow): StudentWorkout {
     endsAt: row.ends_at,
     exerciseCount: exercises.length,
     exercises,
-    trainingType: workoutTrainingType(row.workout?.category),
+    trainingType: prescriptionRow?.modality ?? workoutTrainingType(row.workout?.category),
+    prescription: prescriptionRow?.prescription ?? null,
   };
 }
 
@@ -121,7 +131,7 @@ export function useStudentWorkouts() {
     queryFn: async (): Promise<StudentWorkout[]> => {
       const { data, error } = await supabase
         .from('student_workout_assignments')
-        .select('id,days_of_week,starts_at,ends_at,workout:workouts(id,title,student_display_name,category,workout_exercises(id,exercise_name,student_display_name,muscle_group,sets,reps,notes,tempo_notes,pro_video_url,position))')
+        .select('id,days_of_week,starts_at,ends_at,workout:workouts(id,title,student_display_name,category,workout_exercises(id,exercise_name,student_display_name,muscle_group,sets,reps,notes,tempo_notes,pro_video_url,position),workout_prescriptions(modality,prescription))')
         .eq('student_user_id', userId as string)
         .eq('status', 'active')
         .order('created_at', { ascending: false });

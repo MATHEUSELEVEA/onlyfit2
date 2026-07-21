@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { localDateKey } from '@/lib/localDate';
+import { DAY_CODES, uniqueWorkouts, useStudentWorkouts } from './useStudentWorkouts';
 
 export type TrainingStatus = 'planned' | 'active' | 'partial' | 'completed' | 'missed' | 'imported' | 'rest';
 export type TrainingSurface = 'strength' | 'running' | 'cycling' | 'walking' | 'swimming' | 'functional' | 'hiit' | 'yoga' | 'pilates' | 'other';
@@ -20,7 +21,7 @@ export interface WorkoutExercise {
   videoUrl?: string | null;
 }
 export interface WorkoutTemplate { id: string; title: string; focus: string; durationMin: number; exercises: WorkoutExercise[]; }
-export interface ScheduledWorkout { id: string; date: string; templateId?: string; title: string; focus: string; durationMin: number; status: TrainingStatus; surface: TrainingSurface; summary?: string; }
+export interface ScheduledWorkout { id: string; date: string; templateId?: string; title: string; focus: string; durationMin: number; status: TrainingStatus; surface: TrainingSurface; summary?: string; canStart?: boolean; }
 /** Boundary for wearable adapters. External data never becomes a prescribed workout. */
 export interface ImportedActivity {
   id: string; date: string; title: string; durationMin: number; surface: TrainingSurface; source: ActivitySource;
@@ -49,26 +50,6 @@ interface TrainingContextValue {
 const TrainingContext = createContext<TrainingContextValue | null>(null);
 const day = (offset: number) => { const date = new Date(); date.setDate(date.getDate() + offset); return localDateKey(date); };
 
-const initialTemplates: WorkoutTemplate[] = [{
-  id: 'upper', title: 'Superior A', focus: 'Peito · costas · ombros', durationMin: 58,
-  exercises: [
-    { id: 'supino', name: 'Supino reto', muscle: 'Peito', sets: 4, targetReps: '8–10', lastWeight: 60, lastReps: 8, technique: 'Escápulas firmes e pés no chão.', demoLabel: 'Posição e trajetória da barra' },
-    { id: 'remada', name: 'Remada baixa', muscle: 'Costas', sets: 4, targetReps: '10–12', lastWeight: 48, lastReps: 10, technique: 'Puxe com os cotovelos, sem elevar os ombros.', demoLabel: 'Controle da puxada e escápulas' },
-    { id: 'desenvolvimento', name: 'Desenvolvimento', muscle: 'Ombros', sets: 3, targetReps: '8–10', lastWeight: 18, lastReps: 8, technique: 'Controle a descida e mantenha o tronco estável.', demoLabel: 'Estabilidade do tronco' },
-  ],
-}];
-
-const initialScheduled: ScheduledWorkout[] = [
-  { id: 'yesterday', date: day(-1), templateId: 'upper', title: 'Superior A', focus: 'Peito · costas · ombros', durationMin: 58, status: 'completed', surface: 'strength', summary: '58 min · concluído' },
-  { id: 'today', date: day(0), templateId: 'upper', title: 'Superior A', focus: 'Peito · costas · ombros', durationMin: 58, status: 'planned', surface: 'strength' },
-  { id: 'tomorrow', date: day(1), templateId: 'upper', title: 'Inferior B', focus: 'Quadríceps · posterior', durationMin: 62, status: 'planned', surface: 'strength' },
-  { id: 'missed', date: day(-3), templateId: 'upper', title: 'Superior A', focus: 'Peito · costas', durationMin: 55, status: 'missed', surface: 'strength' },
-  { id: 'partial', date: day(-4), templateId: 'upper', title: 'Inferior B', focus: 'Quadríceps · posterior', durationMin: 62, status: 'partial', surface: 'strength', summary: '24 min · sessão parcial' },
-  { id: 'rest', date: day(2), title: 'Descanso', focus: 'Recuperação', durationMin: 0, status: 'rest', surface: 'strength' },
-];
-
-const initialImported: ImportedActivity[] = [];
-
 function createSession(scheduledId: string, template: WorkoutTemplate): WorkoutSession {
   return {
     id: `session-${scheduledId}`,
@@ -91,13 +72,73 @@ function createSession(scheduledId: string, template: WorkoutTemplate): WorkoutS
 }
 
 export function TrainingProvider({ children }: { children: ReactNode }) {
-  const [templates, setTemplates] = useState(initialTemplates);
-  const [scheduled, setScheduled] = useState(initialScheduled);
-  const [imported, setImported] = useState(initialImported);
+  const { workouts } = useStudentWorkouts();
+  const sourceWorkouts = useMemo(() => uniqueWorkouts(workouts), [workouts]);
+  const realTemplates = useMemo<WorkoutTemplate[]>(() => sourceWorkouts.map((workout) => {
+    const exercises = workout.exercises.map((exercise, index) => {
+      const name = exercise.studentDisplayName || exercise.exerciseName || `Exercício ${index + 1}`;
+      return {
+        id: exercise.id,
+        name,
+        muscle: exercise.muscleGroup || 'Exercício',
+        sets: exercise.sets,
+        targetReps: exercise.reps,
+        lastWeight: 0,
+        lastReps: Number(exercise.reps.match(/\d+/)?.[0] ?? 10),
+        technique: exercise.notes || exercise.tempoNotes || '',
+        demoLabel: name,
+        videoUrl: exercise.videoUrl,
+      };
+    });
+    const muscles = [...new Set(exercises.map((exercise) => exercise.muscle).filter((muscle) => muscle !== 'Exercício'))];
+    return {
+      id: `library-${workout.workoutId ?? workout.assignmentId}`,
+      title: workout.title,
+      focus: muscles.slice(0, 3).join(' · ') || workout.prescription?.session.objective || '',
+      durationMin: Math.max(0, Math.round(exercises.reduce((total, exercise) => total + exercise.sets, 0) * 2.5)),
+      exercises,
+    };
+  }), [sourceWorkouts]);
+  const realScheduled = useMemo<ScheduledWorkout[]>(() => {
+    const current = new Date();
+    const todayCode = DAY_CODES[current.getDay()];
+    const date = localDateKey(current);
+    return workouts
+      .filter((workout) => workout.daysOfWeek.includes(todayCode))
+      .filter((workout) => !workout.startsAt || workout.startsAt.slice(0, 10) <= date)
+      .filter((workout) => !workout.endsAt || workout.endsAt.slice(0, 10) >= date)
+      .map((workout) => {
+        const templateId = `library-${workout.workoutId ?? workout.assignmentId}`;
+        const template = realTemplates.find((item) => item.id === templateId);
+        return {
+          id: workout.assignmentId,
+          date,
+          templateId,
+          title: workout.title,
+          focus: template?.focus || workout.prescription?.session.objective || '',
+          durationMin: template?.durationMin || 0,
+          status: 'planned',
+          surface: workout.trainingType,
+          canStart: Boolean(template?.exercises.length),
+        };
+      });
+  }, [realTemplates, workouts]);
+  const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
+  const [scheduled, setScheduled] = useState<ScheduledWorkout[]>([]);
+  const [imported, setImported] = useState<ImportedActivity[]>([]);
   const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
+  // React Query is the external source; keep the session-capable local projection in sync.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setTemplates(realTemplates), [realTemplates]);
+  // Preserve transient session status while refreshing the server-backed schedule.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setScheduled((current) => realScheduled.map((item) => {
+    const existing = current.find((entry) => entry.id === item.id);
+    return existing && existing.status !== 'planned' ? { ...item, status: existing.status, summary: existing.summary } : item;
+  })), [realScheduled]);
   const startSession = (scheduledId: string) => {
     const item = scheduled.find((entry) => entry.id === scheduledId); const template = templates.find((entry) => entry.id === item?.templateId);
-    if (!item || !template) return;
+    if (!item || !template || !template.exercises.length) return;
     if (activeSession && activeSession.scheduledId !== scheduledId) return;
     if (activeSession?.scheduledId === scheduledId) return;
     setActiveSession(createSession(scheduledId, template));
@@ -155,12 +196,12 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
   const updateSessionNote = (note: string) => setActiveSession((current) => current ? { ...current, note } : current);
   const completeSession = () => {
     if (!activeSession) return;
-    setScheduled((current) => current.map((entry) => entry.id === activeSession.scheduledId ? { ...entry, status: 'completed', summary: 'Concluído agora · sessão registrada' } : entry));
+    setScheduled((current) => current.map((entry) => entry.id === activeSession.scheduledId ? { ...entry, status: 'completed' } : entry));
     setActiveSession(null);
   };
   const reschedule = (scheduledId: string) => setScheduled((current) => current.map((entry) => entry.id === scheduledId ? { ...entry, date: day(0), status: 'planned' } : entry));
   const skipToday = (scheduledId: string) => setScheduled((current) => current.map((entry) => entry.id === scheduledId && entry.status === 'planned'
-    ? { ...entry, status: 'missed', summary: 'Marcado como não realizado hoje' }
+    ? { ...entry, status: 'missed' }
     : entry));
   const addActivity = (activity: Omit<ImportedActivity, 'id'>) => setImported((current) => [{ ...activity, id: `activity-${Date.now()}` }, ...current]);
   const value = { templates, scheduled, imported, addActivity, activeSession, startSession, toggleSet, updateSet, setActiveExercise, updateSessionNote, completeSession, reschedule, startWorkoutNow, skipToday };
