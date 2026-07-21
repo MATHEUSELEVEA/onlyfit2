@@ -3,6 +3,7 @@ import { Loader2, RotateCw, Volume2, VolumeX } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { FeedMedia } from './types';
 import { muteAfterAutoplayBlock, setVideoMuted, useVideoMuted } from './videoSound';
+import { CaptionOverlay } from './CaptionOverlay';
 
 type MediaFit = 'cover' | 'contain';
 
@@ -204,6 +205,10 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
             applyFit(event.currentTarget.naturalWidth / event.currentTarget.naturalHeight)
           }
         />
+      )}
+
+      {media.kind === 'video' && media.captions && media.captions.cues.length > 0 && (
+        <CaptionOverlay track={media.captions} currentTime={currentTime} />
       )}
 
       {media.kind === 'video' && active && buffering && !videoError && (

@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { Globe, Loader2, Lock, MapPin, Play, Search, X } from 'lucide-react';
+import { Captions, Globe, Loader2, Lock, MapPin, Play, Search, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { FilterChip } from '@/components/ui/FilterChip';
 import { useAffinityGroups } from '@/lib/sports';
 import type { DraftMedia, PostLocation } from '../media';
 import { useLocationSearch } from '../useLocationSearch';
+import { CaptionEditor } from './CaptionEditor';
+import type { CaptionTrack } from '@/lib/captions';
 import type { PostVisibility } from '../useCreatePost';
 
 interface DetailsStepProps {
@@ -13,6 +15,8 @@ interface DetailsStepProps {
   onCaptionChange: (value: string) => void;
   sports: string[];
   onToggleSport: (key: string) => void;
+  captions: CaptionTrack | null;
+  onCaptionsChange: (value: CaptionTrack | null) => void;
   location: PostLocation | null;
   onLocationChange: (value: PostLocation | null) => void;
   visibility: PostVisibility;
@@ -90,6 +94,8 @@ export function DetailsStep({
   onCaptionChange,
   sports,
   onToggleSport,
+  captions,
+  onCaptionsChange,
   location,
   onLocationChange,
   visibility,
@@ -99,6 +105,8 @@ export function DetailsStep({
   onPublish,
 }: DetailsStepProps) {
   const { groups } = useAffinityGroups();
+  const [captionEditorOpen, setCaptionEditorOpen] = useState(false);
+  const coverIsVideo = media[0]?.kind === 'video';
   // A fila de publicação roda fora da tela, mas o botão só fica consumido
   // depois que o enfileiramento realmente foi aceito. Assim, um perfil ainda
   // carregando nunca deixa a tela travada em estado enviado.
@@ -158,6 +166,24 @@ export function DetailsStep({
           </div>
         </div>
 
+        {coverIsVideo && (
+          <div className="space-y-2">
+            <span className="font-sans text-label text-on-surface">Legendas no vídeo</span>
+            {captions && captions.cues.length > 0 ? (
+              <div className="flex items-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2.5">
+                <Captions size={18} className="shrink-0 text-primary" aria-hidden />
+                <span className="min-w-0 flex-1 font-sans text-label text-on-surface">{captions.cues.length} fala{captions.cues.length > 1 ? 's' : ''}</span>
+                <button type="button" onClick={() => setCaptionEditorOpen(true)} className="rounded-full px-3 py-1 font-sans text-counter text-primary transition-colors active:bg-primary/10">Editar</button>
+                <button type="button" onClick={() => onCaptionsChange(null)} aria-label="Remover legendas" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-on-surface-variant transition-transform active:scale-90"><X size={16} aria-hidden /></button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setCaptionEditorOpen(true)} className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl border border-outline-variant/50 bg-surface font-sans text-label text-on-surface transition-colors active:bg-surface-container">
+                <Captions size={18} aria-hidden /> Adicionar legendas
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="space-y-2">
           <span className="font-sans text-label text-on-surface">Localização</span>
           <LocationField location={location} onChange={onLocationChange} />
@@ -209,6 +235,15 @@ export function DetailsStep({
           )}
         </button>
       </div>
+
+      {captionEditorOpen && media[0] && (
+        <CaptionEditor
+          media={media[0]}
+          value={captions}
+          onSave={(track) => { onCaptionsChange(track); setCaptionEditorOpen(false); }}
+          onClose={() => setCaptionEditorOpen(false)}
+        />
+      )}
     </div>
   );
 }

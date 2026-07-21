@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { DEFAULT_CAPTION_STYLE, type CaptionCue, type CaptionTrack } from '@/lib/captions';
 import type { FeedMedia, FeedPost } from './types';
 
 const PAGE_SIZE = 10;
@@ -81,7 +82,7 @@ async function fetchPostMedia(postIds: string[]): Promise<Map<string, FeedMedia[
 function singleMedia(row: PostRow): FeedMedia[] {
   if (row.video_url) {
     const hlsUrl = row.stream_status === 'ready' ? row.stream_playback_url : null;
-    return [{ kind: 'video', url: row.video_url, thumbnailUrl: row.thumbnail_url, hlsUrl }];
+    return [{ kind: 'video', url: row.video_url, thumbnailUrl: row.thumbnail_url, hlsUrl, captions: readCaptions(row.metadata) }];
   }
   if (row.thumbnail_url) {
     return [{ kind: 'image', url: row.thumbnail_url, thumbnailUrl: null }];
@@ -121,6 +122,22 @@ function toFeedPost(
     likedByMe: likedPostIds.has(row.id),
     commentsDisabled: row.metadata?.comments_disabled === true,
   };
+}
+
+// Legenda autoral guardada em metadata.captions ({ cues, style }). Parse
+// defensivo: só devolve uma track válida com pelo menos uma fala.
+function readCaptions(metadata: PostRow['metadata']): CaptionTrack | null {
+  const raw = metadata?.captions as { cues?: unknown; style?: unknown } | undefined;
+  if (!raw || !Array.isArray(raw.cues)) return null;
+  const cues: CaptionCue[] = raw.cues
+    .filter((c): c is CaptionCue => {
+      const cue = c as Record<string, unknown>;
+      return typeof cue?.start === 'number' && typeof cue?.end === 'number' && typeof cue?.text === 'string' && cue.text.trim().length > 0;
+    })
+    .map((c) => ({ start: c.start, end: c.end, text: c.text }));
+  if (cues.length === 0) return null;
+  const style = { ...DEFAULT_CAPTION_STYLE, ...(raw.style as object) } as CaptionTrack['style'];
+  return { cues, style };
 }
 
 // Nome legível da localização guardada em metadata.location ({name, secondary}).
