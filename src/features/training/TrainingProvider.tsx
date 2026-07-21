@@ -50,15 +50,6 @@ interface TrainingContextValue {
 const TrainingContext = createContext<TrainingContextValue | null>(null);
 const day = (offset: number) => { const date = new Date(); date.setDate(date.getDate() + offset); return localDateKey(date); };
 
-function currentWeekFromStart(startsAt: string | null, date: string): number {
-  if (!startsAt) return 1;
-  const start = new Date(`${startsAt.slice(0, 10)}T12:00:00`);
-  const current = new Date(`${date}T12:00:00`);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(current.getTime())) return 1;
-  const diffDays = Math.floor((current.getTime() - start.getTime()) / 86_400_000);
-  return Math.max(1, Math.floor(diffDays / 7) + 1);
-}
-
 function createSession(scheduledId: string, template: WorkoutTemplate): WorkoutSession {
   return {
     id: `session-${scheduledId}`,
@@ -113,7 +104,6 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     const date = localDateKey(current);
     return workouts
       .filter((workout) => workout.daysOfWeek.includes(todayCode))
-      .filter((workout) => !workout.weeks.length || workout.weeks.includes(currentWeekFromStart(workout.startsAt, date)))
       .filter((workout) => !workout.startsAt || workout.startsAt.slice(0, 10) <= date)
       .filter((workout) => !workout.endsAt || workout.endsAt.slice(0, 10) >= date)
       .map((workout) => {
@@ -135,7 +125,9 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [scheduled, setScheduled] = useState<ScheduledWorkout[]>([]);
   const [imported, setImported] = useState<ImportedActivity[]>([]);
-  const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
+  const [activeSessions, setActiveSessions] = useState<Record<string, WorkoutSession>>({});
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const activeSession = activeSessionId ? activeSessions[activeSessionId] ?? null : null;
   // React Query is the external source; keep the session-capable local projection in sync.
   // Só atualiza se o conteúdo mudou — evita loop quando a dependência vem com nova referência.
   useEffect(() => {
@@ -183,16 +175,14 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
   const startSession = (scheduledId: string) => {
     const item = scheduled.find((entry) => entry.id === scheduledId); const template = templates.find((entry) => entry.id === item?.templateId);
     if (!item || !template || !template.exercises.length) return;
-    if (activeSession && activeSession.scheduledId !== scheduledId) return;
-    if (activeSession?.scheduledId === scheduledId) return;
-    setActiveSession(createSession(scheduledId, template));
+    const sessionId = `session-${scheduledId}`;
+    setActiveSessions((current) => current[sessionId] ? current : { ...current, [sessionId]: createSession(scheduledId, template) });
+    setActiveSessionId(sessionId);
     setScheduled((current) => current.map((entry) => entry.id === scheduledId ? { ...entry, status: 'active' } : entry));
   };
   const startWorkoutNow = (template: WorkoutTemplate, surface: TrainingSurface) => {
     if (!template.exercises.length) return false;
     const scheduledId = `${template.id}-${day(0)}`;
-    if (activeSession && activeSession.scheduledId !== scheduledId) return false;
-    if (activeSession?.scheduledId === scheduledId) return true;
 
     setTemplates((current) => current.some((entry) => entry.id === template.id)
       ? current.map((entry) => entry.id === template.id ? template : entry)
@@ -212,36 +202,48 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
         ? current.map((entry) => entry.id === scheduledId ? scheduledWorkout : entry)
         : [...current, scheduledWorkout];
     });
-    setActiveSession(createSession(scheduledId, template));
+    const sessionId = `session-${scheduledId}`;
+    setActiveSessions((current) => current[sessionId] ? current : { ...current, [sessionId]: createSession(scheduledId, template) });
+    setActiveSessionId(sessionId);
     return true;
   };
-  const toggleSet = (exerciseId: string, setIndex: number) => setActiveSession((current) => {
-    if (!current) return current;
+  const toggleSet = (exerciseId: string, setIndex: number) => setActiveSessions((sessions) => {
+    if (!activeSessionId) return sessions;
+    const current = sessions[activeSessionId];
+    if (!current) return sessions;
     const currentSet = current.logs[exerciseId][setIndex];
     const completing = !currentSet.completed;
     return {
-      ...current,
-      logs: {
-        ...current.logs,
-        [exerciseId]: current.logs[exerciseId].map((set, index) => {
-          if (index === setIndex) return { ...set, completed: !set.completed };
-          // A série seguinte herda a carga e as repetições digitadas agora.
-          // Isso evita o retorno ao valor padrão a cada conclusão.
-          if (completing && index === setIndex + 1 && !set.completed) {
-            return { ...set, weight: currentSet.weight, reps: currentSet.reps };
-          }
-          return set;
-        }),
+      ...sessions,
+      [activeSessionId]: {
+        ...current,
+        logs: {
+          ...current.logs,
+          [exerciseId]: current.logs[exerciseId].map((set, index) => {
+            if (index === setIndex) return { ...set, completed: !set.completed };
+            // A série seguinte herda a carga e as repetições digitadas agora.
+            // Isso evita o retorno ao valor padrão a cada conclusão.
+            if (completing && index === setIndex + 1 && !set.completed) {
+              return { ...set, weight: currentSet.weight, reps: currentSet.reps };
+            }
+            return set;
+          }),
+        },
       },
     };
   });
-  const updateSet = (exerciseId: string, setIndex: number, values: Partial<Pick<ExerciseSetLog, 'weight' | 'reps' | 'rpe' | 'rir'>>) => setActiveSession((current) => current ? { ...current, logs: { ...current.logs, [exerciseId]: current.logs[exerciseId].map((set, index) => index === setIndex ? { ...set, ...values } : set) } } : current);
-  const setActiveExercise = (activeExercise: number) => setActiveSession((current) => current ? { ...current, activeExercise } : current);
-  const updateSessionNote = (note: string) => setActiveSession((current) => current ? { ...current, note } : current);
+  const updateSet = (exerciseId: string, setIndex: number, values: Partial<Pick<ExerciseSetLog, 'weight' | 'reps' | 'rpe' | 'rir'>>) => setActiveSessions((sessions) => activeSessionId && sessions[activeSessionId] ? { ...sessions, [activeSessionId]: { ...sessions[activeSessionId], logs: { ...sessions[activeSessionId].logs, [exerciseId]: sessions[activeSessionId].logs[exerciseId].map((set, index) => index === setIndex ? { ...set, ...values } : set) } } } : sessions);
+  const setActiveExercise = (activeExercise: number) => setActiveSessions((sessions) => activeSessionId && sessions[activeSessionId] ? { ...sessions, [activeSessionId]: { ...sessions[activeSessionId], activeExercise } } : sessions);
+  const updateSessionNote = (note: string) => setActiveSessions((sessions) => activeSessionId && sessions[activeSessionId] ? { ...sessions, [activeSessionId]: { ...sessions[activeSessionId], note } } : sessions);
   const completeSession = () => {
     if (!activeSession) return;
     setScheduled((current) => current.map((entry) => entry.id === activeSession.scheduledId ? { ...entry, status: 'completed' } : entry));
-    setActiveSession(null);
+    setActiveSessions((current) => {
+      const next = { ...current };
+      delete next[activeSession.id];
+      return next;
+    });
+    setActiveSessionId(null);
   };
   const reschedule = (scheduledId: string) => setScheduled((current) => current.map((entry) => entry.id === scheduledId ? { ...entry, date: day(0), status: 'planned' } : entry));
   const skipToday = (scheduledId: string) => setScheduled((current) => current.map((entry) => entry.id === scheduledId && entry.status === 'planned'
