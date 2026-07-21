@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { queryClient } from '@/lib/queryClient';
-import { insertOptimisticPost, removeOptimisticPost } from '@/features/feed/useFeed';
 import type { MyProfile } from '@/features/profile/useMyProfile';
+import type { FeedPost } from '@/features/feed/types';
 import {
   buildOptimisticPost,
   getCreatePostErrorMessage,
@@ -25,12 +25,29 @@ export interface PublishJobState {
 interface PublishJob extends PublishJobState {
   input: CreatePostInput;
   profile: MyProfile;
+  post: FeedPost;
+  snapshot: PublishJobState;
 }
 
 const jobs = new Map<string, PublishJob>();
 const listeners = new Set<() => void>();
+let jobsSnapshot: PublishJobSnapshot[] = [];
+
+export interface PublishJobSnapshot extends PublishJobState {
+  id: string;
+  post: FeedPost;
+}
+
+function refreshSnapshot(): void {
+  jobsSnapshot = Array.from(jobs, ([id, job]) => ({
+    id,
+    post: job.post,
+    ...job.snapshot,
+  }));
+}
 
 function notify(): void {
+  refreshSnapshot();
   listeners.forEach((listener) => listener());
 }
 
@@ -49,6 +66,7 @@ async function runJob(localId: string): Promise<void> {
   job.status = 'uploading';
   job.progress = 0;
   job.error = undefined;
+  job.snapshot = { status: 'uploading', progress: 0 };
   notify();
 
   try {
@@ -56,12 +74,11 @@ async function runJob(localId: string): Promise<void> {
       const current = jobs.get(localId);
       if (!current) return;
       current.progress = fraction;
+      current.snapshot = { status: 'uploading', progress: fraction };
       notify();
     });
-    // Sucesso: o post local cumpriu seu papel visual — some do cache e o
-    // refetch de ['feed'] (abaixo) traz o post real na posição que o servidor
-    // decidir (pode não ser o topo, e está tudo bem).
-    removeOptimisticPost(queryClient, localId);
+    // Sucesso: o post local sai da fila e o refetch de ['feed'] (abaixo) traz
+    // o post real na posição que o servidor decidir.
     revokePreviewUrls(job.input);
     jobs.delete(localId);
     notify();
@@ -71,16 +88,29 @@ async function runJob(localId: string): Promise<void> {
     if (!current) return;
     current.status = 'error';
     current.error = getCreatePostErrorMessage(error);
+    current.snapshot = {
+      status: 'error',
+      progress: current.progress,
+      error: current.error,
+    };
     notify();
   }
 }
 
-// Publica em background: insere o post otimista no feed do próprio autor
-// imediatamente e retorna sem esperar o upload — quem chamou já pode navegar.
+// Publica em background: registra o post otimista na fila imediatamente e
+// retorna sem esperar o upload — o FeedPage o renderiza mesmo sem cache prévio.
 export function enqueuePublish(input: CreatePostInput, profile: MyProfile): string {
-  const localId = `local-${crypto.randomUUID()}`;
-  insertOptimisticPost(queryClient, buildOptimisticPost(input, profile, localId));
-  jobs.set(localId, { status: 'uploading', progress: 0, input, profile });
+  const randomId = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const localId = `local-${randomId}`;
+  const post = buildOptimisticPost(input, profile, localId);
+  jobs.set(localId, {
+    status: 'uploading',
+    progress: 0,
+    input,
+    profile,
+    post,
+    snapshot: { status: 'uploading', progress: 0 },
+  });
   notify();
   void runJob(localId);
   return localId;
@@ -91,11 +121,10 @@ export function retryPublish(localId: string): void {
   if (jobs.has(localId)) void runJob(localId);
 }
 
-// Descarta um post que falhou: some do feed e revoga os previews locais.
+// Descarta um post que falhou: remove-o da fila e revoga os previews locais.
 export function dismissPublishError(localId: string): void {
   const job = jobs.get(localId);
   if (!job) return;
-  removeOptimisticPost(queryClient, localId);
   revokePreviewUrls(job.input);
   jobs.delete(localId);
   notify();
@@ -106,8 +135,13 @@ export function isLocalPostId(id: string): boolean {
 }
 
 export function usePublishJob(postId: string): PublishJobState | undefined {
-  return useSyncExternalStore(subscribe, () => {
-    const job = jobs.get(postId);
-    return job ? { status: job.status, progress: job.progress, error: job.error } : undefined;
-  });
+  return useSyncExternalStore(
+    subscribe,
+    () => jobs.get(postId)?.snapshot,
+    () => jobs.get(postId)?.snapshot,
+  );
+}
+
+export function usePublishJobs(): PublishJobSnapshot[] {
+  return useSyncExternalStore(subscribe, () => jobsSnapshot, () => jobsSnapshot);
 }

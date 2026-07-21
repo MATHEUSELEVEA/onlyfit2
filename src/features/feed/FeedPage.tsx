@@ -7,6 +7,8 @@ import { FeedSportsBar } from './FeedSportsBar';
 import { useActiveStoryItems } from '@/features/stories/useActiveStoryItems';
 import { mergeFeedEntries } from '@/features/stories/feedMerge';
 import { StoryCard } from '@/features/stories/StoryCard';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePublishJobs } from '@/features/studio/publishQueue';
 
 // Arrasto (px) além do qual soltar dispara o refresh.
 const PULL_THRESHOLD = 56;
@@ -29,6 +31,7 @@ function FeedSkeleton() {
 
 export function FeedPage() {
   const navigate = useNavigate();
+  const { session } = useAuth();
   // O filtro guarda as chaves dos grupos escolhidos. Um grupo sem conteúdo é
   // aplicado do mesmo jeito — o feed fica vazio e mostra o estado próprio, em
   // vez de ignorar a escolha do usuário.
@@ -45,12 +48,20 @@ export function FeedPage() {
   } = useFeed(sports);
 
   const posts = useMemo(() => data?.pages.flatMap((page) => page.posts) ?? [], [data]);
+  const publishJobs = usePublishJobs();
+  const visiblePosts = useMemo(() => {
+    const serverPostIds = new Set(posts.map((post) => post.id));
+    const pendingPosts = publishJobs
+      .filter((job) => job.post.author.id === session?.user.id && !serverPostIds.has(job.post.id))
+      .map((job) => job.post);
+    return [...pendingPosts, ...posts];
+  }, [posts, publishJobs, session?.user.id]);
 
   // Story não tem tela própria: entra misturado no mesmo scroll dos posts, na
   // mesma ordenação por data — a única diferença visual é o card ter o
   // relógio de tempo restante em vez do trilho de ações (ver StoryCard).
   const { data: storyItems } = useActiveStoryItems();
-  const entries = useMemo(() => mergeFeedEntries(posts, storyItems ?? []), [posts, storyItems]);
+  const entries = useMemo(() => mergeFeedEntries(visiblePosts, storyItems ?? []), [visiblePosts, storyItems]);
 
   // Pull-to-refresh: distância atual do arrasto (0 = solto).
   const [pull, setPull] = useState(0);
@@ -141,7 +152,7 @@ export function FeedPage() {
           transition: pulling ? undefined : 'transform 0.25s cubic-bezier(0.22, 1, 0.36, 1)',
         }}
       >
-        {isLoading && <FeedSkeleton />}
+        {isLoading && visiblePosts.length === 0 && <FeedSkeleton />}
 
         {isError && (
           <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
@@ -158,7 +169,7 @@ export function FeedPage() {
           </div>
         )}
 
-        {!isLoading && !isError && !hasNextPage && posts.length === 0 && (
+        {!isLoading && !isError && !hasNextPage && visiblePosts.length === 0 && (
           <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
             {sports.length > 0 ? (
               <>
