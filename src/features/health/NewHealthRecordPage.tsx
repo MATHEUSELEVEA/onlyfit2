@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Activity, AlertCircle, ArrowLeft, Bandage, Camera, FileCheck2, FileHeart, FileText, HeartPulse, Loader2, Mic, Moon, Paperclip, Pill, Plus, Square, Stethoscope, Syringe, Trash2, Upload } from 'lucide-react';
+import { Activity, AlertCircle, ArrowLeft, Bandage, Camera, FileCheck2, FileHeart, FileText, HeartPulse, Loader2, Mic, Moon, Paperclip, Pill, Plus, Square, Stethoscope, Syringe, Trash2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { TextAreaField, TextField } from '@/components/ui/TextField';
@@ -9,8 +9,6 @@ import { extractHealthPhoto, transcribeHealthAudio, uploadAndProcessHealthPdf } 
 import { healthCategoryLabels, type HealthCaptureMethod, type HealthCategory, type HealthEvent, type HealthFactInput } from './types';
 import { useHealthAudioRecorder } from './useHealthAudioRecorder';
 import { useAppendHealthEvent, useHealthConsents, useHealthEvent, useRecordHealthConsent } from './useHealthProfile';
-
-type EntryMode = 'text' | 'audio' | 'photo' | 'pdf';
 
 const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const PROFILE_CONSENT = 'Autorizo o tratamento das informações que eu registrar para criar e manter minha Ficha de saúde no OnlyFit.';
@@ -70,8 +68,7 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
   const recorder = useHealthAudioRecorder();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const [step, setStep] = useState(correctsId ? 3 : 1);
-  const [mode, setMode] = useState<EntryMode>('text');
+  const [step, setStep] = useState(correctsId ? 2 : 1);
   const [category, setCategory] = useState<HealthCategory | null>(correctedEvent?.category === 'anamnesis' ? 'other' : correctedEvent?.category ?? null);
   const [title, setTitle] = useState(correctedEvent ? `Correção: ${correctedEvent.title}` : '');
   const [narrative, setNarrative] = useState(correctedEvent?.narrative ?? '');
@@ -84,6 +81,7 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
   const [captureWarnings, setCaptureWarnings] = useState<string[]>([]);
   const [photoPreview, setPhotoPreview] = useState('');
   const [photoReviewed, setPhotoReviewed] = useState(false);
+  const [usedAudio, setUsedAudio] = useState(false);
   const [usedAi, setUsedAi] = useState(false);
   const [showMyFitSuccess, setShowMyFitSuccess] = useState(false);
   const [sleepHours, setSleepHours] = useState(7);
@@ -94,26 +92,12 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
   const isHabit = category === 'habit';
 
   // A foto nunca sai do dispositivo depois da leitura: a prévia é um object URL
-  // local e precisa ser revogada para não vazar memória entre trocas de modo.
+  // local e precisa ser revogada para não vazar memória entre trocas de anexo.
   useEffect(() => () => {
     if (photoPreview) URL.revokeObjectURL(photoPreview);
   }, [photoPreview]);
 
-  const usesExtractedFacts = mode === 'pdf' || mode === 'photo';
-
-  function changeMode(next: EntryMode) {
-    setMode(next);
-    setError('');
-    setTitle('');
-    setNarrative('');
-    setDocumentId(null);
-    setExtractedFacts([]);
-    setDocumentName('');
-    setCaptureWarnings([]);
-    setPhotoPreview('');
-    setPhotoReviewed(false);
-    setUsedAi(false);
-  }
+  const usesExtractedFacts = Boolean(documentId) || photoReviewed;
 
   async function finishRecording() {
     setCaptureBusy(true);
@@ -122,8 +106,10 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
       const recording = await recorder.stop();
       if (!recording) throw new Error('A gravação ficou vazia.');
       const transcript = await transcribeHealthAudio(recording.blob, recording.mime);
-      setNarrative(transcript);
+      setNarrative((current) => [current.trim(), transcript.trim()].filter(Boolean).join('\n\n'));
       if (!title) setTitle('Registro por áudio');
+      setUsedAudio(true);
+      setUsedAi(true);
     } catch (value) {
       setError(value instanceof Error ? value.message : 'Não foi possível transcrever o áudio.');
     } finally {
@@ -134,25 +120,29 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
   async function selectPhoto(file: File | undefined) {
     if (!file) return;
     setError('');
-    setPhotoReviewed(false);
     if (!PHOTO_TYPES.includes(file.type)) {
       setError('Envie uma foto JPEG, PNG ou WEBP.');
+      if (photoInputRef.current) photoInputRef.current.value = '';
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
       setError('A foto deve ter no máximo 10 MB.');
+      if (photoInputRef.current) photoInputRef.current.value = '';
       return;
     }
+    setPhotoReviewed(false);
     setCaptureBusy(true);
     setPhotoPreview(URL.createObjectURL(file));
     try {
       const proposal = await extractHealthPhoto(file);
-      setTitle(proposal.title);
-      setNarrative(proposal.narrative);
+      setTitle((current) => current.trim() ? current : proposal.title);
+      setNarrative((current) => current.trim() ? current : proposal.narrative);
       setEffectiveDate(proposal.effective_date || todayInputValue());
       setExtractedFacts(proposal.facts);
       setCaptureWarnings(proposal.warnings);
       setPhotoReviewed(true);
+      setDocumentId(null);
+      setDocumentName('');
       setUsedAi(true);
     } catch (value) {
       setError(value instanceof Error ? value.message : 'Não foi possível ler a foto.');
@@ -165,31 +155,36 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
   async function selectPdf(file: File | undefined) {
     if (!file) return;
     setError('');
-    setDocumentId(null);
     if (file.type !== 'application/pdf' || !file.name.toLowerCase().endsWith('.pdf')) {
       setError('Somente documentos PDF são aceitos.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
     if (file.size > 15 * 1024 * 1024) {
       setError('O PDF deve ter no máximo 15 MB.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
     const signature = new TextDecoder().decode(await file.slice(0, 5).arrayBuffer());
     if (signature !== '%PDF-') {
       setError('O arquivo selecionado não possui uma estrutura PDF válida.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
+    setDocumentId(null);
     setCaptureBusy(true);
     setDocumentName(file.name);
     try {
       const result = await uploadAndProcessHealthPdf(file);
       setDocumentId(result.documentId);
-      setTitle(result.proposal.title || file.name.replace(/\.pdf$/i, ''));
-      setNarrative(result.proposal.narrative);
+      setTitle((current) => current.trim() ? current : result.proposal.title || file.name.replace(/\.pdf$/i, ''));
+      setNarrative((current) => current.trim() ? current : result.proposal.narrative);
       setEffectiveDate(result.proposal.effective_date || todayInputValue());
       setExtractedFacts(result.proposal.facts);
       setCaptureWarnings(result.proposal.warnings);
-      setUsedAi(result.usedAi);
+      setPhotoPreview('');
+      setPhotoReviewed(false);
+      setUsedAi((current) => current || result.usedAi);
     } catch (value) {
       setError(value instanceof Error ? value.message : 'Não foi possível processar o PDF.');
     } finally {
@@ -205,9 +200,7 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
     if (!isHabit && !cleanTitle) return setError('Dê um título curto para identificar este registro.');
     if (!isHabit && !cleanNarrative) return setError('Descreva a informação clínica que deseja registrar.');
     if (!effectiveDate) return setError('Informe quando essa informação aconteceu ou passou a valer.');
-    if (mode === 'pdf' && !documentId) return setError('Envie e revise um PDF antes de confirmar.');
-    if (mode === 'photo' && !photoReviewed) return setError('Envie e revise uma foto antes de confirmar.');
-    if (usesExtractedFacts && extractedFacts.some((fact) =>
+    if (!isHabit && usesExtractedFacts && extractedFacts.some((fact) =>
       (fact.value_numeric != null && !Number.isFinite(fact.value_numeric))
       || (fact.value_numeric == null && !fact.value_text && fact.value_boolean == null && !fact.value_date))) {
       return setError('Revise os resultados extraídos: todo item mantido precisa ter um valor válido.');
@@ -215,20 +208,21 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
 
     setError('');
     try {
+      const captureMethod: HealthCaptureMethod = isHabit ? 'text' : documentId ? 'pdf' : photoReviewed ? 'photo' : usedAudio ? 'audio_transcript' : 'text';
       await appendEvent.mutateAsync({
         category,
-        eventType: correctsId ? 'correction' : mode === 'pdf' ? 'document_record' : category === 'exam' ? 'exam_result' : 'clinical_record',
+        eventType: correctsId ? 'correction' : !isHabit && documentId ? 'document_record' : category === 'exam' ? 'exam_result' : 'clinical_record',
         title: isHabit ? 'Check-in do dia' : cleanTitle,
         narrative: isHabit ? (cleanNarrative || null) : cleanNarrative,
         effectiveAt: new Date(`${effectiveDate}T12:00:00`).toISOString(),
-        captureMethod: modeToCaptureMethod(mode),
+        captureMethod,
         correctsEventId: correctsId,
-        documentId,
+        documentId: isHabit ? null : documentId,
         content: isHabit ? { checkin: { sleep_hours: sleepHours, sleep_quality: sleepQuality, hunger_score: hungerScore, energy_score: energyScore } }
-          : mode === 'pdf' ? { original_filename: documentName, extracted_facts: extractedFacts }
-          : mode === 'photo' ? { extracted_facts: extractedFacts, photo_saved: false }
+          : documentId ? { original_filename: documentName, extracted_facts: extractedFacts }
+          : photoReviewed ? { extracted_facts: extractedFacts, photo_saved: false }
           : correctsId ? { correction_reason: 'user_correction' } : {},
-        provenance: { submitted_via: 'onlyfit-mobile', input_mode: mode, ai_used: mode === 'audio' || usedAi, user_reviewed: true },
+        provenance: { submitted_via: 'onlyfit-mobile', input_mode: captureMethod, ai_used: isHabit ? false : usedAi, user_reviewed: true },
         facts: isHabit ? habitFacts({ sleepHours, sleepQuality, hungerScore, energyScore, effectiveDate }) : usesExtractedFacts ? extractedFacts : [],
       });
       if (openedFromMyFit) {
@@ -244,7 +238,6 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
     }
   }
 
-  const canShowForm = mode === 'text' || mode === 'audio' || (mode === 'pdf' && Boolean(documentId)) || (mode === 'photo' && photoReviewed);
   return (
     <HealthPageShell width="form">
       <HealthPageHeader
@@ -256,78 +249,55 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
       <main className="space-y-6 px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-6">
         {!correctsId ? <WizardProgress step={step} /> : null}
         {step > 1 && !correctsId ? <button type="button" onClick={() => setStep((current) => current - 1)} className="-ml-2 flex min-h-11 items-center gap-1 px-2 font-sans text-label text-on-surface-variant"><ArrowLeft size={18} aria-hidden /> Voltar</button> : null}
-        {step === 1 ? <RecordTypeStep category={category} onSelect={(value) => { setCategory(value); setError(''); }} /> : null}
-        {step === 2 && isHabit ? <DailyCheckinStep sleepHours={sleepHours} sleepQuality={sleepQuality} hungerScore={hungerScore} energyScore={energyScore} onSleepHours={setSleepHours} onSleepQuality={setSleepQuality} onHungerScore={setHungerScore} onEnergyScore={setEnergyScore} /> : null}
-        {step === 2 && !isHabit && !correctsId ? (
-          <div className="grid grid-cols-4 gap-2" role="tablist" aria-label="Forma de entrada">
-            <ModeButton icon={FileText} label="Escrever" selected={mode === 'text'} onClick={() => changeMode('text')} />
-            <ModeButton icon={Mic} label="Gravar" selected={mode === 'audio'} onClick={() => changeMode('audio')} />
-            <ModeButton icon={Camera} label="Foto" selected={mode === 'photo'} onClick={() => changeMode('photo')} />
-            <ModeButton icon={Paperclip} label="PDF" selected={mode === 'pdf'} onClick={() => changeMode('pdf')} />
-          </div>
-        ) : null}
-
-        {step === 2 && !isHabit && mode === 'audio' ? (
-          <section className="rounded-2xl border border-outline-variant/40 bg-surface px-4 py-5 text-center">
-            <span className={clsx('mx-auto flex h-14 w-14 items-center justify-center rounded-full', recorder.isRecording ? 'bg-error-container text-on-error-container' : 'bg-primary-container text-on-primary-container')}><Mic size={24} aria-hidden /></span>
-            <h2 className="mt-3 font-sans text-title text-on-surface">{recorder.isRecording ? formatDuration(recorder.elapsedMs) : narrative ? 'Transcrição pronta para revisão' : 'Gravar informação de saúde'}</h2>
-            <p className="mt-2 font-sans text-body-sm text-on-surface-variant">O áudio é enviado somente para transcrição e não é armazenado. Apenas o texto revisado será salvo.</p>
-            {recorder.isRecording ? (
-              <button type="button" onClick={() => void finishRecording()} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-error px-5 font-sans text-label text-on-error"><Square size={16} fill="currentColor" aria-hidden /> Parar e transcrever</button>
-            ) : (
-              <button type="button" onClick={() => void recorder.start().catch((value) => setError(value instanceof Error ? value.message : 'Permita o acesso ao microfone.'))} disabled={captureBusy} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 font-sans text-label text-on-primary disabled:opacity-60">
-                {captureBusy ? <Loader2 size={17} className="animate-spin" aria-hidden /> : <Mic size={17} aria-hidden />} {captureBusy ? 'Transcrevendo...' : narrative ? 'Gravar novamente' : 'Iniciar gravação'}
-              </button>
-            )}
+        {step === 1 ? <RecordTypeStep category={category} onSelect={(value) => { setCategory(value); setError(''); setStep(2); }} /> : null}
+        {step === 2 && isHabit ? (
+          <section className="space-y-5">
+            <DailyCheckinStep sleepHours={sleepHours} sleepQuality={sleepQuality} hungerScore={hungerScore} energyScore={energyScore} onSleepHours={setSleepHours} onSleepQuality={setSleepQuality} onHungerScore={setHungerScore} onEnergyScore={setEnergyScore} />
+            <TextField label="Data do check-in" type="date" max={todayInputValue()} value={effectiveDate} onChange={(event) => setEffectiveDate(event.target.value)} />
+            <TextAreaField label="Observação (opcional)" hint="Algo que queira lembrar sobre hoje?" value={narrative} onChange={(event) => setNarrative(event.target.value)} maxLength={5000} autoCapitalize="sentences" className="min-h-[120px]" />
           </section>
         ) : null}
-
-        {step === 2 && !isHabit && mode === 'photo' ? (
-          <section className="rounded-2xl border border-outline-variant/40 bg-surface px-4 py-5 text-center">
-            {photoPreview ? (
-              <img src={photoPreview} alt="Foto enviada para leitura" className="mx-auto max-h-56 w-auto rounded-xl object-contain" />
-            ) : (
-              <Camera size={26} className="mx-auto text-primary" aria-hidden />
-            )}
-            <h2 className="mt-3 font-sans text-title text-on-surface">{photoReviewed ? 'Leitura pronta para revisão' : 'Fotografar informação de saúde'}</h2>
-            <p className="mt-2 font-sans text-body-sm text-on-surface-variant">
-              Fotografe receita, laudo, exame ou caixa de medicamento. A foto é enviada somente para leitura e não é armazenada: apenas o texto revisado será salvo.
-            </p>
-            <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => void selectPhoto(event.target.files?.[0])} />
-            <button type="button" onClick={() => photoInputRef.current?.click()} disabled={captureBusy} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 font-sans text-label text-on-primary disabled:opacity-60">
-              {captureBusy ? <Loader2 size={17} className="animate-spin" aria-hidden /> : <Camera size={17} aria-hidden />} {captureBusy ? 'Lendo a foto...' : photoReviewed ? 'Trocar foto' : 'Tirar ou escolher foto'}
-            </button>
-          </section>
-        ) : null}
-
-        {step === 2 && !isHabit && mode === 'pdf' ? (
-          <section className="rounded-2xl border border-outline-variant/40 bg-surface px-4 py-5 text-center">
-            {documentId ? <FileCheck2 size={26} className="mx-auto text-primary" aria-hidden /> : <Paperclip size={26} className="mx-auto text-primary" aria-hidden />}
-            <h2 className="mt-3 font-sans text-title text-on-surface">{documentId ? 'PDF pronto para revisão' : 'Adicionar documento PDF'}</h2>
-            <p className="mt-2 font-sans text-body-sm text-on-surface-variant">{documentName || 'Somente PDF, com até 15 MB. O original fica armazenado de forma privada.'}</p>
-            <input ref={fileInputRef} type="file" accept="application/pdf,.pdf" className="sr-only" onChange={(event) => void selectPdf(event.target.files?.[0])} />
-            <button type="button" onClick={() => fileInputRef.current?.click()} disabled={captureBusy} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full bg-primary px-5 font-sans text-label text-on-primary disabled:opacity-60">
-              {captureBusy ? <Loader2 size={17} className="animate-spin" aria-hidden /> : <Upload size={17} aria-hidden />} {captureBusy ? 'Enviando e analisando...' : documentId ? 'Trocar PDF' : 'Selecionar PDF'}
-            </button>
+        {step === 2 && !isHabit ? (
+          <section className="space-y-5">
+            <div>
+              <h2 className="font-sans text-title-lg text-on-surface">Conte os detalhes</h2>
+              <p className="mt-1 font-sans text-body-sm text-on-surface-variant">Escreva, fale ou envie um arquivo. Você pode revisar tudo antes de salvar.</p>
+            </div>
+            <NarrativeComposer
+              value={narrative}
+              onChange={setNarrative}
+              isRecording={recorder.isRecording}
+              elapsedMs={recorder.elapsedMs}
+              busy={captureBusy}
+              onStart={() => { setError(''); void recorder.start().catch((value) => setError(value instanceof Error ? value.message : 'Permita o acesso ao microfone.')); }}
+              onStop={() => void finishRecording()}
+            />
+            <AttachmentPicker
+              fileInputRef={fileInputRef}
+              photoInputRef={photoInputRef}
+              busy={captureBusy}
+              disabled={captureBusy || recorder.isRecording}
+              documentName={documentName}
+              hasDocument={Boolean(documentId)}
+              photoPreview={photoPreview}
+              photoReviewed={photoReviewed}
+              onSelectPhoto={selectPhoto}
+              onSelectPdf={selectPdf}
+              onRemovePhoto={() => { setPhotoPreview(''); setPhotoReviewed(false); setExtractedFacts([]); setCaptureWarnings([]); }}
+              onRemovePdf={() => { setDocumentId(null); setDocumentName(''); setExtractedFacts([]); setCaptureWarnings([]); }}
+            />
+            <TextField label="Título" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} autoComplete="off" autoCapitalize="sentences" enterKeyHint="next" />
+            <TextField label="Data da informação" type="date" max={todayInputValue()} value={effectiveDate} onChange={(event) => setEffectiveDate(event.target.value)} />
+            {usesExtractedFacts && extractedFacts.length ? <ExtractedFacts facts={extractedFacts} onChange={setExtractedFacts} /> : null}
           </section>
         ) : null}
 
         {step === 2 && captureWarnings.length ? (
           <div className="space-y-2">{captureWarnings.map((warning) => <FeedbackMessage key={warning} type="info">{warning}</FeedbackMessage>)}</div>
         ) : null}
-        {step === 3 && canShowForm ? (
-          <section className="space-y-4">
-            {isHabit ? <DailyCheckinReview sleepHours={sleepHours} sleepQuality={sleepQuality} hungerScore={hungerScore} energyScore={energyScore} /> : <TextField label="Título" value={title} onChange={(event) => setTitle(event.target.value)} maxLength={120} autoComplete="off" autoCapitalize="sentences" enterKeyHint="next" />}
-            <TextField label="Data da informação" type="date" max={todayInputValue()} value={effectiveDate} onChange={(event) => setEffectiveDate(event.target.value)} />
-            <TextAreaField label={isHabit ? 'Observação (opcional)' : correctsId ? 'Informação correta' : mode === 'audio' ? 'Transcrição revisada' : mode === 'pdf' ? 'Resumo revisado' : mode === 'photo' ? 'Leitura revisada' : 'Descrição'} hint={isHabit ? 'Algo que queira lembrar sobre hoje?' : mode === 'text' ? undefined : 'Edite qualquer informação antes de confirmar.'} value={narrative} onChange={(event) => setNarrative(event.target.value)} maxLength={5000} autoCapitalize="sentences" className="min-h-[180px]" />
-            {usesExtractedFacts && extractedFacts.length ? <ExtractedFacts facts={extractedFacts} onChange={setExtractedFacts} /> : null}
-          </section>
-        ) : null}
 
         {error ? <FeedbackMessage type="error">{error}</FeedbackMessage> : null}
-        {step === 1 ? <WizardAction disabled={!category} onClick={() => setStep(2)}>Continuar</WizardAction> : null}
-        {step === 2 ? <WizardAction disabled={(!isHabit && !canShowForm) || captureBusy || recorder.isRecording} onClick={() => setStep(3)}>Continuar</WizardAction> : null}
-        {step === 3 && canShowForm ? <WizardAction disabled={appendEvent.isPending || captureBusy || recorder.isRecording} onClick={() => void saveRecord()}>{appendEvent.isPending ? 'Salvando...' : correctsId ? 'Adicionar correção' : 'Confirmar registro'}</WizardAction> : null}
+        {step === 2 ? <WizardAction disabled={appendEvent.isPending || captureBusy || recorder.isRecording} onClick={() => void saveRecord()}>{appendEvent.isPending ? 'Salvando...' : correctsId ? 'Adicionar correção' : 'Salvar registro'}</WizardAction> : null}
       </main>
       <BottomSheet
         open={showMyFitSuccess}
@@ -364,11 +334,11 @@ const recordTypes = [
 ] as const satisfies ReadonlyArray<{ value: HealthCategory; icon: typeof Activity; description: string }>;
 
 function WizardProgress({ step }: { step: number }) {
-  return <div><div className="flex items-center justify-between"><span className="font-sans text-body-sm text-on-surface-variant">{step} de 3</span><span className="font-sans text-body-sm text-on-surface-variant">Adicionar registro</span></div><div className="mt-2 h-1 overflow-hidden rounded-full bg-surface-container-high"><span className="block h-full rounded-full bg-primary transition-all" style={{ width: `${step / 3 * 100}%` }} /></div></div>;
+  return <div><div className="flex items-center justify-between"><span className="font-sans text-body-sm text-on-surface-variant">{step} de 2</span><span className="font-sans text-body-sm text-on-surface-variant">Adicionar registro</span></div><div className="mt-2 h-1 overflow-hidden rounded-full bg-surface-container-high"><span className="block h-full rounded-full bg-primary transition-[width] motion-reduce:transition-none" style={{ width: `${step / 2 * 100}%` }} /></div></div>;
 }
 
 function RecordTypeStep({ category, onSelect }: { category: HealthCategory | null; onSelect: (value: HealthCategory) => void }) {
-  return <section><h2 className="font-sans text-title-lg text-on-surface">O que você quer registrar?</h2><p className="mt-1 font-sans text-body-sm text-on-surface-variant">Escolha o tipo primeiro. Você adiciona texto ou anexos depois.</p><div className="mt-6 grid grid-cols-3 gap-2">{recordTypes.map(({ value, icon: Icon }) => { const selected = category === value; return <button key={value} type="button" aria-pressed={selected} onClick={() => onSelect(value)} className={clsx('flex min-h-[116px] flex-col items-center justify-center gap-3 rounded-2xl border p-2 text-center transition-colors', selected ? 'border-primary bg-primary/10' : 'border-outline-variant/40 bg-surface-container')}><Icon size={25} className="text-primary" aria-hidden /><span className="font-sans text-counter text-on-surface">{healthCategoryLabels[value]}</span></button>; })}</div></section>;
+  return <section><h2 className="font-sans text-title-lg text-on-surface">O que você quer registrar?</h2><p className="mt-1 font-sans text-body-sm text-on-surface-variant">Toque em uma opção para seguir.</p><div className="mt-6 grid grid-cols-3 gap-2">{recordTypes.map(({ value, icon: Icon }) => { const selected = category === value; return <button key={value} type="button" aria-label={`${healthCategoryLabels[value]}. Selecionar e seguir`} onClick={() => onSelect(value)} className={clsx('flex min-h-[116px] flex-col items-center justify-center gap-3 rounded-2xl border p-2 text-center transition-colors active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary motion-reduce:transition-none', selected ? 'border-primary bg-primary/10' : 'border-outline-variant/40 bg-surface-container')}><Icon size={25} className="text-primary" aria-hidden /><span className="font-sans text-counter text-on-surface">{healthCategoryLabels[value]}</span></button>; })}</div></section>;
 }
 
 function DailyCheckinStep({ sleepHours, sleepQuality, hungerScore, energyScore, onSleepHours, onSleepQuality, onHungerScore, onEnergyScore }: { sleepHours: number; sleepQuality: number; hungerScore: number; energyScore: number; onSleepHours: (value: number) => void; onSleepQuality: (value: number) => void; onHungerScore: (value: number) => void; onEnergyScore: (value: number) => void }) {
@@ -379,12 +349,8 @@ function RangeQuestion({ label, value, min, max, step = 1, suffix, onChange }: {
   return <label className="block rounded-2xl border border-outline-variant/40 bg-surface-container p-4"><span className="flex items-baseline justify-between gap-3 font-sans text-label text-on-surface"><span>{label}</span><strong className="text-title text-primary">{value}{suffix}</strong></span><input className="mt-4 w-full accent-primary" type="range" min={min} max={max} step={step} value={value} onChange={(event) => onChange(Number(event.target.value))} /></label>;
 }
 
-function DailyCheckinReview({ sleepHours, sleepQuality, hungerScore, energyScore }: { sleepHours: number; sleepQuality: number; hungerScore: number; energyScore: number }) {
-  return <div className="grid grid-cols-2 gap-2 rounded-2xl bg-surface-container p-4 font-sans text-body-sm text-on-surface-variant"><span>Sono <strong className="block font-sans text-title text-on-surface">{sleepHours}h</strong></span><span>Qualidade <strong className="block font-sans text-title text-on-surface">{sleepQuality}/5</strong></span><span>Fome <strong className="block font-sans text-title text-on-surface">{hungerScore}/10</strong></span><span>Energia <strong className="block font-sans text-title text-on-surface">{energyScore}/5</strong></span></div>;
-}
-
 function WizardAction({ children, disabled, onClick }: { children: string; disabled?: boolean; onClick: () => void }) {
-  return <button type="button" disabled={disabled} onClick={onClick} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 font-sans text-label text-on-primary transition-transform active:scale-[0.98] disabled:opacity-60">{children}</button>;
+  return <button type="button" disabled={disabled} onClick={onClick} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 font-sans text-label text-on-primary transition-transform active:scale-[0.98] disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none">{children}</button>;
 }
 
 function habitFacts({ sleepHours, sleepQuality, hungerScore, energyScore, effectiveDate }: { sleepHours: number; sleepQuality: number; hungerScore: number; energyScore: number; effectiveDate: string }): HealthFactInput[] {
@@ -394,6 +360,102 @@ function habitFacts({ sleepHours, sleepQuality, hungerScore, energyScore, effect
     { fact_type: 'daily_checkin', canonical_key: 'hunger_score', display: 'Fome', value_numeric: hungerScore, unit: '/10', effective_at: effectiveDate },
     { fact_type: 'daily_checkin', canonical_key: 'energy_score', display: 'Energia', value_numeric: energyScore, unit: '/5', effective_at: effectiveDate },
   ];
+}
+
+function NarrativeComposer({ value, onChange, isRecording, elapsedMs, busy, onStart, onStop }: {
+  value: string;
+  onChange: (value: string) => void;
+  isRecording: boolean;
+  elapsedMs: number;
+  busy: boolean;
+  onStart: () => void;
+  onStop: () => void;
+}) {
+  const actionLabel = isRecording ? `${formatDuration(elapsedMs)} · Parar` : busy ? 'Aguarde' : 'Falar';
+
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor="health-record-description" className="block font-sans text-body-sm font-medium text-on-surface-variant">Descrição</label>
+      <div className="relative">
+        <textarea
+          id="health-record-description"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          maxLength={5000}
+          autoCapitalize="sentences"
+          placeholder="Conte o que aconteceu, os resultados ou as orientações que recebeu..."
+          className="min-h-[148px] w-full resize-none rounded-xl border border-outline-variant/50 bg-surface-container-low px-3.5 pb-16 pt-3 font-sans text-body text-on-surface placeholder:text-on-surface-variant/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+        <button
+          type="button"
+          onClick={isRecording ? onStop : onStart}
+          disabled={busy && !isRecording}
+          aria-label={isRecording ? 'Parar gravação e transcrever' : 'Ditar descrição pelo microfone'}
+          className={clsx(
+            'absolute bottom-3 right-3 inline-flex min-h-11 items-center gap-2 rounded-full px-4 font-sans text-label transition-transform active:scale-[0.98] disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary motion-reduce:transition-none',
+            isRecording ? 'bg-error text-on-error' : 'bg-primary text-on-primary',
+          )}
+        >
+          {busy && !isRecording ? <Loader2 size={17} className="animate-spin motion-reduce:animate-none" aria-hidden /> : isRecording ? <Square size={15} fill="currentColor" aria-hidden /> : <Mic size={17} aria-hidden />}
+          {actionLabel}
+        </button>
+      </div>
+      <p aria-live="polite" className="font-sans text-body-sm text-on-surface-variant">
+        {isRecording ? 'Gravando agora. Toque em Parar para transformar sua fala em texto.' : busy ? 'Processando sua informação...' : 'Se preferir, dite pelo microfone. O áudio não fica armazenado.'}
+      </p>
+    </div>
+  );
+}
+
+function AttachmentPicker({ fileInputRef, photoInputRef, busy, disabled, documentName, hasDocument, photoPreview, photoReviewed, onSelectPhoto, onSelectPdf, onRemovePhoto, onRemovePdf }: {
+  fileInputRef: RefObject<HTMLInputElement>;
+  photoInputRef: RefObject<HTMLInputElement>;
+  busy: boolean;
+  disabled: boolean;
+  documentName: string;
+  hasDocument: boolean;
+  photoPreview: string;
+  photoReviewed: boolean;
+  onSelectPhoto: (file: File | undefined) => Promise<void>;
+  onSelectPdf: (file: File | undefined) => Promise<void>;
+  onRemovePhoto: () => void;
+  onRemovePdf: () => void;
+}) {
+  return (
+    <fieldset className="space-y-3">
+      <legend className="font-sans text-body-sm font-medium text-on-surface-variant">Anexo (opcional)</legend>
+      <p className="font-sans text-body-sm text-on-surface-variant">Envie uma foto ou um PDF para preencher os campos automaticamente.</p>
+      <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(event) => void onSelectPhoto(event.target.files?.[0])} />
+      <input ref={fileInputRef} type="file" accept="application/pdf,.pdf" className="sr-only" onChange={(event) => void onSelectPdf(event.target.files?.[0])} />
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" onClick={() => photoInputRef.current?.click()} disabled={disabled} className="flex min-h-[76px] items-center gap-3 rounded-xl border border-outline-variant/50 bg-surface-container px-3 text-left transition-colors active:bg-surface-container-high disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary motion-reduce:transition-none">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-container text-on-primary-container"><Camera size={19} aria-hidden /></span>
+          <span><strong className="block font-sans text-label text-on-surface">Foto</strong><span className="font-sans text-counter text-on-surface-variant">JPEG, PNG ou WEBP</span></span>
+        </button>
+        <button type="button" onClick={() => fileInputRef.current?.click()} disabled={disabled} className="flex min-h-[76px] items-center gap-3 rounded-xl border border-outline-variant/50 bg-surface-container px-3 text-left transition-colors active:bg-surface-container-high disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary motion-reduce:transition-none">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-container text-on-primary-container"><Paperclip size={19} aria-hidden /></span>
+          <span><strong className="block font-sans text-label text-on-surface">PDF</strong><span className="font-sans text-counter text-on-surface-variant">Documento até 15 MB</span></span>
+        </button>
+      </div>
+      {photoPreview ? (
+        <div className="flex items-center gap-3 rounded-xl bg-surface-container-low p-3">
+          <img src={photoPreview} alt="Prévia da foto selecionada" className="h-16 w-16 shrink-0 rounded-lg object-cover" />
+          <span className="min-w-0 flex-1">
+            <strong className="block font-sans text-label text-on-surface">{photoReviewed ? 'Foto analisada' : busy ? 'Lendo a foto...' : 'Não foi possível analisar a foto'}</strong>
+            <span className="font-sans text-body-sm text-on-surface-variant">A imagem é descartada depois da leitura.</span>
+          </span>
+          {busy && !photoReviewed ? <Loader2 size={18} className="shrink-0 animate-spin text-primary motion-reduce:animate-none" aria-hidden /> : <button type="button" onClick={onRemovePhoto} aria-label="Remover foto" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-on-surface-variant active:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><Trash2 size={18} aria-hidden /></button>}
+        </div>
+      ) : null}
+      {documentName ? (
+        <div className="flex items-center gap-3 rounded-xl bg-surface-container-low p-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary-container text-on-primary-container">{hasDocument ? <FileCheck2 size={20} aria-hidden /> : busy ? <Loader2 size={20} className="animate-spin motion-reduce:animate-none" aria-hidden /> : <Paperclip size={20} aria-hidden />}</span>
+          <span className="min-w-0 flex-1"><strong className="block truncate font-sans text-label text-on-surface">{documentName}</strong><span className="font-sans text-body-sm text-on-surface-variant">{hasDocument ? 'PDF pronto para revisão' : busy ? 'Enviando e analisando...' : 'Não foi possível analisar o PDF'}</span></span>
+          {!busy ? <button type="button" onClick={onRemovePdf} aria-label="Remover PDF" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-on-surface-variant active:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><Trash2 size={18} aria-hidden /></button> : null}
+        </div>
+      ) : null}
+    </fieldset>
+  );
 }
 
 function ExtractedFacts({ facts, onChange }: { facts: HealthFactInput[]; onChange: (facts: HealthFactInput[]) => void }) {
@@ -439,17 +501,6 @@ function ExtractedFacts({ facts, onChange }: { facts: HealthFactInput[]; onChang
       </div>
     </fieldset>
   );
-}
-
-function ModeButton({ icon: Icon, label, selected, onClick }: { icon: typeof FileText; label: string; selected: boolean; onClick: () => void }) {
-  return <button type="button" role="tab" aria-selected={selected} onClick={onClick} className={clsx('flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 font-sans text-label transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', selected ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface-variant')}><Icon size={18} aria-hidden /> {label}</button>;
-}
-
-function modeToCaptureMethod(mode: EntryMode): HealthCaptureMethod {
-  if (mode === 'audio') return 'audio_transcript';
-  if (mode === 'photo') return 'photo';
-  if (mode === 'pdf') return 'pdf';
-  return 'text';
 }
 
 function formatDuration(value: number) {
