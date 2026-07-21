@@ -2,15 +2,25 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, X } from 'lucide-react';
 import { CameraStep } from './camera/CameraStep';
-import { createDraftMedia, inferMediaKind, moveItem, type CaptureMode, type DraftMedia, type MediaKind, type PostLocation } from './media';
+import { clsx } from 'clsx';
+import { createDraftMedia, inferMediaKind, type CaptureMode, type DraftMedia, type MediaKind, type PostLocation } from './media';
 import { enqueuePublish } from './publishQueue';
 import type { PostVisibility } from './useCreatePost';
 import { usePublishStory } from '@/features/stories/usePublishStory';
 import { useMyProfile } from '@/features/profile/useMyProfile';
-import { PickMediaStep } from './steps/PickMediaStep';
+import type { Area } from 'react-easy-crop';
+import { FramingStep } from './steps/FramingStep';
+import { CoverPicker } from './steps/CoverPicker';
 import { DetailsStep } from './steps/DetailsStep';
+import { cropImageToBlob } from './imageCrop';
 
-type Step = 'camera' | 'pick' | 'details';
+type Step = 'camera' | 'frame' | 'cover' | 'details';
+
+const WIZARD_LABELS: Record<Exclude<Step, 'camera'>, string> = {
+  frame: 'Enquadrar',
+  cover: 'Capa',
+  details: 'Detalhes',
+};
 
 // Estúdio de criação de post. Fluxo em passos (câmera → revisão → detalhes →
 // publicar), propositalmente segregado em features/studio para evoluir depois
@@ -57,7 +67,7 @@ export function StudioPage() {
 
   const addCapturedMedia = (draft: DraftMedia) => {
     setMedia((prev) => [...prev, draft]);
-    setStep('pick');
+    setStep('frame');
   };
 
   // Publica um story direto (a partir da câmera ou da galeria, no modo
@@ -95,7 +105,7 @@ export function StudioPage() {
       return;
     }
     addFiles(files);
-    setStep('pick');
+    setStep('frame');
   };
 
   const retryStory = () => {
@@ -113,10 +123,6 @@ export function StudioPage() {
       if (target) URL.revokeObjectURL(target.previewUrl);
       return prev.filter((item) => item.id !== id);
     });
-  };
-
-  const reorderMedia = (from: number, to: number) => {
-    setMedia((prev) => moveItem(prev, from, to));
   };
 
   // Define o frame de capa (poster) de um vídeo escolhido no CoverPicker.
@@ -143,10 +149,32 @@ export function StudioPage() {
     return true;
   };
 
+  const hasVideoCover = media[0]?.kind === 'video';
+
   const close = () => {
-    if (step === 'details') setStep('pick');
-    else if (step === 'pick') setStep('camera');
+    if (step === 'details') setStep(hasVideoCover ? 'cover' : 'frame');
+    else if (step === 'cover') setStep('frame');
+    else if (step === 'frame') setStep('camera');
     else navigate(-1);
+  };
+
+  // Aplica o recorte 9:16 escolhido nas fotos (WYSIWYG) e avança: capa quando a
+  // capa é vídeo, senão detalhes.
+  const applyFramingAndContinue = async (areasById: Record<string, Area>) => {
+    const next = await Promise.all(
+      media.map(async (item) => {
+        const area = areasById[item.id];
+        if (item.kind !== 'image' || !area) return item;
+        const blob = await cropImageToBlob(item.previewUrl, area);
+        if (!blob) return item;
+        URL.revokeObjectURL(item.previewUrl);
+        const baseName = item.file.name.replace(/\.[^.]+$/, '') || 'foto';
+        const file = new File([blob], `${baseName}.jpg`, { type: 'image/jpeg' });
+        return { ...item, file, previewUrl: URL.createObjectURL(file) };
+      }),
+    );
+    setMedia(next);
+    setStep(next[0]?.kind === 'video' ? 'cover' : 'details');
   };
 
   if (step === 'camera') {
@@ -166,31 +194,47 @@ export function StudioPage() {
     );
   }
 
+  if (step === 'cover' && media[0]) {
+    return (
+      <CoverPicker
+        media={media[0]}
+        onPick={(blob) => { setCover(media[0].id, blob); setStep('details'); }}
+        onClose={() => setStep('details')}
+      />
+    );
+  }
+
+  const wizardSteps: Exclude<Step, 'camera'>[] = hasVideoCover ? ['frame', 'cover', 'details'] : ['frame', 'details'];
+
   return (
     <div className="flex h-full flex-col bg-surface">
       <header className="flex items-center gap-3 border-b border-outline-variant/40 px-2 py-2 pt-safe-top">
         <button
           type="button"
           onClick={close}
-          aria-label={step === 'details' ? 'Voltar' : 'Fechar'}
+          aria-label={step === 'frame' ? 'Fechar' : 'Voltar'}
           className="flex h-11 w-11 items-center justify-center rounded-full text-on-surface transition-colors active:bg-surface-container"
         >
-          {step === 'details' ? <ArrowLeft size={22} aria-hidden /> : <X size={22} aria-hidden />}
+          {step === 'frame' ? <X size={22} aria-hidden /> : <ArrowLeft size={22} aria-hidden />}
         </button>
-        <h1 className="font-sans text-title text-on-surface">
-          {step === 'pick' ? 'Novo post' : 'Detalhes'}
-        </h1>
+        <h1 className="font-sans text-title text-on-surface">{WIZARD_LABELS[step as Exclude<Step, 'camera'>]}</h1>
+        <div className="ml-auto flex items-center gap-1.5 pr-2" aria-hidden>
+          {wizardSteps.map((wizardStep) => (
+            <span
+              key={wizardStep}
+              className={clsx('h-1.5 rounded-full transition-all', wizardStep === step ? 'w-5 bg-primary' : 'w-1.5 bg-outline-variant/50')}
+            />
+          ))}
+        </div>
       </header>
 
       <div className="min-h-0 flex-1">
-        {step === 'pick' ? (
-          <PickMediaStep
+        {step === 'frame' ? (
+          <FramingStep
             media={media}
             onRemove={removeMedia}
-            onMove={reorderMedia}
-            onSetCover={setCover}
             onAddMore={() => setStep('camera')}
-            onNext={() => setStep('details')}
+            onNext={applyFramingAndContinue}
           />
         ) : (
           <DetailsStep
