@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Images, Loader2, RotateCcw, X } from 'lucide-react';
+import { Images, Loader2, SwitchCamera, X, Zap, ZapOff } from 'lucide-react';
 import { clsx } from 'clsx';
 import { CameraModeSwitcher } from './CameraModeSwitcher';
 import { useCameraStream, type CameraFacing } from './useCameraStream';
@@ -21,6 +21,10 @@ interface CameraStepProps {
   onRetryStory?: () => void;
   onDismissStoryError?: () => void;
 }
+
+// Duração do "flash de tela" (foto): a tela fica branca por um instante para
+// iluminar o rosto na câmera frontal antes de capturar o quadro.
+const SCREEN_FLASH_MS = 160;
 
 function capturePhotoBlob(video: HTMLVideoElement): Promise<Blob | null> {
   return new Promise((resolve) => {
@@ -69,6 +73,8 @@ export function CameraStep({
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [capturingPhoto, setCapturingPhoto] = useState(false);
+  const [flashOn, setFlashOn] = useState(false);
+  const [screenFlash, setScreenFlash] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -76,6 +82,19 @@ export function CameraStep({
     video.srcObject = stream;
     if (stream) video.play().catch(() => {});
   }, [stream]);
+
+  // Lanterna (torch): tentativa best-effort. O WebView do iOS quase nunca
+  // expõe a constraint `torch`, então isto costuma ser um no-op silencioso —
+  // por isso a foto também conta com o flash de tela (screenFlash).
+  const applyTorch = async (on: boolean) => {
+    const track = stream?.getVideoTracks()[0];
+    if (!track) return;
+    try {
+      await track.applyConstraints({ advanced: [{ torch: on }] } as unknown as MediaTrackConstraints);
+    } catch {
+      // torch não suportado neste aparelho/WebView — ignora.
+    }
+  };
 
   const { isRecording, elapsedMs, start: startRecording, stop: stopRecording } = useVideoCapture({
     stream,
@@ -92,7 +111,16 @@ export function CameraStep({
     if (mode === 'photo') {
       if (!videoRef.current || capturingPhoto) return;
       setCapturingPhoto(true);
+      if (flashOn) {
+        setScreenFlash(true);
+        await new Promise((resolve) => setTimeout(resolve, SCREEN_FLASH_MS));
+        void applyTorch(true);
+      }
       const blob = await capturePhotoBlob(videoRef.current);
+      if (flashOn) {
+        void applyTorch(false);
+        setScreenFlash(false);
+      }
       setCapturingPhoto(false);
       if (!blob) return;
       const file = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
@@ -103,9 +131,11 @@ export function CameraStep({
     // Vídeo e Stories gravam do mesmo jeito (Stories é vídeo com validade de
     // 24h); o que muda é o destino da mídia, decidido no StudioPage pelo modo.
     if (isRecording) {
+      void applyTorch(false);
       stopRecording();
       return;
     }
+    if (flashOn) void applyTorch(true);
     void startRecording();
   };
 
@@ -122,6 +152,9 @@ export function CameraStep({
           e.target.value = '';
         }}
       />
+
+      {/* Flash de tela: clarão branco por um instante para iluminar a selfie. */}
+      {screenFlash && <div className="pointer-events-none absolute inset-0 z-40 bg-white" aria-hidden />}
 
       {/* Modo Stories publica direto (sem tela de detalhes): enquanto sobe, a
           tela toda fica bloqueada; um erro deixa tentar de novo ou descartar. */}
@@ -195,6 +228,7 @@ export function CameraStep({
           </div>
         )}
 
+        {/* Barra superior: fechar (esq.) · flash ou tempo de gravação (centro) */}
         <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-4 pb-3 pt-safe-top">
           <button
             type="button"
@@ -205,43 +239,46 @@ export function CameraStep({
             <X size={20} aria-hidden />
           </button>
 
-          {isRecording && (
+          {isRecording ? (
             <div className="flex items-center gap-2 rounded-full bg-black/40 px-3 py-1.5">
               <span className="h-2 w-2 rounded-full bg-error" aria-hidden />
               <span className="font-sans text-counter text-white">{formatElapsed(elapsedMs)}</span>
             </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setFlashOn((prev) => !prev)}
+              aria-label={flashOn ? 'Desligar flash' : 'Ligar flash'}
+              aria-pressed={flashOn}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-black/30 text-white"
+            >
+              {flashOn ? <Zap size={20} aria-hidden /> : <ZapOff size={20} aria-hidden />}
+            </button>
           )}
 
-          <button
-            type="button"
-            onClick={() => setFacing((prev) => (prev === 'user' ? 'environment' : 'user'))}
-            aria-label="Trocar câmera"
-            disabled={isRecording}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-black/30 text-white disabled:opacity-40"
-          >
-            <RotateCcw size={20} aria-hidden />
-          </button>
+          <div className="h-10 w-10" aria-hidden />
         </div>
       </div>
 
       <div className="flex flex-col items-center gap-5 bg-black pb-safe-bottom pt-4">
         <CameraModeSwitcher mode={mode} onChange={onModeChange} />
 
-        <div className="flex w-full items-center justify-center gap-10 px-8 pb-4">
+        {/* Galeria (esq.) · obturador (centro) · virar câmera (dir.) */}
+        <div className="grid w-full grid-cols-3 items-center px-8 pb-4">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             aria-label="Escolher da galeria"
-            className="flex h-11 w-11 items-center justify-center rounded-lg border border-white/25 text-white"
+            className="flex h-12 w-12 items-center justify-center justify-self-start overflow-hidden rounded-xl border-2 border-white/70 bg-white/5 text-white"
           >
-            <Images size={20} aria-hidden />
+            <Images size={22} aria-hidden />
           </button>
 
           <button
             type="button"
             onClick={handleShutterTap}
             aria-label={mode === 'photo' ? 'Capturar foto' : isRecording ? 'Parar gravação' : 'Iniciar gravação'}
-            className="flex h-[72px] w-[72px] items-center justify-center rounded-full border-4 border-white bg-white/10 transition-transform active:scale-95"
+            className="flex h-[72px] w-[72px] items-center justify-center justify-self-center rounded-full border-4 border-white bg-white/10 transition-transform active:scale-95"
           >
             <span
               className={clsx(
@@ -254,7 +291,15 @@ export function CameraStep({
             />
           </button>
 
-          <div className="h-11 w-11" aria-hidden />
+          <button
+            type="button"
+            onClick={() => setFacing((prev) => (prev === 'user' ? 'environment' : 'user'))}
+            aria-label="Virar câmera"
+            disabled={isRecording}
+            className="flex h-12 w-12 items-center justify-center justify-self-end rounded-full bg-white/15 text-white disabled:opacity-40"
+          >
+            <SwitchCamera size={22} aria-hidden />
+          </button>
         </div>
       </div>
     </div>
