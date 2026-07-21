@@ -187,6 +187,7 @@ export function StudioPage() {
           />
         ) : (
           <DetailsStep
+            media={media}
             caption={caption}
             onCaptionChange={setCaption}
             sports={sports}
