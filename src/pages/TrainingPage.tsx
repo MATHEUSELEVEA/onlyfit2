@@ -111,7 +111,7 @@ function TrainingContent() {
   return <div className="relative flex h-full flex-col overflow-y-auto bg-background pb-8">
     <PageTopBar title={t('meufit.training.pageTitle')} backFallback="/meu-fit" />
     <main className="mx-auto w-full max-w-[720px] px-5 pb-6 pt-5">
-      <div className="grid grid-cols-4 rounded-xl bg-surface-container p-1" role="tablist" aria-label={t('meufit.training.tabs.aria')}>{([['today', t('meufit.training.tabs.today')], ['history', t('meufit.training.tabs.history')], ['progress', t('meufit.training.tabs.progress')], ['library', t('meufit.training.tabs.library')]] as [Tab, string][]).map(([value, label]) => <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={clsx('min-h-[40px] rounded-lg font-sans text-counter transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', tab === value ? 'bg-surface-container-lowest text-on-surface' : 'text-on-surface-variant')}>{label}</button>)}</div>
+      <div className="grid grid-cols-4 gap-1 rounded-full bg-surface-container p-1" role="tablist" aria-label={t('meufit.training.tabs.aria')}>{([['today', t('meufit.training.tabs.today')], ['history', t('meufit.training.tabs.history')], ['progress', t('meufit.training.tabs.progress')], ['library', t('meufit.training.tabs.library')]] as [Tab, string][]).map(([value, label]) => <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={clsx('flex min-h-[40px] items-center justify-center rounded-full font-sans text-counter transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', tab === value ? 'bg-surface-container-lowest text-on-surface' : 'text-on-surface-variant hover:text-on-surface active:text-on-surface')}>{label}</button>)}</div>
       {tab !== 'today' ? <AppleHealthCard appleHealth={appleHealth} compact /> : null}
       {tab === 'today' && <Today items={todayItems} active={activeItem ?? null} />}
       {tab === 'history' && <HistoryList imported={allImported} onOpenDay={(value) => setDetailDate(value)} onOpenActivity={setDetailActivity} onRecord={() => setRecordOpen(true)} />}
@@ -150,7 +150,7 @@ function Today({ items, active }: { items: ScheduledWorkout[]; active: Scheduled
                   key={surface}
                   type="button"
                   onClick={() => setSelectedSurface(surface)}
-                  className="flex min-h-[76px] w-full items-center gap-4 rounded-xl border border-outline-variant/40 bg-surface-container px-4 py-3 text-left transition-colors hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className="flex min-h-[76px] w-full items-center gap-4 rounded-2xl border border-outline-variant/40 bg-surface-container px-4 py-3 text-left transition-colors duration-150 hover:bg-surface-container-high active:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                   aria-label={t('meufit.training.today.openType', { type: t(surfaceTranslationKey[surface]) })}
                 >
                   <TrainingBadge surface={surface} status={surfaceActive ? 'active' : surfaceWorkouts[0].status} />
@@ -167,7 +167,7 @@ function Today({ items, active }: { items: ScheduledWorkout[]; active: Scheduled
             })}
           </div>
         ) : (
-          <div className="mt-5 rounded-xl border border-dashed border-outline-variant/50 px-4 py-6">
+          <div className="mt-5 rounded-2xl border border-dashed border-outline-variant/40 px-4 py-6">
             <p className="font-sans text-label text-on-surface">{t('meufit.training.today.emptyTitle')}</p>
             <p className="mt-1 font-sans text-body-sm text-on-surface-variant">{t('meufit.training.today.emptyDescription')}</p>
           </div>
@@ -196,7 +196,7 @@ function Today({ items, active }: { items: ScheduledWorkout[]; active: Scheduled
           const canStart = item.canStart !== false && (item.status === 'planned' || item.status === 'active' || item.status === 'partial');
           const anotherWorkoutIsActive = Boolean(activeSession && !isActive);
           return (
-            <article key={item.id} className="rounded-xl border border-outline-variant/40 bg-surface-container p-4">
+            <article key={item.id} className="rounded-2xl border border-outline-variant/40 bg-surface-container p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <h3 className="font-sans text-title text-on-surface">{item.title}</h3>
@@ -223,13 +223,13 @@ function Today({ items, active }: { items: ScheduledWorkout[]; active: Scheduled
                 )}
               </div>
               {canStart ? (
-                <button type="button" disabled={anotherWorkoutIsActive} onClick={() => { startSession(item.id); navigate('/meu-fit/treino/player'); }} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary font-sans text-label text-on-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container disabled:cursor-not-allowed disabled:bg-surface-container-high disabled:text-on-surface-variant">
+                <button type="button" disabled={anotherWorkoutIsActive} onClick={() => { startSession(item.id); navigate('/meu-fit/treino/player'); }} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary font-sans text-label text-on-primary transition-opacity duration-150 enabled:hover:opacity-90 enabled:active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container disabled:cursor-not-allowed disabled:bg-surface-container-high disabled:text-on-surface-variant">
                   <Play size={18} fill="currentColor" aria-hidden />
                   {t(anotherWorkoutIsActive ? 'meufit.training.today.finishCurrent' : isActive ? 'meufit.training.today.continue' : 'meufit.training.today.start')}
                 </button>
               ) : null}
               {item.status === 'planned' ? (
-                <button type="button" onClick={() => skipToday(item.id)} className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl font-sans text-label text-on-surface-variant transition-colors hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                <button type="button" onClick={() => skipToday(item.id)} className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl font-sans text-label text-on-surface-variant transition-colors duration-150 hover:bg-surface-container-high active:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                   <CalendarX2 size={18} aria-hidden />
                   {t('meufit.training.today.skip')}
                 </button>
@@ -265,7 +265,7 @@ function DayDetailContent({ date, healthDays, scheduled, showScheduled = true, o
 
   const hasAnything = (day?.hasData ?? false) || dayScheduled.length > 0;
   if (!hasAnything) {
-    return <p className="rounded-xl border border-dashed border-outline-variant/50 px-4 py-5 font-sans text-body-sm text-on-surface-variant">Dia livre. Sem treinos programados nem atividades registradas.</p>;
+    return <p className="rounded-2xl border border-dashed border-outline-variant/40 px-4 py-5 font-sans text-body-sm text-on-surface-variant">Dia livre. Sem treinos programados nem atividades registradas.</p>;
   }
 
   const ringProgress = day?.activeKcal ? Math.min(1, day.activeKcal / MOVE_GOAL_KCAL) : (day?.activities.length ? 0.5 : 0);
@@ -311,7 +311,7 @@ function DayDetailContent({ date, healthDays, scheduled, showScheduled = true, o
       ))}
 
       {(day?.activities ?? []).map((activity) => (
-        <button key={activity.id} type="button" onClick={() => onOpenActivity?.(activity)} className="flex w-full items-center gap-3 rounded-xl border border-outline-variant/40 bg-surface p-3 text-left transition-colors hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+        <button key={activity.id} type="button" onClick={() => onOpenActivity?.(activity)} className="flex w-full items-center gap-3 rounded-xl border border-outline-variant/40 bg-surface p-3 text-left transition-colors duration-150 hover:bg-surface-container-high active:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
           <TrainingBadge surface={activity.surface} status="imported" />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -572,7 +572,7 @@ function Library() {
                     onClick={() => {
                       if (startWorkoutNow(template, workout.trainingType)) navigate('/meu-fit/treino/player');
                     }}
-                    className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-3 font-sans text-label text-on-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container disabled:cursor-not-allowed disabled:bg-surface-container-high disabled:text-on-surface-variant"
+                    className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-3 font-sans text-label text-on-primary transition-opacity duration-150 enabled:hover:opacity-90 enabled:active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container disabled:cursor-not-allowed disabled:bg-surface-container-high disabled:text-on-surface-variant"
                   >
                     <Play size={18} fill="currentColor" aria-hidden />
                     {t(anotherWorkoutIsActive ? 'meufit.training.today.finishCurrent' : isCurrentWorkout ? 'meufit.training.library.continue' : 'meufit.training.library.doNow')}
@@ -600,11 +600,11 @@ function Library() {
       {isLoading ? (
         <div className="space-y-3">{[0, 1, 2].map((index) => <div key={index} className="h-[104px] animate-pulse rounded-2xl bg-surface-container motion-reduce:animate-none" />)}</div>
       ) : items.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-outline-variant/50 px-4 py-6 font-sans text-body-sm text-on-surface-variant">Nenhum treino aplicado ainda. Quando seu profissional montar seu treino, ele aparece aqui.</p>
+        <p className="rounded-2xl border border-dashed border-outline-variant/40 px-4 py-6 font-sans text-body-sm text-on-surface-variant">Nenhum treino aplicado ainda. Quando seu profissional montar seu treino, ele aparece aqui.</p>
       ) : (
         <div className="space-y-3">
           {groups.map((group) => (
-            <button key={group.type} type="button" onClick={() => setSelectedType(group.type)} className="flex min-h-[76px] w-full items-center gap-4 rounded-2xl border border-outline-variant/40 bg-surface-container px-4 py-3 text-left transition-colors hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label={t('meufit.training.library.openType', { type: t(surfaceTranslationKey[group.type]) })}>
+            <button key={group.type} type="button" onClick={() => setSelectedType(group.type)} className="flex min-h-[76px] w-full items-center gap-4 rounded-2xl border border-outline-variant/40 bg-surface-container px-4 py-3 text-left transition-colors duration-150 hover:bg-surface-container-high active:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label={t('meufit.training.library.openType', { type: t(surfaceTranslationKey[group.type]) })}>
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant" aria-hidden>{surfaceIcon[group.type]}</span>
               <span className="min-w-0 flex-1">
                 <span className="block font-sans text-label text-on-surface">{t(surfaceTranslationKey[group.type])}</span>
@@ -691,7 +691,7 @@ function AppleHealthCard({ appleHealth, compact }: { appleHealth: AppleHealthSta
                 type="button"
                 onClick={() => appleHealth.sync.mutate('manual')}
                 disabled={syncing}
-                className="min-h-10 shrink-0 rounded-full bg-primary px-4 font-sans text-counter text-on-primary disabled:opacity-60"
+                className="min-h-10 shrink-0 rounded-full bg-primary px-4 font-sans text-counter text-on-primary transition-opacity duration-150 enabled:hover:opacity-90 enabled:active:opacity-80 disabled:opacity-60"
               >
                 {syncing ? t('health.apple.syncing') : t('health.apple.sync')}
               </button>
@@ -713,7 +713,7 @@ function AppleHealthCard({ appleHealth, compact }: { appleHealth: AppleHealthSta
                 type="button"
                 onClick={() => appleHealth.sync.mutate('initial')}
                 disabled={syncing}
-                className="min-h-12 w-full rounded-xl bg-primary font-sans text-label text-on-primary disabled:opacity-60"
+                className="min-h-12 w-full rounded-xl bg-primary font-sans text-label text-on-primary transition-opacity duration-150 enabled:hover:opacity-90 enabled:active:opacity-80 disabled:opacity-60"
               >
                 {syncing ? t('health.apple.connecting') : t('health.apple.connect')}
               </button>
@@ -828,12 +828,12 @@ function Heatmap({ selectedDate, healthDays, scheduled, onSelect }: { selectedDa
   return (
     <section>
       <div className="flex items-center justify-between">
-        <button type="button" onClick={() => setCursor(new Date(year, month - 1, 1))} className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container text-on-surface transition-colors hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label={t('meufit.training.progress.prevMonth')}><ChevronLeft size={20} /></button>
+        <button type="button" onClick={() => setCursor(new Date(year, month - 1, 1))} className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container text-on-surface transition-colors duration-150 hover:bg-surface-container-high active:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label={t('meufit.training.progress.prevMonth')}><ChevronLeft size={20} /></button>
         <div className="text-center">
           <span className="block font-sans text-title capitalize text-on-surface">{cursor.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</span>
           <span className="mt-0.5 block font-sans text-counter text-on-surface-variant">{t('meufit.training.progress.activeDaysCount', { count: activeDays })}</span>
         </div>
-        <button type="button" onClick={() => setCursor(new Date(year, month + 1, 1))} className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container text-on-surface transition-colors hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label={t('meufit.training.progress.nextMonth')}><ChevronRight size={20} /></button>
+        <button type="button" onClick={() => setCursor(new Date(year, month + 1, 1))} className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container text-on-surface transition-colors duration-150 hover:bg-surface-container-high active:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label={t('meufit.training.progress.nextMonth')}><ChevronRight size={20} /></button>
       </div>
 
       <div className="mt-5 grid grid-cols-7 gap-1.5">
@@ -1004,7 +1004,7 @@ function AddActivitySheet({
         <button
           type="button"
           onClick={addManual}
-          className="min-h-12 w-full rounded-xl bg-primary font-sans text-label text-on-primary"
+          className="min-h-12 w-full rounded-xl bg-primary font-sans text-label text-on-primary transition-opacity duration-150 hover:opacity-90 active:opacity-80"
         >
           Salvar registro
         </button>
