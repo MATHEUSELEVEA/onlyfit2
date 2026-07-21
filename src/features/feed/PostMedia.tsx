@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Volume2, VolumeX } from 'lucide-react';
+import { Loader2, RotateCw, Volume2, VolumeX } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { FeedMedia } from './types';
 import { muteAfterAutoplayBlock, setVideoMuted, useVideoMuted } from './videoSound';
@@ -21,6 +21,12 @@ function fitFor(mediaAspect: number, stage: HTMLElement): MediaFit {
   return Math.max(ratio, 1 / ratio) <= COVER_TOLERANCE ? 'cover' : 'contain';
 }
 
+function formatVideoTime(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+  const minutes = Math.floor(seconds / 60);
+  return `${minutes}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+}
+
 // Uma página de mídia (vídeo ou imagem) preenchendo o card em tela cheia.
 // Vídeo só toca quando é a página ativa do carrossel — imagens são estáticas.
 function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean; alt: string }) {
@@ -28,8 +34,10 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
   const stageRef = useRef<HTMLDivElement>(null);
   const aspectRef = useRef(0);
   const [fit, setFit] = useState<MediaFit>('cover');
-  // Fração assistida do vídeo (0..1), para a barra fina sobre a nav.
-  const [progress, setProgress] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [buffering, setBuffering] = useState(false);
+  const [videoError, setVideoError] = useState(false);
   const muted = useVideoMuted();
 
   const applyFit = useCallback((mediaAspect?: number) => {
@@ -65,6 +73,28 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
     });
   }, [active, muted]);
 
+  const seek = (seconds: number) => {
+    const video = videoRef.current;
+    if (!video || !Number.isFinite(seconds)) return;
+    video.currentTime = seconds;
+    setCurrentTime(seconds);
+  };
+
+  const retryVideo = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    setVideoError(false);
+    setBuffering(true);
+    video.load();
+    if (!active) return;
+    video.muted = muted;
+    void video.play().catch(() => {
+      video.muted = true;
+      muteAfterAutoplayBlock();
+      void video.play().catch(() => setVideoError(true));
+    });
+  };
+
   const backdropUrl = media.kind === 'image' ? media.url : media.thumbnailUrl;
   const mediaClass = clsx('relative h-full w-full', fit === 'cover' ? 'object-cover' : 'object-contain');
 
@@ -92,12 +122,24 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
           // Só o slide visível baixa vídeo — os vizinhos esperam a vez, senão
           // todos bufferizam juntos e o scroll engasga em aparelho modesto.
           preload={active ? 'auto' : 'none'}
-          onLoadedMetadata={(event) =>
-            applyFit(event.currentTarget.videoWidth / event.currentTarget.videoHeight)
-          }
+          onLoadStart={() => setBuffering(true)}
+          onLoadedMetadata={(event) => {
+            applyFit(event.currentTarget.videoWidth / event.currentTarget.videoHeight);
+            setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0);
+          }}
+          onCanPlay={() => {
+            setBuffering(false);
+            setVideoError(false);
+          }}
+          onPlaying={() => setBuffering(false)}
+          onWaiting={() => setBuffering(true)}
+          onError={() => {
+            setBuffering(false);
+            setVideoError(true);
+          }}
           onTimeUpdate={(event) => {
-            const { currentTime, duration } = event.currentTarget;
-            setProgress(duration > 0 ? currentTime / duration : 0);
+            setCurrentTime(event.currentTarget.currentTime);
+            if (Number.isFinite(event.currentTarget.duration)) setDuration(event.currentTarget.duration);
           }}
         />
       ) : (
@@ -113,15 +155,51 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
         />
       )}
 
-      {/* Barra fina de progresso, encostada na nav (só no vídeo visível).
-          `timeupdate` pulsa ~4x/s; a transição linear preenche os degraus. */}
-      {media.kind === 'video' && active && (
-        <div className="feed-progress absolute inset-x-0 z-10 h-0.5 bg-white/20" aria-hidden>
-          <div
-            className="h-full bg-white/80 transition-[width] duration-300 ease-linear motion-reduce:transition-none"
-            style={{ width: `${progress * 100}%` }}
-          />
+      {media.kind === 'video' && active && buffering && !videoError && (
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center" role="status">
+          <Loader2 size={28} className="animate-spin text-white drop-shadow" aria-label="Carregando vídeo" />
         </div>
+      )}
+
+      {media.kind === 'video' && active && videoError && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center px-8 text-center">
+          <button
+            type="button"
+            onClick={retryVideo}
+            className="flex min-h-12 items-center gap-2 rounded-full bg-black/60 px-5 font-sans text-label text-white backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+          >
+            <RotateCw size={18} aria-hidden />
+            Tentar carregar o vídeo novamente
+          </button>
+        </div>
+      )}
+
+      {/* Scrubber real: permite voltar ao início ou a qualquer ponto sem
+          esperar o loop. A área de toque fica totalmente acima da BottomNav. */}
+      {media.kind === 'video' && active && duration > 0 && (
+        <label
+          className="feed-progress-control absolute inset-x-0 z-20 flex h-11 items-center px-3"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <span className="sr-only">Progresso do vídeo</span>
+          <span className="pointer-events-none absolute inset-x-3 h-1 overflow-hidden rounded-full bg-white/25" aria-hidden>
+            <span
+              className="block h-full rounded-full bg-white/90 transition-[width] duration-200 ease-linear motion-reduce:transition-none"
+              style={{ width: `${Math.min(100, currentTime / duration * 100)}%` }}
+            />
+          </span>
+          <input
+            type="range"
+            min={0}
+            max={duration}
+            step={0.1}
+            value={Math.min(currentTime, duration)}
+            onChange={(event) => seek(Number(event.target.value))}
+            aria-label="Progresso do vídeo"
+            aria-valuetext={`${formatVideoTime(currentTime)} de ${formatVideoTime(duration)}`}
+            className="feed-progress-input relative h-11 w-full cursor-pointer appearance-none bg-transparent text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+          />
+        </label>
       )}
     </div>
   );

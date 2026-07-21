@@ -78,20 +78,22 @@ async function uploadDraft(
   const ext = fileExtension(draft.file) || (draft.kind === 'image' ? 'jpg' : 'mp4');
   const contentType = contentTypeForMedia(draft.file, draft.kind);
 
-  // A mídia em si é a maior parte do upload; o poster (quando precisa subir)
-  // é tratado como um extra fora dessa fração de progresso.
-  const url = await uploadAsset(draft.file, `${draft.kind}_${stamp}.${ext}`, contentType, 'onlyfit-media', onProgress);
+  // Vídeo e thumbnail sobem em paralelo. Antes, todo o upload grande precisava
+  // terminar para só então começar a captura e o envio do poster, somando até
+  // quatro segundos desnecessários ao tempo percebido de publicação.
+  const thumbnailPromise = draft.kind === 'video'
+    ? Promise.resolve(draft.posterBlob ?? captureVideoPoster(draft.file))
+      .then((poster) => poster
+        ? uploadAsset(poster, `thumb_${stamp}.jpg`, 'image/jpeg', 'onlyfit-thumbnails')
+        : null)
+    : Promise.resolve(null);
 
-  let thumbnailUrl: string | null = null;
-  if (draft.kind === 'video') {
-    // Vídeo gravado pela câmera já traz o poster capturado ao vivo do stream
-    // (ver useVideoCapture) — pula captureVideoPoster, que abre o arquivo
-    // gravado depois e pode travar em .mov/HEVC não decodificável.
-    const poster = draft.posterBlob ?? (await captureVideoPoster(draft.file));
-    if (poster) {
-      thumbnailUrl = await uploadAsset(poster, `thumb_${stamp}.jpg`, 'image/jpeg', 'onlyfit-thumbnails');
-    }
-  }
+  // A mídia em si é a maior parte do upload; o poster é tratado como um extra
+  // fora dessa fração de progresso para a porcentagem nunca andar para trás.
+  const [url, thumbnailUrl] = await Promise.all([
+    uploadAsset(draft.file, `${draft.kind}_${stamp}.${ext}`, contentType, 'onlyfit-media', onProgress),
+    thumbnailPromise,
+  ]);
 
   return { kind: draft.kind, url, thumbnailUrl };
 }

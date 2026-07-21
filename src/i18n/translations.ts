@@ -893,6 +893,13 @@ const pt = {
   'profile.myPosts.delete.deleting': 'Excluindo...',
   'profile.myPosts.cancel': 'Cancelar',
   'profile.myPosts.error': 'Não foi possível concluir. Tente novamente.',
+  'profile.myPosts.reorder.start': 'Organizar grade',
+  'profile.myPosts.reorder.hint': 'Use as setas para mover cada publicação.',
+  'profile.myPosts.reorder.save': 'Salvar',
+  'profile.myPosts.reorder.saving': 'Salvando...',
+  'profile.myPosts.reorder.moveBack': 'Mover publicação para trás',
+  'profile.myPosts.reorder.moveForward': 'Mover publicação para frente',
+  'profile.myPosts.reorder.error': 'Não foi possível salvar a ordem. Tente novamente.',
 
   'profile.healthTab.title': 'Dashboard de saúde',
   'profile.healthTab.description':
@@ -1868,6 +1875,13 @@ const en: Record<keyof typeof pt, string> = {
   'profile.myPosts.delete.deleting': 'Deleting...',
   'profile.myPosts.cancel': 'Cancel',
   'profile.myPosts.error': 'Could not complete. Try again.',
+  'profile.myPosts.reorder.start': 'Arrange grid',
+  'profile.myPosts.reorder.hint': 'Use the arrows to move each post.',
+  'profile.myPosts.reorder.save': 'Save',
+  'profile.myPosts.reorder.saving': 'Saving...',
+  'profile.myPosts.reorder.moveBack': 'Move post backward',
+  'profile.myPosts.reorder.moveForward': 'Move post forward',
+  'profile.myPosts.reorder.error': 'Could not save the order. Try again.',
 
   'profile.healthTab.title': 'Health dashboard',
   'profile.healthTab.description':

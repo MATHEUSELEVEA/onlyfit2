@@ -88,11 +88,39 @@
     top: calc(var(--feed-inset-t) + 112px);
   }
 
-  /* Barra fina de progresso do vídeo, encostada na nav translúcida. */
-  .feed-progress {
-    /* A barra fica acima da navegação. Assim o botão elevado de My Fit não
-     * intercepta a área de duração do vídeo. */
-    bottom: calc(var(--feed-inset-b) + 18px);
+  /* Scrubber do vídeo. A área de 44px termina 12px acima da nav e, portanto,
+   * antes do botão elevado de My Fit, sem disputa de gesto. */
+  .feed-progress-control {
+    bottom: calc(var(--feed-inset-b) + 12px);
+    touch-action: pan-x;
+  }
+
+  .feed-progress-input::-webkit-slider-runnable-track {
+    height: 4px;
+    background: transparent;
+  }
+
+  .feed-progress-input::-webkit-slider-thumb {
+    width: 14px;
+    height: 14px;
+    margin-top: -5px;
+    appearance: none;
+    border: 2px solid currentColor;
+    border-radius: 9999px;
+    background: rgb(var(--color-surface-container-lowest) / 0.9);
+  }
+
+  .feed-progress-input::-moz-range-track {
+    height: 4px;
+    background: transparent;
+  }
+
+  .feed-progress-input::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: 2px solid currentColor;
+    border-radius: 9999px;
+    background: rgb(var(--color-surface-container-lowest) / 0.9);
   }
 
   /* Overlay de "Publicando…"/erro do post ainda subindo (publishQueue.ts),

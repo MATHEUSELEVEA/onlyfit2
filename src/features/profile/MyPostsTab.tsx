@@ -2,6 +2,10 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CirclePlus,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  GripVertical,
   Heart,
   Loader2,
   MessageCircle,
@@ -22,6 +26,7 @@ import { ShareSheet } from '@/components/ui/ShareSheet';
 import {
   useDeleteMyPost,
   useMyPosts,
+  useReorderMyPosts,
   useToggleMyPostComments,
   useUpdateMyPostCaption,
   type MyPost,
@@ -36,6 +41,9 @@ export function MyPostsTab({ username }: { username: string | null }) {
   const { data: posts, isLoading, isError, refetch } = useMyPosts();
   const [activePost, setActivePost] = useState<MyPost | null>(null);
   const [mode, setMode] = useState<SheetMode | null>(null);
+  const [organizing, setOrganizing] = useState(false);
+  const [orderedPosts, setOrderedPosts] = useState<MyPost[]>([]);
+  const reorderPosts = useReorderMyPosts();
 
   // O sheet trabalha com a versão mais fresca do post (após toggles/edições).
   const currentPost = activePost ? (posts?.find((p) => p.id === activePost.id) ?? null) : null;
@@ -48,6 +56,31 @@ export function MyPostsTab({ username }: { username: string | null }) {
   function closeAll() {
     setActivePost(null);
     setMode(null);
+  }
+
+  function startOrganizing() {
+    setOrderedPosts(posts ?? []);
+    reorderPosts.reset();
+    setOrganizing(true);
+  }
+
+  function movePost(from: number, to: number) {
+    if (to < 0 || to >= orderedPosts.length) return;
+    setOrderedPosts((current) => {
+      const next = [...current];
+      const [post] = next.splice(from, 1);
+      next.splice(to, 0, post);
+      return next;
+    });
+  }
+
+  async function saveOrder() {
+    try {
+      await reorderPosts.mutateAsync(orderedPosts);
+      setOrganizing(false);
+    } catch {
+      // O aviso permanece visível e a ordem local continua disponível.
+    }
   }
 
   if (isLoading) {
@@ -97,12 +130,61 @@ export function MyPostsTab({ username }: { username: string | null }) {
 
   return (
     <>
+      {posts.length > 1 && (
+        <div className="mb-3 flex min-h-11 items-center justify-between gap-3">
+          {organizing ? (
+            <>
+              <p className="min-w-0 flex-1 font-sans text-body-sm text-on-surface-variant">
+                {t('profile.myPosts.reorder.hint')}
+              </p>
+              <button
+                type="button"
+                onClick={() => setOrganizing(false)}
+                disabled={reorderPosts.isPending}
+                className="min-h-11 rounded-full px-3 font-sans text-label text-on-surface-variant disabled:opacity-60"
+              >
+                {t('profile.myPosts.cancel')}
+              </button>
+              <button
+                type="button"
+                onClick={() => void saveOrder()}
+                disabled={reorderPosts.isPending}
+                className="flex min-h-11 items-center gap-1.5 rounded-full bg-primary px-4 font-sans text-label text-on-primary disabled:opacity-60"
+              >
+                {reorderPosts.isPending ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Check size={16} aria-hidden />}
+                {reorderPosts.isPending ? t('profile.myPosts.reorder.saving') : t('profile.myPosts.reorder.save')}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={startOrganizing}
+              className="ml-auto flex min-h-11 items-center gap-2 rounded-full px-3 font-sans text-label text-primary active:bg-primary/10"
+            >
+              <GripVertical size={18} aria-hidden />
+              {t('profile.myPosts.reorder.start')}
+            </button>
+          )}
+        </div>
+      )}
+
+      {reorderPosts.isError && (
+        <p role="alert" className="mb-3 rounded-xl bg-error-container px-3 py-3 font-sans text-body-sm text-on-error-container">
+          {t('profile.myPosts.reorder.error')}
+        </p>
+      )}
+
       <div className="grid grid-cols-3 gap-1.5">
-        {posts.map((post) => (
+        {(organizing ? orderedPosts : posts).map((post, index, visiblePosts) => (
           <div key={post.id} className="relative aspect-square overflow-hidden rounded-lg bg-surface-container">
             <Link
               to={`/video/${encodeURIComponent(post.id)}`}
               aria-label={post.caption || t('profile.myPosts.viewPost')}
+              aria-disabled={organizing}
+              tabIndex={organizing ? -1 : undefined}
+              onClick={(event) => {
+                if (organizing) event.preventDefault();
+              }}
               className="block h-full w-full"
             >
               {post.thumbnailUrl ? (
@@ -126,14 +208,40 @@ export function MyPostsTab({ username }: { username: string | null }) {
                 )}
               </div>
             </Link>
-            <button
-              type="button"
-              aria-label={t('profile.myPosts.options')}
-              onClick={() => openMenu(post)}
-              className="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-full text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.85)] transition-transform active:scale-95"
-            >
-              <MoreHorizontal size={20} aria-hidden />
-            </button>
+            {organizing ? (
+              <div className="absolute inset-x-1 bottom-1 z-10 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => movePost(index, index - 1)}
+                  disabled={index === 0}
+                  aria-label={t('profile.myPosts.reorder.moveBack')}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/65 text-white backdrop-blur-sm disabled:opacity-25"
+                >
+                  <ChevronLeft size={19} aria-hidden />
+                </button>
+                <span className="rounded-full bg-black/65 px-2 py-1 font-sans text-counter text-white backdrop-blur-sm">
+                  {index + 1}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => movePost(index, index + 1)}
+                  disabled={index === visiblePosts.length - 1}
+                  aria-label={t('profile.myPosts.reorder.moveForward')}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/65 text-white backdrop-blur-sm disabled:opacity-25"
+                >
+                  <ChevronRight size={19} aria-hidden />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                aria-label={t('profile.myPosts.options')}
+                onClick={() => openMenu(post)}
+                className="absolute right-1 top-1 flex h-9 w-9 items-center justify-center rounded-full text-white drop-shadow-[0_1px_4px_rgba(0,0,0,0.85)] transition-transform active:scale-95"
+              >
+                <MoreHorizontal size={20} aria-hidden />
+              </button>
+            )}
           </div>
         ))}
       </div>

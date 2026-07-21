@@ -39,6 +39,11 @@ export function commentsDisabledFrom(metadata: Record<string, unknown> | null): 
   return metadata?.comments_disabled === true;
 }
 
+function profileGridPosition(metadata: Record<string, unknown>): number | null {
+  const value = metadata.profile_grid_position;
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
 export function useMyPosts() {
   const { session } = useAuth();
   const userId = session?.user.id;
@@ -56,7 +61,7 @@ export function useMyPosts() {
         .order('published_at', { ascending: false });
       if (error) throw error;
 
-      return ((data ?? []) as MyPostRow[]).map((row) => ({
+      const posts = ((data ?? []) as MyPostRow[]).map((row) => ({
         id: row.id,
         caption: row.description ?? row.title ?? '',
         // Capa espelhada em thumbnail_url para vídeo, imagem e carrossel (padrão v1).
@@ -69,6 +74,16 @@ export function useMyPosts() {
         commentsDisabled: commentsDisabledFrom(row.metadata),
         metadata: row.metadata ?? {},
       }));
+
+      return posts.sort((a, b) => {
+        const aPosition = profileGridPosition(a.metadata);
+        const bPosition = profileGridPosition(b.metadata);
+        if (aPosition !== null && bPosition !== null) return aPosition - bPosition;
+        // Posts novos, ainda sem posição manual, entram no topo da grade.
+        if (aPosition === null && bPosition !== null) return -1;
+        if (aPosition !== null && bPosition === null) return 1;
+        return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
+      });
     },
   });
 }
@@ -148,6 +163,34 @@ export function useDeleteMyPost() {
       );
       queryClient.invalidateQueries({ queryKey: ['feed'] });
       queryClient.invalidateQueries({ queryKey: ['feed-post'] });
+    },
+  });
+}
+
+export function useReorderMyPosts() {
+  const { session } = useAuth();
+  const queryClient = useQueryClient();
+  const queryKey = myPostsQueryKey(session?.user.id);
+
+  return useMutation({
+    mutationFn: async (orderedPosts: MyPost[]): Promise<MyPost[]> => {
+      const nextPosts = orderedPosts.map((post, index) => ({
+        ...post,
+        metadata: { ...post.metadata, profile_grid_position: index },
+      }));
+      const results = await Promise.all(nextPosts.map((post) => supabase
+        .from('posts')
+        .update({ metadata: post.metadata })
+        .eq('id', post.id)));
+      const failed = results.find((result) => result.error);
+      if (failed?.error) throw failed.error;
+      return nextPosts;
+    },
+    onSuccess: (posts) => {
+      queryClient.setQueryData<MyPost[]>(queryKey, posts);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
     },
   });
 }

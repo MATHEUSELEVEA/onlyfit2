@@ -78,6 +78,9 @@ export function FeedPage() {
   // desligado, então o gesto nativo não existe — o arrasto no topo é medido
   // na mão e o feed desce junto com o dedo.
   const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    // Scrubber, botões e links possuem seus próprios gestos. Não deixe um
+    // ajuste da duração do vídeo virar pull-to-refresh por acidente.
+    if ((event.target as HTMLElement).closest('input, button, a')) return;
     const el = scrollerRef.current;
     if (el && el.scrollTop <= 0 && !isRefetching) {
       pullStartY.current = event.touches[0].clientY;

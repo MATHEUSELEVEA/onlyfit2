@@ -157,7 +157,7 @@ export function PostCard({ post }: PostCardProps) {
   // TikTok. Toques em botões (som, pontinhos) não contam para o gesto.
   const handleMediaTap = (event: React.MouseEvent<HTMLDivElement>) => {
     if (isLocal) return;
-    if ((event.target as HTMLElement).closest('button')) return;
+    if ((event.target as HTMLElement).closest('button, input, a')) return;
     const now = Date.now();
     if (now - lastTapRef.current < DOUBLE_TAP_MS) {
       lastTapRef.current = 0;
