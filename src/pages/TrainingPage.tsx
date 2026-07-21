@@ -10,7 +10,7 @@ import { DAY_CODES, uniqueWorkouts, useStudentWorkouts } from '@/features/traini
 import { useAppleHealth } from '@/features/wearables/useAppleHealth';
 import { buildHealthDays, formatSleep, type HealthDay } from '@/features/wearables/healthDays';
 import { localDateKey, todayKey } from '@/lib/localDate';
-import { useTranslation } from '@/i18n/I18nProvider';
+import { useTranslation, type TranslationKey } from '@/i18n/I18nProvider';
 
 type Tab = 'today' | 'history' | 'progress' | 'library';
 type AppleHealthState = ReturnType<typeof useAppleHealth>;
@@ -33,6 +33,18 @@ const surfaceIcon: Record<TrainingSurface, ReactNode> = {
   yoga: <Leaf size={18} />,
   pilates: <HeartPulse size={18} />,
   other: <Plus size={18} />,
+};
+const surfaceTranslationKey: Record<TrainingSurface, TranslationKey> = {
+  strength: 'meufit.training.surface.strength',
+  running: 'meufit.training.surface.running',
+  cycling: 'meufit.training.surface.cycling',
+  walking: 'meufit.training.surface.walking',
+  swimming: 'meufit.training.surface.swimming',
+  functional: 'meufit.training.surface.functional',
+  hiit: 'meufit.training.surface.hiit',
+  yoga: 'meufit.training.surface.yoga',
+  pilates: 'meufit.training.surface.pilates',
+  other: 'meufit.training.surface.other',
 };
 
 const weekdayFull = (value: string) => new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long' });
@@ -73,6 +85,7 @@ function WatchOriginChip() {
 export function TrainingPage() { return <TrainingContent />; }
 
 function TrainingContent() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>('today');
   const [selectedDate, setSelectedDate] = useState(today());
   const [detailDate, setDetailDate] = useState<string | null>(null);
@@ -81,83 +94,142 @@ function TrainingContent() {
   const appleHealth = useAppleHealth();
   const allImported = useMemo<ImportedActivity[]>(() => [...appleHealth.importedActivities, ...imported], [appleHealth.importedActivities, imported]);
   const healthDays = useMemo(() => buildHealthDays(appleHealth.importedActivities, appleHealth.dailySummaries), [appleHealth.importedActivities, appleHealth.dailySummaries]);
-  const activeItem = activeSession ? scheduled.find((item) => item.id === activeSession.scheduledId) : null;
+  const todayItems = scheduled.filter((item) => item.date === today());
+  const activeItem = activeSession ? todayItems.find((item) => item.id === activeSession.scheduledId) : null;
 
   return <div className="relative flex h-full flex-col overflow-y-auto bg-background pb-8">
-    <PageTopBar title="Treinos" backFallback="/meu-fit" actions={<button type="button" aria-label="Abrir progresso e calendário" onClick={() => setTab('progress')} className={clsx('flex h-11 w-11 items-center justify-center rounded-full transition-colors', tab === 'progress' ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface')}><CalendarDays size={20} aria-hidden /></button>} />
+    <PageTopBar title={t('meufit.training.pageTitle')} backFallback="/meu-fit" actions={<button type="button" aria-label="Abrir progresso e calendário" onClick={() => setTab('progress')} className={clsx('flex h-11 w-11 items-center justify-center rounded-full transition-colors', tab === 'progress' ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface')}><CalendarDays size={20} aria-hidden /></button>} />
     <main className="mx-auto w-full max-w-[720px] px-5 pb-6 pt-5">
-      <div className="grid grid-cols-4 rounded-xl bg-surface-container p-1" role="tablist" aria-label="Seções de treino">{([['today', 'Hoje'], ['history', 'Histórico'], ['progress', 'Progresso'], ['library', 'Biblioteca']] as [Tab, string][]).map(([value, label]) => <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={clsx('min-h-[40px] rounded-lg font-sans text-counter transition-colors', tab === value ? 'bg-surface-container-lowest text-on-surface' : 'text-on-surface-variant')}>{label}</button>)}</div>
-      <AppleHealthCard appleHealth={appleHealth} compact={tab !== 'today'} />
-      {tab === 'today' && <Agenda selectedDate={selectedDate} onDate={setSelectedDate} scheduled={scheduled} healthDays={healthDays} active={activeItem ?? null} onRecord={() => setRecordOpen(true)} onOpenCalendar={() => setTab('progress')} />}
-      {tab === 'history' && <HistoryList imported={allImported} healthDays={healthDays} onOpenDay={(value) => setDetailDate(value)} />}
+      <div className="grid grid-cols-4 rounded-xl bg-surface-container p-1" role="tablist" aria-label={t('meufit.training.tabs.aria')}>{([['today', t('meufit.training.tabs.today')], ['history', t('meufit.training.tabs.history')], ['progress', t('meufit.training.tabs.progress')], ['library', t('meufit.training.tabs.library')]] as [Tab, string][]).map(([value, label]) => <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={clsx('min-h-[40px] rounded-lg font-sans text-counter transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', tab === value ? 'bg-surface-container-lowest text-on-surface' : 'text-on-surface-variant')}>{label}</button>)}</div>
+      {tab !== 'today' ? <AppleHealthCard appleHealth={appleHealth} compact /> : null}
+      {tab === 'today' && <Today items={todayItems} active={activeItem ?? null} />}
+      {tab === 'history' && <HistoryList imported={allImported} healthDays={healthDays} onOpenDay={(value) => setDetailDate(value)} onRecord={() => setRecordOpen(true)} />}
       {tab === 'progress' && <Progress appleHealth={appleHealth} healthDays={healthDays} scheduled={scheduled} selectedDate={selectedDate} onSelect={(value) => { setSelectedDate(value); setDetailDate(value); }} />}
       {tab === 'library' && <Library />}
     </main>
     <DayDetailSheet date={detailDate} onClose={() => setDetailDate(null)} healthDays={healthDays} scheduled={scheduled} />
-    <AddActivitySheet open={recordOpen} onClose={() => setRecordOpen(false)} selectedDate={selectedDate} onAdd={(activity) => { addActivity(activity); setRecordOpen(false); }} />
+    <AddActivitySheet open={recordOpen} onClose={() => setRecordOpen(false)} selectedDate={today()} onAdd={(activity) => { addActivity(activity); setRecordOpen(false); }} />
   </div>;
 }
 
-/** Faixa dos 7 dias da semana, com preenchimento por intensidade real. */
-function WeekStrip({ selectedDate, onDate, healthDays, scheduled }: { selectedDate: string; onDate: (value: string) => void; healthDays: Map<string, HealthDay>; scheduled: ScheduledWorkout[] }) {
-  const week = useMemo(() => Array.from({ length: 7 }, (_, index) => { const d = new Date(); d.setDate(d.getDate() - d.getDay() + index); return d; }), []);
-  const todayValue = today();
+function Today({ items, active }: { items: ScheduledWorkout[]; active: ScheduledWorkout | null }) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { templates, startSession, activeSession, reschedule } = useTraining();
+  const [selectedSurface, setSelectedSurface] = useState<TrainingSurface | null>(null);
+  const workouts = items.filter((item) => item.status !== 'rest');
+  const types = Array.from(new Set(workouts.map((item) => item.surface)));
+  const currentSurface = selectedSurface && types.includes(selectedSurface) ? selectedSurface : null;
+  const selectedWorkouts = currentSurface ? workouts.filter((item) => item.surface === currentSurface) : [];
+
+  if (!currentSurface) {
+    return (
+      <section className="mt-6">
+        <h2 className="font-sans text-title-lg text-on-surface">{t('meufit.training.today.chooseType')}</h2>
+        <p className="mt-1 font-sans text-body-sm text-on-surface-variant">{t('meufit.training.today.chooseTypeDescription')}</p>
+        {types.length ? (
+          <div className="mt-5 space-y-3">
+            {types.map((surface) => {
+              const surfaceWorkouts = workouts.filter((item) => item.surface === surface);
+              const surfaceActive = active?.surface === surface;
+              const duration = surfaceWorkouts.reduce((total, item) => total + item.durationMin, 0);
+              return (
+                <button
+                  key={surface}
+                  type="button"
+                  onClick={() => setSelectedSurface(surface)}
+                  className="flex min-h-[76px] w-full items-center gap-4 rounded-xl border border-outline-variant/40 bg-surface-container px-4 py-3 text-left transition-colors hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  aria-label={t('meufit.training.today.openType', { type: t(surfaceTranslationKey[surface]) })}
+                >
+                  <TrainingBadge surface={surface} status={surfaceActive ? 'active' : surfaceWorkouts[0].status} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-sans text-label text-on-surface">{t(surfaceTranslationKey[surface])}</span>
+                    <span className="mt-1 block font-sans text-body-sm text-on-surface-variant">
+                      {t(surfaceWorkouts.length === 1 ? 'meufit.training.today.workoutCount' : 'meufit.training.today.workoutCountPlural', { count: surfaceWorkouts.length })} · {t('meufit.training.today.minutes', { minutes: duration })}
+                    </span>
+                  </span>
+                  {surfaceActive ? <span className="rounded-full bg-primary/10 px-2.5 py-1 font-sans text-counter text-primary">{t('meufit.training.today.inProgress')}</span> : null}
+                  <ChevronRight size={20} className="shrink-0 text-on-surface-variant" aria-hidden />
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="mt-5 rounded-xl border border-dashed border-outline-variant/50 px-4 py-6">
+            <p className="font-sans text-label text-on-surface">{t('meufit.training.today.emptyTitle')}</p>
+            <p className="mt-1 font-sans text-body-sm text-on-surface-variant">{t('meufit.training.today.emptyDescription')}</p>
+          </div>
+        )}
+      </section>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-7 gap-1.5">
-      {week.map((date) => {
-        const value = dateKey(date);
-        const selected = selectedDate === value;
-        const day = healthDays.get(value);
-        const item = scheduled.find((entry) => entry.date === value);
-        return (
-          <button key={value} type="button" onClick={() => onDate(value)} aria-pressed={selected} className={clsx('flex min-h-[68px] flex-col items-center justify-center gap-1 rounded-xl font-sans text-counter transition-colors', heatClass(day, selected))}>
-            <span className="uppercase opacity-80">{date.toLocaleDateString('pt-BR', { weekday: 'narrow' })}</span>
-            <span className={clsx('font-sans text-body tabular-nums', value === todayValue && !selected && 'text-primary')}>{date.getDate()}</span>
-            <span className="flex h-1.5 items-center gap-0.5">
-              {item ? <span className={clsx('h-1.5 w-1.5 rounded-full', selected ? 'bg-on-primary' : statusTone[item.status])} /> : null}
-              {(day?.activities.length ?? 0) > 0 ? <span className={clsx('h-1.5 w-1.5 rounded-full', selected ? 'bg-on-primary' : 'bg-tertiary')} /> : null}
-            </span>
-          </button>
-        );
-      })}
-    </div>
+    <section className="mt-6">
+      <button type="button" onClick={() => setSelectedSurface(null)} className="inline-flex min-h-11 items-center gap-2 font-sans text-label text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label={t('meufit.training.today.backToTypes')}>
+        <ChevronLeft size={18} aria-hidden />
+        {t('meufit.training.today.backToTypes')}
+      </button>
+      <div className="mt-3 flex items-center gap-3">
+        <TrainingBadge surface={currentSurface} status={active?.surface === currentSurface ? 'active' : selectedWorkouts[0].status} />
+        <div>
+          <h2 className="font-sans text-title-lg text-on-surface">{t(surfaceTranslationKey[currentSurface])}</h2>
+          <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{t('meufit.training.today.todayOnly')}</p>
+        </div>
+      </div>
+      <div className="mt-5 space-y-4">
+        {selectedWorkouts.map((item) => {
+          const template = templates.find((entry) => entry.id === item.templateId);
+          const isActive = activeSession?.scheduledId === item.id;
+          const canStart = item.status === 'planned' || item.status === 'active' || item.status === 'partial';
+          return (
+            <article key={item.id} className="rounded-xl border border-outline-variant/40 bg-surface-container p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="font-sans text-title text-on-surface">{item.title}</h3>
+                  <p className="mt-1 font-sans text-body-sm text-on-surface-variant">{item.focus} · {t('meufit.training.today.minutes', { minutes: item.durationMin })}</p>
+                </div>
+                <span className="shrink-0 rounded-full bg-surface-container-high px-2.5 py-1 font-sans text-counter text-on-surface-variant">{statusLabel[item.status]}</span>
+              </div>
+              <div className="mt-5 border-t border-outline-variant/40 pt-4">
+                <h4 className="font-sans text-label text-on-surface">{t('meufit.training.today.exercises')}</h4>
+                {template?.exercises.length ? (
+                  <ol className="mt-3 space-y-3">
+                    {template.exercises.map((exercise, index) => (
+                      <li key={exercise.id} className="flex items-start gap-3">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-surface-container-high font-sans text-counter text-primary">{index + 1}</span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-sans text-label text-on-surface">{exercise.name}</span>
+                          <span className="mt-0.5 block font-sans text-body-sm text-on-surface-variant">{exercise.muscle} · {exercise.sets} × {exercise.targetReps}</span>
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="mt-2 font-sans text-body-sm text-on-surface-variant">{t('meufit.training.today.noExercises')}</p>
+                )}
+              </div>
+              {canStart ? (
+                <button type="button" onClick={() => { startSession(item.id); navigate('/meu-fit/treino/player'); }} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary font-sans text-label text-on-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container">
+                  <Play size={18} fill="currentColor" aria-hidden />
+                  {t(isActive ? 'meufit.training.today.continue' : 'meufit.training.today.start')}
+                </button>
+              ) : null}
+              {item.status === 'missed' ? (
+                <button type="button" onClick={() => reschedule(item.id)} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-surface-container-high font-sans text-label text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                  <RotateCcw size={18} aria-hidden />
+                  {t('meufit.training.today.reschedule')}
+                </button>
+              ) : null}
+            </article>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
-function Agenda({ selectedDate, onDate, scheduled, healthDays, active, onRecord, onOpenCalendar }: { selectedDate: string; onDate: (value: string) => void; scheduled: ScheduledWorkout[]; healthDays: Map<string, HealthDay>; active: ScheduledWorkout | null; onRecord: () => void; onOpenCalendar: () => void }) {
-  const navigate = useNavigate();
-  const { startSession, activeSession } = useTraining();
-  const items = scheduled.filter((item) => item.date === selectedDate);
-  const primary = active ?? items.find((item) => item.status === 'planned') ?? null;
-  const isToday = selectedDate === today();
-
-  return <section className="mt-6 space-y-7">
-    <div className="rounded-2xl border border-outline-variant/40 bg-surface-container p-5">
-      <span className="font-sans text-counter text-primary">{active ? 'TREINO EM ANDAMENTO' : isToday ? 'HOJE' : 'AGENDA'}</span>
-      <h2 className="mt-2 font-sans text-title-lg text-on-surface">{primary ? primary.title : 'Nenhum treino programado'}</h2>
-      <p className="mt-1 font-sans text-body-sm text-on-surface-variant">{primary ? `${primary.focus} · ${primary.durationMin} min` : 'Seu profissional ainda não programou um treino para esta data.'}</p>
-      {primary ? <button type="button" onClick={() => { startSession(primary.id); navigate('/meu-fit/treino/player'); }} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary font-sans text-label text-on-primary"><Play size={18} fill="currentColor" aria-hidden />{activeSession ? 'Continuar treino' : 'Começar treino'}</button> : null}
-    </div>
-
-    <section>
-      <div className="flex items-center justify-between">
-        <h2 className="font-sans text-title text-on-surface">Esta semana</h2>
-        <button type="button" onClick={onOpenCalendar} className="font-sans text-counter text-primary">Calendário</button>
-      </div>
-      <div className="mt-3"><WeekStrip selectedDate={selectedDate} onDate={onDate} healthDays={healthDays} scheduled={scheduled} /></div>
-    </section>
-
-    <section>
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="font-sans text-title capitalize text-on-surface">{isToday ? 'Hoje' : new Date(`${selectedDate}T12:00:00`).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}</h2>
-        <button type="button" onClick={onRecord} className="flex min-h-10 shrink-0 items-center gap-2 rounded-full bg-primary px-4 font-sans text-counter text-on-primary" aria-label="Adicionar registro de atividade"><Plus size={16} aria-hidden />Registrar</button>
-      </div>
-      <div className="mt-3"><DayDetailContent date={selectedDate} healthDays={healthDays} scheduled={scheduled} showScheduled /></div>
-    </section>
-  </section>;
-}
-
-/** Conteúdo do dia: anel de energia, métricas, atividades e treinos. Reutilizado na Agenda (inline) e no Calendário (bottom sheet). */
+/** Conteúdo do dia: anel de energia, métricas, atividades e treinos, usado nos detalhes do Histórico e Progresso. */
 function DayDetailContent({ date, healthDays, scheduled, showScheduled = true }: { date: string; healthDays: Map<string, HealthDay>; scheduled: ScheduledWorkout[]; showScheduled?: boolean }) {
   const navigate = useNavigate();
   const { startSession, reschedule } = useTraining();
@@ -402,7 +474,8 @@ function AppleHealthCard({ appleHealth, compact }: { appleHealth: AppleHealthSta
 }
 
 /** Histórico cronológico agrupado por dia, com contexto de saúde no cabeçalho do dia. */
-function HistoryList({ imported, healthDays, onOpenDay }: { imported: ImportedActivity[]; healthDays: Map<string, HealthDay>; onOpenDay: (date: string) => void }) {
+function HistoryList({ imported, healthDays, onOpenDay, onRecord }: { imported: ImportedActivity[]; healthDays: Map<string, HealthDay>; onOpenDay: (date: string) => void; onRecord: () => void }) {
+  const { t } = useTranslation();
   const { scheduled } = useTraining();
   const byDate = useMemo(() => {
     const map = new Map<string, { id: string; title: string; meta: string; status: TrainingStatus; surface: TrainingSurface; importedFromWatch: boolean }[]>();
@@ -420,8 +493,16 @@ function HistoryList({ imported, healthDays, onOpenDay }: { imported: ImportedAc
 
   return (
     <section className="mt-6">
-      <h2 className="font-sans text-title text-on-surface">Histórico</h2>
-      <p className="mt-1 font-sans text-body-sm text-on-surface-variant">Treinos e atividades por dia.</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="font-sans text-title text-on-surface">Histórico</h2>
+          <p className="mt-1 font-sans text-body-sm text-on-surface-variant">Treinos e atividades por dia.</p>
+        </div>
+        <button type="button" onClick={onRecord} className="flex min-h-10 shrink-0 items-center gap-2 rounded-full bg-primary px-4 font-sans text-counter text-on-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background" aria-label={t('meufit.training.history.record')}>
+          <Plus size={16} aria-hidden />
+          {t('meufit.training.history.record')}
+        </button>
+      </div>
       <div className="mt-4 space-y-5">
         {days.length ? days.map((date) => {
           const entries = byDate.get(date)!;
