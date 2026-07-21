@@ -528,7 +528,7 @@ function TabButton({
         </span>
       )}
       {alertCount > 0 && (
-        <span className="absolute right-2 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 font-sans text-nav font-bold text-on-primary">
+        <span className="absolute right-2 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 font-sans text-nav text-on-primary">
           {alertCount > 9 ? '9+' : alertCount}
         </span>
       )}

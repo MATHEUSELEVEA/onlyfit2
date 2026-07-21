@@ -139,7 +139,7 @@ export function CommunityPage() {
             >
               {item.label}
               {typeof item.badge === 'number' && item.badge > 0 && (
-                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 font-sans text-nav font-bold text-on-primary">
+                <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 font-sans text-nav text-on-primary">
                   {item.badge > 9 ? '9+' : item.badge}
                 </span>
               )}

@@ -190,7 +190,7 @@ function AmbassadorRail({
                   <span className="mt-2 block truncate font-sans text-counter text-on-surface">
                     {compactName}
                   </span>
-                  <span className="block truncate font-sans text-[10px] font-normal leading-tight text-on-surface-variant">
+                  <span className="block truncate font-sans text-nav leading-tight text-on-surface-variant">
                     {ambassador.ambassadorHeadline || (sport ? labelFor(sport) : ambassador.ambassadorBadge || t('explore.ambassadors.fallback'))}
                   </span>
                 </>
