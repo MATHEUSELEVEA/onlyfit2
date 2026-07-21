@@ -7,6 +7,14 @@
 
 export type MediaKind = 'image' | 'video';
 
+// Localização opcional de um post (busca via places-search / OpenStreetMap).
+export interface PostLocation {
+  name: string;
+  secondary?: string;
+  lat?: number;
+  lon?: number;
+}
+
 // Modo selecionado na câmera (CameraModeSwitcher). 'stories' só passa a
 // publicar de fato a partir do PR de Stories — até lá a captura nesse modo
 // fica retida na própria tela da câmera.

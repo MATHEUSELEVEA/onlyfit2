@@ -36,6 +36,8 @@ export interface FeedPost {
   commentCount: number;
   createdAt: string;
   product: FeedProduct | null;
+  // Localização opcional do post (guardada em posts.metadata.location).
+  location: string | null;
   // Estado do usuário logado sobre o post (hidratado no fetch, atualizado
   // de forma otimista por useToggleLike).
   likedByMe: boolean;

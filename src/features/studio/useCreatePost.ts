@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { captureVideoPoster, uploadAsset } from './upload';
-import { contentTypeForMedia, fileExtension, type DraftMedia } from './media';
+import { contentTypeForMedia, fileExtension, type DraftMedia, type PostLocation } from './media';
 import type { MyProfile } from '@/features/profile/useMyProfile';
 import type { FeedPost } from '@/features/feed/types';
 
@@ -10,6 +10,7 @@ export interface CreatePostInput {
   media: DraftMedia[];
   caption: string;
   sports: string[];
+  location?: PostLocation | null;
   visibility: PostVisibility;
 }
 
@@ -154,7 +155,10 @@ export async function runCreatePost(
       // Espelha a página de capa no formato de mídia única do v1.
       video_url: cover.kind === 'video' ? cover.url : null,
       thumbnail_url: cover.kind === 'video' ? cover.thumbnailUrl : cover.url,
-      metadata: { media_kind: isCarousel ? 'carousel' : cover.kind },
+      metadata: {
+        media_kind: isCarousel ? 'carousel' : cover.kind,
+        ...(input.location ? { location: { name: input.location.name, secondary: input.location.secondary ?? null, lat: input.location.lat ?? null, lon: input.location.lon ?? null } } : {}),
+      },
     },
     p_media: rows,
   });
@@ -195,6 +199,7 @@ export function buildOptimisticPost(input: CreatePostInput, profile: MyProfile, 
     commentCount: 0,
     createdAt: new Date().toISOString(),
     product: null,
+    location: input.location?.name ?? null,
     likedByMe: false,
     commentsDisabled: true,
   };

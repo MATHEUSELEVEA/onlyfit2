@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Loader2, RotateCw, Volume2, VolumeX } from 'lucide-react';
+import { Captions, CaptionsOff, Loader2, RotateCw, Volume2, VolumeX } from 'lucide-react';
 import { clsx } from 'clsx';
 import type { FeedMedia } from './types';
 import { muteAfterAutoplayBlock, setVideoMuted, useVideoMuted } from './videoSound';
+import { setCaptionsOn, useCaptionsOn } from './videoCaptions';
 
 type MediaFit = 'cover' | 'contain';
 
@@ -38,7 +39,10 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
   const [duration, setDuration] = useState(0);
   const [buffering, setBuffering] = useState(false);
   const [videoError, setVideoError] = useState(false);
+  const [hasCaptions, setHasCaptions] = useState(false);
   const muted = useVideoMuted();
+  const captionsOn = useCaptionsOn();
+  const hlsRef = useRef<import('hls.js').default | null>(null);
   const activeRef = useRef(active);
   const mutedRef = useRef(muted);
   useEffect(() => {
@@ -101,12 +105,12 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
       return;
     }
     let destroyed = false;
-    let hls: import('hls.js').default | null = null;
     void import('hls.js')
       .then(({ default: Hls }) => {
         if (destroyed) return;
         if (Hls.isSupported()) {
-          hls = new Hls({ enableWorker: true });
+          const hls = new Hls({ enableWorker: true });
+          hlsRef.current = hls;
           hls.on(Hls.Events.MANIFEST_PARSED, play);
           hls.loadSource(hlsUrl);
           hls.attachMedia(video);
@@ -119,9 +123,39 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
       });
     return () => {
       destroyed = true;
-      if (hls) hls.destroy();
+      hlsRef.current?.destroy();
+      hlsRef.current = null;
     };
   }, [media.kind, media.url, media.hlsUrl]);
+
+  // Legendas (CC): a faixa vem do HLS do Cloudflare Stream. Reflete a
+  // preferência global (default ligada) tanto no HLS nativo (iOS/WKWebView, via
+  // textTracks) quanto no hls.js, e detecta se há faixa disponível.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || media.kind !== 'video') return;
+    const apply = () => {
+      const tracks = video.textTracks;
+      const subtitleTracks = Array.from(tracks).filter((t) => t.kind === 'subtitles' || t.kind === 'captions');
+      setHasCaptions(subtitleTracks.length > 0 || (hlsRef.current?.subtitleTracks?.length ?? 0) > 0);
+      subtitleTracks.forEach((track, i) => {
+        track.mode = captionsOn && i === 0 ? 'showing' : 'disabled';
+      });
+      const hls = hlsRef.current;
+      if (hls) {
+        hls.subtitleDisplay = captionsOn;
+        if (captionsOn && hls.subtitleTrack < 0 && (hls.subtitleTracks?.length ?? 0) > 0) hls.subtitleTrack = 0;
+      }
+    };
+    apply();
+    const tracks = video.textTracks;
+    tracks.addEventListener?.('addtrack', apply);
+    tracks.addEventListener?.('change', apply);
+    return () => {
+      tracks.removeEventListener?.('addtrack', apply);
+      tracks.removeEventListener?.('change', apply);
+    };
+  }, [captionsOn, media.kind, media.hlsUrl]);
 
   const seek = (seconds: number) => {
     const video = videoRef.current;
@@ -202,6 +236,21 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
             applyFit(event.currentTarget.naturalWidth / event.currentTarget.naturalHeight)
           }
         />
+      )}
+
+      {media.kind === 'video' && active && hasCaptions && (
+        <button
+          type="button"
+          onClick={() => setCaptionsOn(!captionsOn)}
+          aria-label={captionsOn ? 'Ocultar legendas' : 'Mostrar legendas'}
+          aria-pressed={captionsOn}
+          className={clsx(
+            'feed-ctrl-sound absolute right-16 z-20 flex h-11 w-11 items-center justify-center rounded-full border backdrop-blur-sm transition-transform active:scale-95',
+            captionsOn ? 'border-white/25 bg-white/15 text-white' : 'border-white/20 bg-black/25 text-white/80',
+          )}
+        >
+          {captionsOn ? <Captions size={20} aria-hidden /> : <CaptionsOff size={20} aria-hidden />}
+        </button>
       )}
 
       {media.kind === 'video' && active && buffering && !videoError && (

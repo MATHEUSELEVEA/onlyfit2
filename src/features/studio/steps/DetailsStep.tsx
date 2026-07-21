@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Globe, Loader2, Lock, Play } from 'lucide-react';
+import { Globe, Loader2, Lock, MapPin, Play, Search, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { FilterChip } from '@/components/ui/FilterChip';
 import { useAffinityGroups } from '@/lib/sports';
-import type { DraftMedia } from '../media';
+import type { DraftMedia, PostLocation } from '../media';
+import { useLocationSearch } from '../useLocationSearch';
 import type { PostVisibility } from '../useCreatePost';
 
 interface DetailsStepProps {
@@ -12,11 +13,68 @@ interface DetailsStepProps {
   onCaptionChange: (value: string) => void;
   sports: string[];
   onToggleSport: (key: string) => void;
+  location: PostLocation | null;
+  onLocationChange: (value: PostLocation | null) => void;
   visibility: PostVisibility;
   onVisibilityChange: (value: PostVisibility) => void;
   canPublishToMembers: boolean;
   canPublish: boolean;
   onPublish: () => boolean;
+}
+
+// Campo de localização: chip quando selecionada; senão, busca com resultados.
+function LocationField({ location, onChange }: { location: PostLocation | null; onChange: (v: PostLocation | null) => void }) {
+  const [query, setQuery] = useState('');
+  const { results, loading } = useLocationSearch(query);
+
+  if (location) {
+    return (
+      <div className="flex items-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-3 py-2.5">
+        <MapPin size={18} className="shrink-0 text-primary" aria-hidden />
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-sans text-label text-on-surface">{location.name}</span>
+          {location.secondary ? <span className="block truncate font-sans text-body-sm text-on-surface-variant">{location.secondary}</span> : null}
+        </span>
+        <button type="button" onClick={() => onChange(null)} aria-label="Remover localização" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-on-surface-variant transition-transform active:scale-90">
+          <X size={16} aria-hidden />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 rounded-xl border border-outline-variant/50 bg-surface-container-low px-3">
+        <Search size={18} className="shrink-0 text-on-surface-variant" aria-hidden />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar um lugar…"
+          className="min-h-[44px] w-full bg-transparent font-sans text-body text-on-surface placeholder:text-on-surface-variant focus:outline-none"
+        />
+        {loading ? <Loader2 size={16} className="shrink-0 animate-spin text-on-surface-variant motion-reduce:animate-none" aria-hidden /> : null}
+      </div>
+      {results.length > 0 && (
+        <ul className="mt-2 divide-y divide-outline-variant/20 overflow-hidden rounded-xl border border-outline-variant/40 bg-surface-container">
+          {results.map((place, i) => (
+            <li key={`${place.name}-${i}`}>
+              <button
+                type="button"
+                onClick={() => { onChange({ name: place.name, secondary: place.secondary, lat: place.lat, lon: place.lon }); setQuery(''); }}
+                className="flex w-full items-center gap-2 px-3 py-2.5 text-left transition-colors active:bg-surface-container-high"
+              >
+                <MapPin size={16} className="shrink-0 text-on-surface-variant" aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-sans text-label text-on-surface">{place.name}</span>
+                  {place.secondary ? <span className="block truncate font-sans text-body-sm text-on-surface-variant">{place.secondary}</span> : null}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 const VISIBILITY_OPTIONS: { value: PostVisibility; label: string; icon: typeof Globe }[] = [
@@ -32,6 +90,8 @@ export function DetailsStep({
   onCaptionChange,
   sports,
   onToggleSport,
+  location,
+  onLocationChange,
   visibility,
   onVisibilityChange,
   canPublishToMembers,
@@ -96,6 +156,11 @@ export function DetailsStep({
               </FilterChip>
             ))}
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <span className="font-sans text-label text-on-surface">Localização</span>
+          <LocationField location={location} onChange={onLocationChange} />
         </div>
 
         {canPublishToMembers && (
