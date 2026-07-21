@@ -1,7 +1,7 @@
 import { clsx } from 'clsx';
 
 interface StoryProgressRingProps {
-  /** 0 (início) a 1 (acabando) da reprodução do story atual. */
+  /** 0 (recém-publicado) a 1 (prestes a expirar as 24h) — ver useStoryTimeProgress. */
   progress: number;
   size?: number;
 }
@@ -9,8 +9,11 @@ interface StoryProgressRingProps {
 // Não é a barra linear do Instagram — o usuário pediu um "relogiozinho de
 // ponteiro virando e preenchendo o tempo": um relógio analógico ao redor do
 // avatar do creator, com um arco que preenche em sentido horário a partir do
-// topo (12h) e um ponteiro que gira até a posição correspondente. Perto do
-// fim (>85%) o traço muda para um tom de alerta, reforçando "está acabando".
+// topo (12h) e um ponteiro que gira até a posição correspondente. Como o
+// Story aparece misturado no feed normal (sem tela/sessão dedicada), o que
+// esse relógio mede é o tempo restante das 24h de vida do story, não o
+// progresso de reprodução do clipe. Perto do fim (>85%) o traço muda para um
+// tom de alerta, reforçando "está acabando".
 export function StoryProgressRing({ progress, size = 64 }: StoryProgressRingProps) {
   const clamped = Math.min(1, Math.max(0, progress));
   const strokeWidth = 3;

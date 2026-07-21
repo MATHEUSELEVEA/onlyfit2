@@ -4,7 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import { useFeed } from './useFeed';
 import { PostCard } from './PostCard';
 import { FeedSportsBar } from './FeedSportsBar';
-import { StoriesBar } from '@/features/stories/StoriesBar';
+import { useActiveStoryItems } from '@/features/stories/useActiveStoryItems';
+import { mergeFeedEntries } from '@/features/stories/feedMerge';
+import { StoryCard } from '@/features/stories/StoryCard';
 
 // Arrasto (px) além do qual soltar dispara o refresh.
 const PULL_THRESHOLD = 56;
@@ -43,6 +45,12 @@ export function FeedPage() {
   } = useFeed(sports);
 
   const posts = useMemo(() => data?.pages.flatMap((page) => page.posts) ?? [], [data]);
+
+  // Story não tem tela própria: entra misturado no mesmo scroll dos posts, na
+  // mesma ordenação por data — a única diferença visual é o card ter o
+  // relógio de tempo restante em vez do trilho de ações (ver StoryCard).
+  const { data: storyItems } = useActiveStoryItems();
+  const entries = useMemo(() => mergeFeedEntries(posts, storyItems ?? []), [posts, storyItems]);
 
   // Pull-to-refresh: distância atual do arrasto (0 = solto).
   const [pull, setPull] = useState(0);
@@ -174,17 +182,15 @@ export function FeedPage() {
           </div>
         )}
 
-        {posts.map((post) => (
-          <div key={post.id} className="h-full snap-start snap-always">
-            {/* Mantemos os posts já percorridos no DOM. A mídia inativa não
+        {entries.map((entry) => (
+          <div key={entry.id} className="h-full snap-start snap-always">
+            {/* Mantemos os itens já percorridos no DOM. A mídia inativa não
                 faz preload nem toca, mas o usuário pode voltar a qualquer
                 reel sem encontrar um palco vazio. */}
-            <PostCard post={post} />
+            {entry.kind === 'post' ? <PostCard post={entry.post} /> : <StoryCard story={entry.story} />}
           </div>
         ))}
       </div>
-
-      <StoriesBar />
 
       {/* Cluster de controles do topo: som (no PostCard) → filtro → criar */}
       <FeedSportsBar selected={sports} onSelect={setSports} />

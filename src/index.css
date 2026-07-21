@@ -94,14 +94,6 @@
      * intercepta a área de duração do vídeo. */
     bottom: calc(var(--feed-inset-b) + 18px);
   }
-
-  /* Faixa de stories: mesma altura do primeiro controle do cluster do topo
-   * (feed-ctrl-sound), mas parando antes da coluna de botões da direita. */
-  .feed-stories-bar {
-    top: calc(var(--feed-inset-t) + 8px);
-    left: 0;
-    right: 64px;
-  }
 }
 
 @layer utilities {
