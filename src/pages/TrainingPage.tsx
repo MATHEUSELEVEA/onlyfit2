@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Activity, Bike, CalendarX2, ChevronLeft, ChevronRight, Droplet, Dumbbell, Flame, Footprints, Gauge, HeartPulse, Info, Leaf, ListChecks, MapPin, Moon, Play, Plus, RotateCcw, Sparkles, Timer, Waves, Watch, X } from 'lucide-react';
+import { Activity, Bike, CalendarX2, ChevronDown, ChevronLeft, ChevronRight, Droplet, Dumbbell, Flame, Footprints, Gauge, HeartPulse, Info, Leaf, ListChecks, MapPin, Moon, Play, Plus, RotateCcw, Sparkles, Timer, Waves, Watch, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -179,6 +179,7 @@ function TodayWorkoutCard({ item }: { item: ScheduledWorkout }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { templates, startSession, activeSession, skipToday } = useTraining();
+  const [expanded, setExpanded] = useState(true);
   const template = templates.find((entry) => entry.id === item.templateId);
   const exerciseCount = template?.exercises.length ?? 0;
   const isActive = activeSession?.scheduledId === item.id;
@@ -188,11 +189,22 @@ function TodayWorkoutCard({ item }: { item: ScheduledWorkout }) {
   return (
     <article className={clsx('overflow-hidden rounded-3xl border bg-surface-container transition-colors', highlighted ? 'border-primary/40 bg-primary/[0.05]' : 'border-outline-variant/40')}>
       <div className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="min-w-0 font-sans text-title leading-tight text-on-surface">{item.title}</h3>
-          {item.status !== 'planned' ? (
-            <span className={clsx('shrink-0 rounded-full px-2.5 py-1 font-sans text-counter', highlighted ? 'bg-primary/15 text-primary' : 'bg-surface-container-high text-on-surface-variant')}>{statusLabel[item.status]}</span>
-          ) : null}
+        <div className="flex items-start gap-3">
+          <h3 className="min-w-0 flex-1 font-sans text-title leading-tight text-on-surface">{item.title}</h3>
+          <div className="flex shrink-0 items-center gap-2">
+            {item.status !== 'planned' ? (
+              <span className={clsx('rounded-full px-2.5 py-1 font-sans text-counter', highlighted ? 'bg-primary/15 text-primary' : 'bg-surface-container-high text-on-surface-variant')}>{statusLabel[item.status]}</span>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => setExpanded((value) => !value)}
+              aria-expanded={expanded}
+              aria-label={t(expanded ? 'meufit.training.hideExercises' : 'meufit.training.showExercises')}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant transition-colors duration-150 hover:text-on-surface active:bg-surface-container-highest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <ChevronDown size={18} className={clsx('transition-transform duration-200', expanded ? 'rotate-180' : 'rotate-0')} aria-hidden />
+            </button>
+          </div>
         </div>
         <div className="mt-3.5 flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-high px-3 py-1 font-sans text-counter tabular-nums text-on-surface-variant"><Timer size={13} aria-hidden />{t('meufit.training.today.minutes', { minutes: item.durationMin })}</span>
@@ -201,21 +213,7 @@ function TodayWorkoutCard({ item }: { item: ScheduledWorkout }) {
         </div>
       </div>
 
-      {template?.exercises.length ? (
-        <ol className="divide-y divide-outline-variant/15 border-y border-outline-variant/20 bg-surface-container-lowest">
-          {template.exercises.map((exercise, index) => (
-            <li key={exercise.id} className="flex items-center gap-3.5 px-5 py-3">
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] bg-surface-container-high font-sans text-counter tabular-nums text-on-surface">{String(index + 1).padStart(2, '0')}</span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate font-sans text-label text-on-surface">{exercise.name}</span>
-                <span className="mt-0.5 block font-sans text-body-sm tabular-nums text-on-surface-variant">{exercise.muscle} · {exercise.sets} × {exercise.targetReps}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
-      ) : (
-        <p className="border-y border-outline-variant/20 bg-surface-container-lowest px-5 py-4 font-sans text-body-sm text-on-surface-variant">{t('meufit.training.today.noExercises')}</p>
-      )}
+      {expanded ? <WorkoutExercisePreview exercises={template?.exercises ?? []} emptyLabel={t('meufit.training.today.noExercises')} /> : null}
 
       <div className="p-4">
         {canStart ? (
@@ -232,6 +230,26 @@ function TodayWorkoutCard({ item }: { item: ScheduledWorkout }) {
         ) : null}
       </div>
     </article>
+  );
+}
+
+function WorkoutExercisePreview({ exercises, emptyLabel }: { exercises: WorkoutTemplate['exercises']; emptyLabel: string }) {
+  if (!exercises.length) {
+    return <p className="border-y border-outline-variant/20 bg-surface-container-lowest px-5 py-4 font-sans text-body-sm text-on-surface-variant">{emptyLabel}</p>;
+  }
+
+  return (
+    <ol className="divide-y divide-outline-variant/15 border-y border-outline-variant/20 bg-surface-container-lowest">
+      {exercises.map((exercise, index) => (
+        <li key={exercise.id} className="flex items-center gap-3.5 px-5 py-3">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] bg-surface-container-high font-sans text-counter tabular-nums text-on-surface">{String(index + 1).padStart(2, '0')}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-sans text-label text-on-surface">{exercise.name}</span>
+            <span className="mt-0.5 block font-sans text-body-sm tabular-nums text-on-surface-variant">{exercise.muscle} · {exercise.sets} × {exercise.targetReps}</span>
+          </span>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -544,33 +562,19 @@ function Library() {
           {selectedGroup.workouts.map((workout) => {
             const template = playerTemplate(workout);
             const isCurrentWorkout = activeSession?.templateId === template.id;
-            const hasExercises = template.exercises.length > 0;
             const hasPrescription = Boolean(workout.prescription);
             return (
-              <article key={workout.workoutId ?? workout.assignmentId} className="rounded-2xl border border-outline-variant/40 bg-surface-container p-4">
-                <div className="flex items-start gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary" aria-hidden>{surfaceIcon[workout.trainingType]}</span>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-sans text-label leading-snug text-on-surface">{workout.title}</h3>
-                    <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{t(workout.exerciseCount === 1 ? 'meufit.training.library.exerciseCount' : 'meufit.training.library.exerciseCountPlural', { count: workout.exerciseCount })}</p>
-                    {workout.weeks.length ? <span className="mt-2 inline-flex items-center rounded-full bg-surface-container-high px-2.5 py-1 font-sans text-counter text-on-surface-variant">{workout.weeks.length === 1 ? t('meufit.training.library.weekSingle', { n: workout.weeks[0] }) : t('meufit.training.library.weekRange', { from: workout.weeks[0], to: workout.weeks[workout.weeks.length - 1] })}</span> : null}
-                  </div>
-                </div>
-                {workout.daysOfWeek.length ? <div className="mt-3 border-t border-outline-variant/30 pt-3"><WeekdayStrip days={workout.daysOfWeek} /></div> : null}
-                <div className="mt-4 flex gap-2">
-                  {hasPrescription && <button type="button" onClick={() => setPrescriptionWorkout(workout)} className={clsx('min-h-12 flex-1 rounded-xl px-3 font-sans text-label focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', hasExercises ? 'bg-surface-container-high text-primary' : 'bg-primary text-on-primary')}>{t('meufit.training.library.viewPrescription')}</button>}
-                  {hasExercises && <button
-                    type="button"
-                    onClick={() => {
-                      if (startWorkoutNow(template, workout.trainingType)) navigate('/meu-fit/treino/player');
-                    }}
-                    className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-3 font-sans text-label text-on-primary transition-opacity duration-150 enabled:hover:opacity-90 enabled:active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container disabled:cursor-not-allowed disabled:bg-surface-container-high disabled:text-on-surface-variant"
-                  >
-                    <Play size={18} fill="currentColor" aria-hidden />
-                    {t(isCurrentWorkout ? 'meufit.training.library.continue' : 'meufit.training.library.doNow')}
-                  </button>}
-                </div>
-              </article>
+              <LibraryWorkoutCard
+                key={workout.workoutId ?? workout.assignmentId}
+                workout={workout}
+                template={template}
+                isCurrentWorkout={isCurrentWorkout}
+                hasPrescription={hasPrescription}
+                onOpenPrescription={() => setPrescriptionWorkout(workout)}
+                onStart={() => {
+                  if (startWorkoutNow(template, workout.trainingType)) navigate('/meu-fit/treino/player');
+                }}
+              />
             );
           })}
         </div>
@@ -610,6 +614,51 @@ function Library() {
         </div>
       )}
     </section>
+  );
+}
+
+function LibraryWorkoutCard({ workout, template, isCurrentWorkout, hasPrescription, onOpenPrescription, onStart }: { workout: StudentWorkout; template: WorkoutTemplate; isCurrentWorkout: boolean; hasPrescription: boolean; onOpenPrescription: () => void; onStart: () => void }) {
+  const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
+  const hasExercises = template.exercises.length > 0;
+
+  return (
+    <article className="overflow-hidden rounded-2xl border border-outline-variant/40 bg-surface-container">
+      <div className="p-4">
+        <div className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary" aria-hidden>{surfaceIcon[workout.trainingType]}</span>
+          <div className="min-w-0 flex-1">
+            <h3 className="font-sans text-label leading-snug text-on-surface">{workout.title}</h3>
+            <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{t(workout.exerciseCount === 1 ? 'meufit.training.library.exerciseCount' : 'meufit.training.library.exerciseCountPlural', { count: workout.exerciseCount })}</p>
+            {workout.weeks.length ? <span className="mt-2 inline-flex items-center rounded-full bg-surface-container-high px-2.5 py-1 font-sans text-counter text-on-surface-variant">{workout.weeks.length === 1 ? t('meufit.training.library.weekSingle', { n: workout.weeks[0] }) : t('meufit.training.library.weekRange', { from: workout.weeks[0], to: workout.weeks[workout.weeks.length - 1] })}</span> : null}
+          </div>
+          <button
+            type="button"
+            onClick={() => setExpanded((value) => !value)}
+            aria-expanded={expanded}
+            aria-label={t(expanded ? 'meufit.training.hideExercises' : 'meufit.training.showExercises')}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant transition-colors duration-150 hover:text-on-surface active:bg-surface-container-highest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <ChevronDown size={18} className={clsx('transition-transform duration-200', expanded ? 'rotate-180' : 'rotate-0')} aria-hidden />
+          </button>
+        </div>
+        {workout.daysOfWeek.length ? <div className="mt-3 border-t border-outline-variant/30 pt-3"><WeekdayStrip days={workout.daysOfWeek} /></div> : null}
+      </div>
+
+      {expanded ? <WorkoutExercisePreview exercises={template.exercises} emptyLabel={t('meufit.training.library.noExercises')} /> : null}
+
+      <div className="flex gap-2 p-4">
+        {hasPrescription && <button type="button" onClick={onOpenPrescription} className={clsx('min-h-12 flex-1 rounded-xl px-3 font-sans text-label focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', hasExercises ? 'bg-surface-container-high text-primary' : 'bg-primary text-on-primary')}>{t('meufit.training.library.viewPrescription')}</button>}
+        {hasExercises && <button
+          type="button"
+          onClick={onStart}
+          className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-3 font-sans text-label text-on-primary transition-opacity duration-150 enabled:hover:opacity-90 enabled:active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container disabled:cursor-not-allowed disabled:bg-surface-container-high disabled:text-on-surface-variant"
+        >
+          <Play size={18} fill="currentColor" aria-hidden />
+          {t(isCurrentWorkout ? 'meufit.training.library.continue' : 'meufit.training.library.doNow')}
+        </button>}
+      </div>
+    </article>
   );
 }
 

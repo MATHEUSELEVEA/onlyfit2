@@ -234,6 +234,8 @@ const pt = {
   'meufit.training.surface.yoga': 'Yoga',
   'meufit.training.surface.pilates': 'Pilates',
   'meufit.training.surface.other': 'Outro',
+  'meufit.training.showExercises': 'Mostrar exercícios',
+  'meufit.training.hideExercises': 'Ocultar exercícios',
   'meufit.training.today.chooseType': 'Escolha o tipo de treino',
   'meufit.training.today.chooseTypeDescription': 'Veja somente os treinos programados para hoje.',
   'meufit.training.today.openType': 'Abrir treino de {type}',
