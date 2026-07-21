@@ -20,7 +20,7 @@ import { ChallengeRanking } from './ChallengeRanking';
 import { ChallengeManage } from './ChallengeManage';
 import { ChallengeCover } from './ChallengesPage';
 import { challengeStatusKey, displayName, formatDateRange } from './format';
-import type { ChallengeRun } from './types';
+import type { ChallengeProfile, ChallengeRun } from './types';
 
 type Tab = 'checklist' | 'feed' | 'ranking' | 'about' | 'manage';
 
@@ -99,7 +99,7 @@ export function ChallengePage() {
       />
 
       <main className="mx-auto w-full max-w-[640px] px-4 pb-8 pt-4">
-        <Header run={run} creatorName={displayName(creator ?? null, t('challenges.creatorFallback'))} />
+        <Header run={run} creator={creator} creatorName={displayName(creator ?? null, t('challenges.creatorFallback'))} />
 
         {/* CTA de participação */}
         {!isOwner && !isMember && (
@@ -148,7 +148,14 @@ export function ChallengePage() {
           {tab === 'checklist' && <ChallengeChecklist run={run} isParticipant={isMember} />}
           {tab === 'feed' && <ChallengeFeed run={run} userId={userId} isParticipant={isMember} isOwner={isOwner} />}
           {tab === 'ranking' && <ChallengeRanking run={run} />}
-          {tab === 'about' && <AboutTab run={run} creatorName={displayName(creator ?? null, t('challenges.creatorFallback'))} isMember={isMember} />}
+          {tab === 'about' && (
+            <AboutTab
+              run={run}
+              creator={creator}
+              creatorName={displayName(creator ?? null, t('challenges.creatorFallback'))}
+              isMember={isMember}
+            />
+          )}
           {tab === 'manage' && isOwner && <ChallengeManage run={run} userId={userId} />}
         </section>
       </main>
@@ -156,7 +163,15 @@ export function ChallengePage() {
   );
 }
 
-function Header({ run, creatorName }: { run: ChallengeRun; creatorName: string }) {
+function Header({
+  run,
+  creator,
+  creatorName,
+}: {
+  run: ChallengeRun;
+  creator: ChallengeProfile | null | undefined;
+  creatorName: string;
+}) {
   const { t } = useTranslation();
   const { labelFor } = useAffinityGroups();
   const isPrivate = run.access_audience === 'invite_only';
@@ -173,9 +188,7 @@ function Header({ run, creatorName }: { run: ChallengeRun; creatorName: string }
             <Globe2 size={15} className="shrink-0 text-on-surface-variant" aria-label={t('challenges.public')} />
           )}
         </div>
-        <p className="mt-0.5 truncate font-sans text-body-sm text-on-surface-variant">
-          {t('challenges.byCreator').replace('{name}', creatorName)}
-        </p>
+        <CreatorByline creator={creator} creatorName={creatorName} />
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 font-sans text-body-sm text-on-surface-variant">
           <span className="inline-flex items-center gap-1">
             <CalendarDays size={14} aria-hidden />
@@ -195,6 +208,34 @@ function Header({ run, creatorName }: { run: ChallengeRun; creatorName: string }
   );
 }
 
+function CreatorByline({
+  creator,
+  creatorName,
+}: {
+  creator: ChallengeProfile | null | undefined;
+  creatorName: string;
+}) {
+  const { t } = useTranslation();
+  const label = t('challenges.byCreator').replace('{name}', creatorName);
+
+  if (!creator?.username) {
+    return <p className="mt-0.5 truncate font-sans text-body-sm text-on-surface-variant">{label}</p>;
+  }
+
+  return (
+    <Link
+      to={`/creator/${encodeURIComponent(creator.username)}`}
+      aria-label={`Ver perfil de @${creator.username}`}
+      className="mt-0.5 flex min-w-0 items-center gap-1.5 self-start truncate font-sans text-body-sm text-on-surface-variant transition-colors hover:text-on-surface"
+    >
+      {creator.avatar_url ? (
+        <img src={creator.avatar_url} alt="" className="h-4 w-4 shrink-0 rounded-full object-cover" />
+      ) : null}
+      <span className="truncate">{label}</span>
+    </Link>
+  );
+}
+
 function CancelRequestButton({ runId }: { runId: string }) {
   const { t } = useTranslation();
   const leave = useLeaveChallenge(runId);
@@ -210,7 +251,17 @@ function CancelRequestButton({ runId }: { runId: string }) {
   );
 }
 
-function AboutTab({ run, creatorName, isMember }: { run: ChallengeRun; creatorName: string; isMember: boolean }) {
+function AboutTab({
+  run,
+  creator,
+  creatorName,
+  isMember,
+}: {
+  run: ChallengeRun;
+  creator: ChallengeProfile | null | undefined;
+  creatorName: string;
+  isMember: boolean;
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const leave = useLeaveChallenge(run.id);
@@ -240,7 +291,20 @@ function AboutTab({ run, creatorName, isMember }: { run: ChallengeRun; creatorNa
         </p>
       </AboutSection>
       <AboutSection title={t('challenges.about.creator')}>
-        <p className="font-sans text-body text-on-surface">{creatorName}</p>
+        {creator?.username ? (
+          <Link
+            to={`/creator/${encodeURIComponent(creator.username)}`}
+            aria-label={`Ver perfil de @${creator.username}`}
+            className="inline-flex items-center gap-2 font-sans text-body text-on-surface transition-colors hover:text-primary"
+          >
+            {creator.avatar_url ? (
+              <img src={creator.avatar_url} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />
+            ) : null}
+            {creatorName}
+          </Link>
+        ) : (
+          <p className="font-sans text-body text-on-surface">{creatorName}</p>
+        )}
       </AboutSection>
 
       {isMember && (
