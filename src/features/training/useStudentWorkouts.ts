@@ -43,6 +43,7 @@ type AssignmentRow = {
   week_number: number | null;
   starts_at: string | null;
   ends_at: string | null;
+  protocol_starts_at: string | null;
   workout: {
     id: string;
     title: string | null;
@@ -110,7 +111,7 @@ function toStudentWorkout(row: AssignmentRow): StudentWorkout {
     title: row.workout?.student_display_name || row.workout?.title || 'Treino',
     daysOfWeek: row.days_of_week ?? [],
     weeks: typeof row.week_number === 'number' ? [row.week_number] : [],
-    startsAt: row.starts_at,
+    startsAt: row.starts_at ?? row.protocol_starts_at,
     endsAt: row.ends_at,
     exerciseCount: exercises.length,
     exercises,
@@ -138,7 +139,7 @@ export function useStudentWorkouts() {
     queryFn: async (): Promise<StudentWorkout[]> => {
       const { data, error } = await supabase
         .from('student_workout_assignments')
-        .select('id,days_of_week,week_number,starts_at,ends_at,workout:workouts(id,title,student_display_name,category,workout_exercises(id,exercise_name,student_display_name,muscle_group,sets,reps,notes,tempo_notes,pro_video_url,position),workout_prescriptions(modality,prescription))')
+        .select('id,days_of_week,week_number,starts_at,ends_at,protocol_starts_at,workout:workouts(id,title,student_display_name,category,workout_exercises(id,exercise_name,student_display_name,muscle_group,sets,reps,notes,tempo_notes,pro_video_url,position),workout_prescriptions(modality,prescription))')
         .eq('student_user_id', userId as string)
         .eq('status', 'active')
         .order('created_at', { ascending: false });
