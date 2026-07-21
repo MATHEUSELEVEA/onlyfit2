@@ -305,8 +305,10 @@ public class OnlyFitHealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
             for (index, workout) in workouts.enumerated() {
                 group.enter()
                 self.fetchHeartRateStats(for: workout) { heartRate in
-                    rows[index] = self.mapWorkout(workout, heartRate: heartRate)
-                    group.leave()
+                    self.fetchWorkoutCadence(for: workout) { cadenceSpm in
+                        rows[index] = self.mapWorkout(workout, heartRate: heartRate, cadenceSpm: cadenceSpm)
+                        group.leave()
+                    }
                 }
             }
 
@@ -382,7 +384,7 @@ public class OnlyFitHealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
         return received
     }
 
-    private func mapWorkout(_ workout: HKWorkout, heartRate: (avg: Double?, max: Double?)) -> [String: Any] {
+    private func mapWorkout(_ workout: HKWorkout, heartRate: (avg: Double?, max: Double?), cadenceSpm: Int?) -> [String: Any] {
         let mapped = mapActivityType(workout.workoutActivityType)
         let deviceName = workout.device?.name ?? ""
         let deviceModel = workout.device?.model ?? ""
@@ -437,7 +439,41 @@ public class OnlyFitHealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
             row["max_hr"] = Int(max.rounded())
         }
 
+        // Métricas sport-specific vão no source_payload (JSONB no banco): cadência
+        // (corrida/caminhada) e braçadas + comprimento da piscina (natação).
+        var extraPayload = row["source_payload"] as? [String: Any] ?? [:]
+        if let cadenceSpm = cadenceSpm, cadenceSpm > 0 {
+            extraPayload["cadence_spm"] = cadenceSpm
+        }
+        if let strokes = (workout.metadata?[HKMetadataKeyTotalSwimmingStrokeCount] as? HKQuantity)?.doubleValue(for: .count()), strokes > 0 {
+            extraPayload["swim_stroke_count"] = Int(strokes.rounded())
+        }
+        if let poolLength = (workout.metadata?[HKMetadataKeyLapLength] as? HKQuantity)?.doubleValue(for: .meter()), poolLength > 0 {
+            extraPayload["pool_length_m"] = Int(poolLength.rounded())
+        }
+        row["source_payload"] = extraPayload
+
         return row
+    }
+
+    // Cadência média (passos/min) do treino, derivada da soma de passos sobre o
+    // intervalo. Relevante para corrida/caminhada; ignorada nos demais esportes
+    // no lado de exibição.
+    private func fetchWorkoutCadence(for workout: HKWorkout, completion: @escaping (Int?) -> Void) {
+        guard workout.duration > 0, let stepType = HKQuantityType.quantityType(forIdentifier: .stepCount) else {
+            completion(nil)
+            return
+        }
+        let predicate = HKQuery.predicateForObjects(from: workout)
+        let query = HKStatisticsQuery(quantityType: stepType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, stats, _ in
+            guard let steps = stats?.sumQuantity()?.doubleValue(for: .count()), steps > 0 else {
+                completion(nil)
+                return
+            }
+            let minutes = workout.duration / 60
+            completion(minutes > 0 ? Int((steps / minutes).rounded()) : nil)
+        }
+        healthStore.execute(query)
     }
 
     private func fetchHeartRateStats(for workout: HKWorkout, completion: @escaping ((avg: Double?, max: Double?)) -> Void) {

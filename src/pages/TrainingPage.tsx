@@ -9,6 +9,7 @@ import { type ActivitySource, type ImportedActivity, type ScheduledWorkout, type
 import { DAY_CODES, uniqueWorkouts, useStudentWorkouts, type StudentWorkout, type WorkoutTrainingType } from '@/features/training/useStudentWorkouts';
 import { useAppleHealth } from '@/features/wearables/useAppleHealth';
 import { buildHealthDays, formatSleep, type HealthDay } from '@/features/wearables/healthDays';
+import { activityMetaLine, activityMetrics, activitySportDetails, paceMinPerKm, PACE_SURFACES } from '@/features/wearables/sportActivityMetrics';
 import { localDateKey, todayKey } from '@/lib/localDate';
 import { useTranslation, type TranslationKey } from '@/i18n/I18nProvider';
 import { BLOCK_ROLE_KEYS, SPECIFIC_FIELDS } from '@/features/profile/offerings/workoutPrescription';
@@ -51,32 +52,10 @@ const surfaceTranslationKey: Record<TrainingSurface, TranslationKey> = {
 const weekdayFull = (value: string) => new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long' });
 const historyDate = (value: string) => new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
 
-// Ritmo (pace) é a métrica-mãe de corrida: min/km, não km/h. Corrida e
-// caminhada mostram ritmo; bike mostra velocidade; nado cai na velocidade.
-const PACE_SURFACES: TrainingSurface[] = ['running', 'walking'];
-
-/** Ritmo em min/km a partir de distância (km) e tempo (min). Ex.: "5:30". */
-function paceMinPerKm(distanceKm?: number, minutes?: number): string | null {
-  if (!distanceKm || !minutes || distanceKm <= 0 || minutes <= 0) return null;
-  const secPerKm = Math.round((minutes * 60) / distanceKm);
-  if (!Number.isFinite(secPerKm) || secPerKm <= 0) return null;
-  return `${Math.floor(secPerKm / 60)}:${String(secPerKm % 60).padStart(2, '0')}`;
-}
-
-function formatActivityMeta(activity: { surface?: TrainingSurface; durationMin: number; distanceKm?: number; calories?: number; averageHeartRate?: number; averageSpeedKmh?: number; movingTimeMin?: number; elevationM?: number }) {
-  const pace = paceMinPerKm(activity.distanceKm, activity.movingTimeMin ?? activity.durationMin);
-  const showPace = activity.surface ? PACE_SURFACES.includes(activity.surface) : Boolean(pace);
-  const rhythm = showPace && pace
-    ? `${pace} /km`
-    : activity.averageSpeedKmh ? `${activity.averageSpeedKmh.toLocaleString('pt-BR')} km/h` : null;
-  return [
-    activity.durationMin ? `${activity.durationMin} min` : null,
-    activity.distanceKm ? `${activity.distanceKm.toLocaleString('pt-BR')} km` : null,
-    rhythm,
-    activity.calories ? `${activity.calories} kcal` : null,
-    activity.averageHeartRate ? `${activity.averageHeartRate} bpm` : null,
-    activity.elevationM ? `${activity.elevationM} m alt.` : null,
-  ].filter(Boolean).join(' · ');
+// Linha compacta da atividade = métrica-mãe do esporte (config única em
+// sportActivityMetrics). Ex.: corrida → "32 min · 5,2 km · 5:30 /km".
+function formatActivityMeta(activity: ImportedActivity) {
+  return activityMetaLine(activity);
 }
 
 function formatActivityDateTime(value?: string) {
@@ -362,6 +341,7 @@ function ActivityDetailRow({ label, value }: { label: string; value?: string | n
 }
 
 function ImportedActivitySheet({ activity, onClose }: { activity: ImportedActivity | null; onClose: () => void }) {
+  const { t } = useTranslation();
   if (!activity) return null;
   const sourcePayload = activity.sourcePayload ?? {};
   const deviceName = typeof sourcePayload.device_name === 'string' ? sourcePayload.device_name : null;
@@ -374,12 +354,18 @@ function ImportedActivitySheet({ activity, onClose }: { activity: ImportedActivi
   const distance = activity.distanceKm ? `${activity.distanceKm.toLocaleString('pt-BR')} km` : null;
   const pace = paceMinPerKm(activity.distanceKm, activity.movingTimeMin ?? activity.durationMin);
   const paceLabel = pace ? `${pace} /km` : null;
+  // Resumo (hero) e detalhes sport-specific vêm da config por esporte: cada
+  // modalidade destaca a SUA métrica-mãe no topo.
+  const { hero, more } = activityMetrics(activity);
+  const summary = [...hero, ...more].slice(0, 4);
+  const sportDetails = activitySportDetails(activity);
   const details: Array<[string, string | null]> = [
     ['Tempo total', activity.durationMin ? `${activity.durationMin} min` : null],
     ['Tempo em movimento', activity.movingTimeMin ? `${activity.movingTimeMin} min` : null],
     ['Distância', distance],
-    ['Ritmo', paceLabel],
+    ['Ritmo', PACE_SURFACES.includes(activity.surface) ? paceLabel : null],
     ['Velocidade média', speed],
+    ...sportDetails.map((metric): [string, string | null] => [t(metric.labelKey), metric.value]),
     ['Calorias', activity.calories ? `${activity.calories} kcal` : null],
     ['FC média', activity.averageHeartRate ? `${activity.averageHeartRate} bpm` : null],
     ['FC máxima', activity.maxHeartRate ? `${activity.maxHeartRate} bpm` : null],
@@ -405,16 +391,7 @@ function ImportedActivitySheet({ activity, onClose }: { activity: ImportedActivi
         <div>
           <div className="mb-2 flex items-center gap-2"><Info size={15} className="text-primary" aria-hidden /><h3 className="font-sans text-counter font-semibold uppercase tracking-[0.12em] text-on-surface-variant">Resumo</h3></div>
           <div className="grid grid-cols-2 gap-2">
-            {[
-              ['Tempo', activity.durationMin ? `${activity.durationMin} min` : '—'],
-              ['Distância', distance ?? '—'],
-              PACE_SURFACES.includes(activity.surface)
-                ? ['Ritmo', paceLabel ?? '—']
-                : activity.surface === 'cycling'
-                  ? ['Velocidade', speed ?? '—']
-                  : ['Calorias', activity.calories ? `${activity.calories} kcal` : '—'],
-              ['FC média', activity.averageHeartRate ? `${activity.averageHeartRate} bpm` : '—'],
-            ].map(([label, value]) => <div key={label} className="rounded-xl border border-outline-variant/30 bg-surface-container p-3"><p className="font-sans text-counter text-on-surface-variant">{label}</p><p className="mt-1 font-sans text-label tabular-nums text-on-surface">{value}</p></div>)}
+            {summary.map((metric) => <div key={metric.labelKey} className="rounded-xl border border-outline-variant/30 bg-surface-container p-3"><p className="font-sans text-counter text-on-surface-variant">{t(metric.labelKey)}</p><p className="mt-1 font-sans text-label tabular-nums text-on-surface">{metric.value}</p></div>)}
           </div>
         </div>
 
