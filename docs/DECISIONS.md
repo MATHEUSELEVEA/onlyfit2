@@ -47,7 +47,7 @@ Registro leve de decisões de arquitetura (ADR). Cada entrada explica **por que*
 - Data: 2026-07-10
 - Status: aceita
 - Contexto: ao implementar curtir/comentar/seguir/assinar no v2, era preciso definir o que o front pode escrever no banco de produção compartilhado.
-- Decisão: o cliente escreve apenas em `post_likes`, `post_comments` e `creator_follows` (linha do próprio usuário, garantida por RLS). `subscriptions`/`creator_memberships` são somente leitura — "Assinar" leva ao fluxo de checkout (futuro), nunca a um insert do front. Posts salvos ficam em `localStorage` até existir tabela.
+- Decisão: o cliente escreve apenas em `post_likes`, `post_comments` e `creator_follows` (linha do próprio usuário, garantida por RLS). `subscriptions`/`payment_subscriptions` são somente leitura — "Assinar" leva ao fluxo de checkout (futuro), nunca a um insert do front. Posts salvos ficam em `localStorage` até existir tabela.
 - Consequência: impossível o front "liberar" conteúdo pago por engano; a lista de escritas vive em `docs/DATABASE.md` e cresce só com policy de RLS conferida.
 
 ## 0006 — Mutações otimistas com rollback como padrão de escrita

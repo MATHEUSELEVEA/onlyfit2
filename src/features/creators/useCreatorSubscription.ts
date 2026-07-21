@@ -1,10 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { isMembershipActive, type MembershipStatusRow } from './membership';
 
-// Estado de assinatura do usuário com um creator: memberships (modelo atual)
-// com fallback na tabela legada `subscriptions` — mesma regra do onlyfit v1.
+// Estado de assinatura do usuário com um creator (payments v2).
 // Somente leitura: assinar passa por checkout/pagamento, nunca por escrita
 // direta do cliente nessas tabelas.
 export function useCreatorSubscription(creatorId: string | null | undefined) {
@@ -15,12 +13,15 @@ export function useCreatorSubscription(creatorId: string | null | undefined) {
     queryKey: ['creator-subscription', creatorId, userId],
     enabled: Boolean(creatorId && userId),
     queryFn: async (): Promise<boolean> => {
-      const [membershipsResp, legacyResp] = await Promise.all([
+      const [paymentSubsResp, legacyResp] = await Promise.all([
         supabase
-          .from('creator_memberships')
-          .select('status, current_period_end, grace_until')
-          .eq('creator_id', creatorId!)
-          .eq('user_id', userId!),
+          .from('payment_subscriptions')
+          .select('id')
+          .eq('professional_profile_id', creatorId!)
+          .eq('profile_id', userId!)
+          .in('status', ['active', 'past_due'])
+          .limit(1)
+          .maybeSingle(),
         supabase
           .from('subscriptions')
           .select('creator_id')
@@ -30,11 +31,8 @@ export function useCreatorSubscription(creatorId: string | null | undefined) {
           .maybeSingle(),
       ]);
 
-      if (membershipsResp.error) throw membershipsResp.error;
-      const hasMembership = ((membershipsResp.data ?? []) as MembershipStatusRow[]).some(
-        isMembershipActive,
-      );
-      return hasMembership || Boolean(legacyResp.data);
+      if (paymentSubsResp.error) throw paymentSubsResp.error;
+      return Boolean(paymentSubsResp.data) || Boolean(legacyResp.data);
     },
   });
 }

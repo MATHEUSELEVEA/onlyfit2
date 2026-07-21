@@ -26,7 +26,7 @@ Leitura:
 - `posts` (+ join `profiles` via `creator_id`) → conteúdo do post; posts públicos de creators alimentam o Explorar.
 - `post_media` → páginas do carrossel (imagem/vídeo por `position`) quando o post tem mais de uma mídia. Post de mídia única não tem linha aqui — o feed cai no fallback `posts.video_url`/`thumbnail_url`. Ver `docs/DECISIONS.md` #0009.
 - `profiles` + `creator_profiles` → identidade, bio, esportes (`sports`, fonte única de modalidade/afinidade — ver `docs/DECISIONS.md` #0008; `category` existe no schema do v1 mas não é lida pelo app) e contadores de creators.
-- `creator_memberships` + `subscriptions` (legada) → estado "Assinado" (**somente leitura** — ver abaixo).
+- `payment_subscriptions` + `subscriptions` (legada) → estado "Assinado" (**somente leitura** — ver abaixo).
 - `health_questionnaires` + `health_questionnaire_versions` → anamnese configurável e versionada; o app lê somente versões publicadas.
 - `health_events` + `health_event_facts` → histórico de saúde confirmado e seus fatos atômicos, sempre filtrados pela RLS do próprio usuário.
 - `health_documents` + `health_document_processing_runs` → metadados de PDFs privados e propostas de extração; o arquivo original fica no R2 `onlyfit-private`.
@@ -60,7 +60,7 @@ Edge Functions de wearables:
 
 ## Escritas que o cliente NUNCA faz
 
-`subscriptions`, `creator_memberships` e qualquer tabela de pagamento/plano são **somente leitura** no front. Assinar passa por checkout/servidor (ver `docs/ECOSYSTEM.md`); inserir uma "assinatura" direto do cliente seria liberar conteúdo pago sem cobrança. O RLS bloqueia, e o código do app nem tenta.
+`subscriptions`, `payment_subscriptions` e qualquer tabela de pagamento/plano são **somente leitura** no front. Assinar passa por checkout/servidor (ver `docs/ECOSYSTEM.md`); inserir uma "assinatura" direto do cliente seria liberar conteúdo pago sem cobrança. O RLS bloqueia, e o código do app nem tenta.
 
 > Mantenha esta lista curta e verdadeira: registre aqui só o que o app **realmente** consome. O schema completo é do v1.
 

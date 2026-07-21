@@ -102,7 +102,7 @@ src/
 - RPC `feed_home_posts_page(p_limit, p_offset, p_sports)` → ids ordenados do feed
 - Tabela `posts` (+ join `profiles` via `creator_id`) → conteúdo
 - `post_likes`, `post_comments`, `creator_follows` → interações (leitura + escrita da própria linha)
-- `creator_memberships` + `subscriptions` → estado "Assinado" (somente leitura; ver `docs/DATABASE.md`)
+- `payment_subscriptions` + `subscriptions` → estado "Assinado" (somente leitura; ver `docs/DATABASE.md`)
 
 ## Roadmap curto
 
