@@ -24,7 +24,7 @@ interface CreatorRow {
   username: string | null;
   full_name: string | null;
   avatar_url: string | null;
-  professional_shell_enabled: boolean | null;
+  is_professional: boolean | null;
   creator_profiles:
     | { bio: string | null; sports: string[] | null; follower_count: number | null }
     | { bio: string | null; sports: string[] | null; follower_count: number | null }[]
@@ -75,7 +75,7 @@ function toExploreCreator(
     sports: cp?.sports ?? [],
     followerCount: cp?.follower_count ?? 0,
     followedByMe: followedIds.has(row.id),
-    isProfessional: Boolean(row.professional_shell_enabled),
+    isProfessional: Boolean(row.is_professional),
     ambassadorBadge: ambassador?.badgeLabel ?? null,
     ambassadorHeadline: ambassador?.headline ?? null,
     ambassadorSport: ambassador?.sportKey ?? null,
@@ -105,7 +105,7 @@ export function useExploreCreators(searchTerm = '') {
       let query = supabase
         .from('profiles')
         .select(
-          `id, username, full_name, avatar_url, professional_shell_enabled,
+          `id, username, full_name, avatar_url, is_professional,
            creator_profiles (bio, sports, follower_count)`,
         )
         .neq('id', userId!);
@@ -149,7 +149,7 @@ export function useFeaturedAmbassadors() {
         .select(
           `id, profile_id, sport_key, headline, badge_label,
            profiles:profile_id (
-             id, username, full_name, avatar_url, professional_shell_enabled,
+	             id, username, full_name, avatar_url, is_professional,
              creator_profiles (bio, sports, follower_count)
            )`,
         )

@@ -3,9 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 
 // Fonte única do perfil do próprio usuário. A identidade Membro × Profissional
-// do app mobile é decidida por `professional_shell_enabled` (o switch do Perfil):
-// ligado = Profissional, desligado = Membro. `is_creator` fica como flag legada
-// de descoberta/monetização no backend, não é o sinal de identidade aqui.
+// é decidida por `is_professional`: false = membro, true = profissional.
 //
 // Não acrescente campo sensível (cpf_hash, cpf_last4, email, telefone) ao select
 // abaixo: eles têm column-level security e o PostgREST recusa a query inteira com
@@ -21,6 +19,7 @@ export interface MyProfile {
   language: string | null;
   isCreator: boolean;
   isProfessional: boolean;
+  isAmbassador: boolean;
   affinitySports: string[];
 }
 
@@ -46,7 +45,7 @@ export function useMyProfile() {
       const { data, error } = await supabase
         .from('profiles')
         .select(
-          `id, username, full_name, avatar_url, bio, country_code, language, is_creator, professional_shell_enabled,
+          `id, username, full_name, avatar_url, bio, country_code, language, is_creator, is_professional, is_ambassador,
            creator_profiles ( sports )`,
         )
         .eq('id', userId!)
@@ -65,7 +64,8 @@ export function useMyProfile() {
         countryCode: data.country_code,
         language: data.language,
         isCreator: Boolean(data.is_creator),
-        isProfessional: Boolean(data.professional_shell_enabled),
+        isProfessional: Boolean((data as { is_professional?: boolean | null }).is_professional),
+        isAmbassador: Boolean((data as { is_ambassador?: boolean | null }).is_ambassador),
         affinitySports: cp?.sports ?? [],
       };
     },

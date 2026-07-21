@@ -47,7 +47,7 @@ export function SettingsMenuPage() {
         p_enabled: enabled,
       });
       if (error) throw error;
-      return data as { professional_shell_enabled: boolean; is_creator: boolean };
+      return data as { is_professional: boolean; is_creator: boolean };
     },
     onSuccess: (data) => {
       setProfessionalFeedback(null);
@@ -55,7 +55,7 @@ export function SettingsMenuPage() {
         current
           ? {
               ...current,
-              isProfessional: Boolean(data.professional_shell_enabled),
+              isProfessional: Boolean(data.is_professional),
               isCreator: Boolean(data.is_creator),
             }
           : current,
