@@ -6,6 +6,7 @@ import { isNativeIos } from '@/lib/nativeSecureStorage';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTranslation } from '@/i18n/I18nProvider';
 import { OnlyFitHealthKit } from './onlyFitHealthKit';
+import { localDateKey } from '@/lib/localDate';
 import type { AppleHealthIngestPayload, AppleHealthSyncResult, WearableActivity } from './types';
 
 type HealthConnectionRow = {
@@ -59,10 +60,6 @@ function randomId() {
   return `00000000-0000-4000-8000-${Math.random().toString(16).slice(2, 14).padEnd(12, '0')}`;
 }
 
-function dateKey(value: string) {
-  return value.slice(0, 10);
-}
-
 function surfaceFromSport(sport: string): WearableActivity['surface'] {
   if (sport === 'running') return 'running';
   if (sport === 'cycling') return 'cycling';
@@ -107,7 +104,7 @@ function isAppleWatchPayload(payload: Record<string, unknown> | null | undefined
 function toWearableActivity(row: ExternalActivityRow): WearableActivity {
   return {
     id: row.id,
-    date: dateKey(row.started_at),
+    date: localDateKey(row.started_at),
     title: row.title || labelFromSport(row.sport),
     durationMin: row.duration_s ? Math.round(row.duration_s / 60) : 0,
     surface: surfaceFromSport(row.sport),

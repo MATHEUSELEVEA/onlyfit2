@@ -1,18 +1,25 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Activity, Bike, ChevronLeft, ChevronRight, Dumbbell, Flame, Footprints, HeartPulse, Leaf, Play, Plus, RotateCcw, Waves, Watch } from 'lucide-react';
+import { Activity, Bike, CalendarDays, ChevronLeft, ChevronRight, Dumbbell, Flame, Footprints, HeartPulse, Leaf, Moon, Play, Plus, RotateCcw, Sparkles, Waves, Watch } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { PageTopBar } from '@/components/layout/PageTopBar';
+import { ActivityRing, MetricStat } from '@/components/health/HealthVisuals';
 import { type ActivitySource, type ImportedActivity, type ScheduledWorkout, type TrainingStatus, type TrainingSurface, useTraining } from '@/features/training/TrainingProvider';
+import { DAY_CODES, uniqueWorkouts, useStudentWorkouts } from '@/features/training/useStudentWorkouts';
 import { useAppleHealth } from '@/features/wearables/useAppleHealth';
+import { buildHealthDays, formatSleep, type HealthDay } from '@/features/wearables/healthDays';
+import { localDateKey, todayKey } from '@/lib/localDate';
 import { useTranslation, type TranslationKey } from '@/i18n/I18nProvider';
 
-type Tab = 'today' | 'history' | 'progress';
+type Tab = 'today' | 'history' | 'progress' | 'library';
 type AppleHealthState = ReturnType<typeof useAppleHealth>;
-const dateKey = (date: Date) => date.toISOString().slice(0, 10);
-const today = () => dateKey(new Date());
+const dateKey = (date: Date) => localDateKey(date);
+const today = () => todayKey();
+const MOVE_GOAL_KCAL = 500;
+
 const statusLabel: Record<TrainingStatus, string> = { planned: 'Planejado', active: 'Em andamento', partial: 'Parcial', completed: 'Concluído', missed: 'Não realizado', imported: 'Importado', rest: 'Descanso' };
+const statusTone: Record<TrainingStatus, string> = { planned: 'bg-outline', active: 'bg-primary', partial: 'bg-secondary', completed: 'bg-primary', missed: 'bg-error', imported: 'bg-tertiary', rest: 'bg-outline-variant' };
 const sourceLabel = (source: string) => ({ healthkit: 'Apple Health', apple_health: 'Apple Health', garmin: 'Garmin', strava: 'Strava', coros: 'COROS', fitbit: 'Fitbit', manual: 'Registro pessoal', onlyfit: 'OnlyFit' }[source] ?? source);
 const enduranceSurfaces: TrainingSurface[] = ['running', 'cycling', 'walking', 'swimming'];
 const surfaceIcon: Record<TrainingSurface, ReactNode> = {
@@ -40,6 +47,9 @@ const surfaceTranslationKey: Record<TrainingSurface, TranslationKey> = {
   other: 'meufit.training.surface.other',
 };
 
+const weekdayFull = (value: string) => new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR', { weekday: 'long' });
+const dayMonth = (value: string) => new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+
 function formatActivityMeta(activity: { durationMin: number; source: string; distanceKm?: number; calories?: number; averageHeartRate?: number; elevationM?: number }) {
   return [
     `${activity.durationMin} min`,
@@ -49,6 +59,18 @@ function formatActivityMeta(activity: { durationMin: number; source: string; dis
     activity.elevationM ? `${activity.elevationM} m alt.` : null,
     sourceLabel(activity.source),
   ].filter(Boolean).join(' · ');
+}
+
+// Intensidade (0..1) → nível de preenchimento do heatmap. Passos discretos em
+// opacidade da cor de marca; premium por contenção, sem cor cheia em dia fraco.
+function heatClass(day: HealthDay | undefined, selected: boolean): string {
+  if (selected) return 'bg-primary text-on-primary';
+  const intensity = day?.intensity ?? 0;
+  if (!day?.hasData || intensity <= 0) return 'bg-surface-container-high text-on-surface-variant';
+  if (intensity < 0.25) return 'bg-primary/15 text-on-surface';
+  if (intensity < 0.5) return 'bg-primary/30 text-on-surface';
+  if (intensity < 0.75) return 'bg-primary/55 text-on-surface';
+  return 'bg-primary/85 text-on-primary';
 }
 
 function WatchOriginChip() {
@@ -65,31 +87,27 @@ export function TrainingPage() { return <TrainingContent />; }
 function TrainingContent() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>('today');
+  const [selectedDate, setSelectedDate] = useState(today());
+  const [detailDate, setDetailDate] = useState<string | null>(null);
   const [recordOpen, setRecordOpen] = useState(false);
   const { scheduled, imported, activeSession, addActivity } = useTraining();
   const appleHealth = useAppleHealth();
   const allImported = useMemo<ImportedActivity[]>(() => [...appleHealth.importedActivities, ...imported], [appleHealth.importedActivities, imported]);
+  const healthDays = useMemo(() => buildHealthDays(appleHealth.importedActivities, appleHealth.dailySummaries), [appleHealth.importedActivities, appleHealth.dailySummaries]);
   const todayItems = scheduled.filter((item) => item.date === today());
   const activeItem = activeSession ? todayItems.find((item) => item.id === activeSession.scheduledId) : null;
+
   return <div className="relative flex h-full flex-col overflow-y-auto bg-background pb-8">
-    <PageTopBar title={t('meufit.training.pageTitle')} backFallback="/meu-fit" />
+    <PageTopBar title={t('meufit.training.pageTitle')} backFallback="/meu-fit" actions={<button type="button" aria-label="Abrir progresso e calendário" onClick={() => setTab('progress')} className={clsx('flex h-11 w-11 items-center justify-center rounded-full transition-colors', tab === 'progress' ? 'bg-primary text-on-primary' : 'bg-surface-container text-on-surface')}><CalendarDays size={20} aria-hidden /></button>} />
     <main className="mx-auto w-full max-w-[720px] px-5 pb-6 pt-5">
-      <div className="grid grid-cols-3 rounded-xl bg-surface-container p-1" role="tablist" aria-label={t('meufit.training.tabs.aria')}>
-        {([
-          ['today', t('meufit.training.tabs.today')],
-          ['history', t('meufit.training.tabs.history')],
-          ['progress', t('meufit.training.tabs.progress')],
-        ] as [Tab, string][]).map(([value, label]) => (
-          <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={clsx('min-h-[40px] rounded-lg font-sans text-counter transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', tab === value ? 'bg-surface-container-lowest text-on-surface' : 'text-on-surface-variant')}>
-            {label}
-          </button>
-        ))}
-      </div>
-      {tab !== 'today' ? <AppleHealthCard appleHealth={appleHealth} /> : null}
+      <div className="grid grid-cols-4 rounded-xl bg-surface-container p-1" role="tablist" aria-label={t('meufit.training.tabs.aria')}>{([['today', t('meufit.training.tabs.today')], ['history', t('meufit.training.tabs.history')], ['progress', t('meufit.training.tabs.progress')], ['library', t('meufit.training.tabs.library')]] as [Tab, string][]).map(([value, label]) => <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={clsx('min-h-[40px] rounded-lg font-sans text-counter transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', tab === value ? 'bg-surface-container-lowest text-on-surface' : 'text-on-surface-variant')}>{label}</button>)}</div>
+      {tab !== 'today' ? <AppleHealthCard appleHealth={appleHealth} compact /> : null}
       {tab === 'today' && <Today items={todayItems} active={activeItem ?? null} />}
-      {tab === 'history' && <History imported={allImported} onRecord={() => setRecordOpen(true)} />}
-      {tab === 'progress' && <Progress appleHealth={appleHealth} />}
+      {tab === 'history' && <HistoryList imported={allImported} healthDays={healthDays} onOpenDay={(value) => setDetailDate(value)} onRecord={() => setRecordOpen(true)} />}
+      {tab === 'progress' && <Progress appleHealth={appleHealth} healthDays={healthDays} scheduled={scheduled} selectedDate={selectedDate} onSelect={(value) => { setSelectedDate(value); setDetailDate(value); }} />}
+      {tab === 'library' && <Library />}
     </main>
+    <DayDetailSheet date={detailDate} onClose={() => setDetailDate(null)} healthDays={healthDays} scheduled={scheduled} />
     <AddActivitySheet open={recordOpen} onClose={() => setRecordOpen(false)} selectedDate={today()} onAdd={(activity) => { addActivity(activity); setRecordOpen(false); }} />
   </div>;
 }
@@ -211,6 +229,172 @@ function Today({ items, active }: { items: ScheduledWorkout[]; active: Scheduled
   );
 }
 
+/** Conteúdo do dia: anel de energia, métricas, atividades e treinos, usado nos detalhes do Histórico e Progresso. */
+function DayDetailContent({ date, healthDays, scheduled, showScheduled = true }: { date: string; healthDays: Map<string, HealthDay>; scheduled: ScheduledWorkout[]; showScheduled?: boolean }) {
+  const navigate = useNavigate();
+  const { startSession, reschedule } = useTraining();
+  const day = healthDays.get(date);
+  const dayScheduled = showScheduled ? scheduled.filter((item) => item.date === date) : [];
+  const metrics = useMemo(() => {
+    if (!day) return [] as { value: string; label: string; icon: ReactNode }[];
+    const list: { value: string; label: string; icon: ReactNode }[] = [];
+    if (day.steps) list.push({ value: day.steps.toLocaleString('pt-BR'), label: 'passos', icon: <Footprints size={14} aria-hidden /> });
+    if (day.activeKcal) list.push({ value: `${Math.round(day.activeKcal)}`, label: 'kcal ativas', icon: <Flame size={14} aria-hidden /> });
+    if (day.restingHr) list.push({ value: `${day.restingHr}`, label: 'FC repouso', icon: <HeartPulse size={14} aria-hidden /> });
+    if (day.hrv) list.push({ value: `${Math.round(day.hrv)}`, label: 'HRV ms', icon: <Activity size={14} aria-hidden /> });
+    const sleep = formatSleep(day.sleepMinutes);
+    if (sleep) list.push({ value: sleep, label: 'sono', icon: <Moon size={14} aria-hidden /> });
+    return list;
+  }, [day]);
+
+  const hasAnything = (day?.hasData ?? false) || dayScheduled.length > 0;
+  if (!hasAnything) {
+    return <p className="rounded-xl border border-dashed border-outline-variant/50 px-4 py-5 font-sans text-body-sm text-on-surface-variant">Dia livre. Sem treinos programados nem atividades registradas.</p>;
+  }
+
+  const ringProgress = day?.activeKcal ? Math.min(1, day.activeKcal / MOVE_GOAL_KCAL) : (day?.activities.length ? 0.5 : 0);
+
+  return (
+    <div className="space-y-3">
+      {day?.hasData ? (
+        <div className="rounded-2xl border border-outline-variant/40 bg-surface-container p-4">
+          <div className="flex items-center gap-4">
+            <ActivityRing progress={ringProgress} size={60} stroke={5}>
+              <span className="flex flex-col items-center leading-none">
+                <span className="font-sans text-label tabular-nums text-on-surface">{day.activeKcal ? Math.round(day.activeKcal) : day.activities.length}</span>
+                <span className="font-sans text-nav text-on-surface-variant">{day.activeKcal ? 'kcal' : 'ativ.'}</span>
+              </span>
+            </ActivityRing>
+            <div className="grid flex-1 grid-cols-2 gap-x-4 gap-y-3">
+              {metrics.slice(0, 4).map((metric) => <MetricStat key={metric.label} value={metric.value} label={metric.label} icon={metric.icon} />)}
+            </div>
+          </div>
+          {metrics.length > 4 ? (
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 border-t border-outline-variant/30 pt-3">
+              {metrics.slice(4).map((metric) => (
+                <span key={metric.label} className="inline-flex items-center gap-1.5 font-sans text-body-sm text-on-surface-variant">
+                  <span className="text-on-surface-variant">{metric.icon}</span>
+                  <span className="font-sans text-label tabular-nums text-on-surface">{metric.value}</span> {metric.label}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {dayScheduled.map((item) => (
+        <div key={item.id} className="flex items-center gap-3 rounded-xl border border-outline-variant/40 bg-surface-container p-3">
+          <TrainingBadge surface={item.surface} status={item.status} />
+          <div className="min-w-0 flex-1">
+            <p className="font-sans text-label text-on-surface">{item.title}</p>
+            <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{statusLabel[item.status]} · {item.summary ?? `${item.durationMin} min`}</p>
+          </div>
+          {item.status === 'planned' ? <button type="button" onClick={() => { startSession(item.id); navigate('/meu-fit/treino/player'); }} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary" aria-label={`Começar ${item.title}`}><Play size={16} fill="currentColor" aria-hidden /></button> : null}
+          {item.status === 'missed' ? <button type="button" onClick={() => reschedule(item.id)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-primary" aria-label={`Reagendar ${item.title}`}><RotateCcw size={16} aria-hidden /></button> : null}
+        </div>
+      ))}
+
+      {(day?.activities ?? []).map((activity) => (
+        <div key={activity.id} className="flex items-center gap-3 rounded-xl border border-outline-variant/40 bg-surface p-3">
+          <TrainingBadge surface={activity.surface} status="imported" />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-sans text-label text-on-surface">{activity.title}</p>
+              {activity.importedFromWatch ? <WatchOriginChip /> : null}
+            </div>
+            <p className="mt-0.5 break-words font-sans text-body-sm text-on-surface-variant">{formatActivityMeta(activity)}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DayDetailSheet({ date, onClose, healthDays, scheduled }: { date: string | null; onClose: () => void; healthDays: Map<string, HealthDay>; scheduled: ScheduledWorkout[] }) {
+  return (
+    <BottomSheet open={!!date} onClose={onClose} title={date ? weekdayFull(date) : ''} description={date ? new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' }) : undefined} panelClassName="max-h-[88%]">
+      <div className="px-5 pb-8 pt-1">{date ? <DayDetailContent date={date} healthDays={healthDays} scheduled={scheduled} /> : null}</div>
+    </BottomSheet>
+  );
+}
+
+/** Progresso: resumo dos últimos 30 dias + calendário heatmap com detalhe ao tocar. */
+function Progress({ appleHealth, healthDays, scheduled, selectedDate, onSelect }: { appleHealth: AppleHealthState; healthDays: Map<string, HealthDay>; scheduled: ScheduledWorkout[]; selectedDate: string; onSelect: (value: string) => void }) {
+  const completed = scheduled.filter((item) => item.status === 'completed').length;
+  const sleep = formatSleep(appleHealth.progress.avgSleepMinutes) ?? '—';
+  return (
+    <section className="mt-6 space-y-6">
+      <div className="rounded-2xl border border-outline-variant/40 bg-surface-container p-4">
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-sans text-title text-on-surface">Resumo</h2>
+          <span className="font-sans text-counter text-on-surface-variant">últimos 30 dias</span>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-4">
+          <MetricStat value={`${completed}`} label="treinos concluídos" icon={<Sparkles size={14} aria-hidden />} emphasis />
+          <MetricStat value={appleHealth.progress.activeKcal ? Math.round(appleHealth.progress.activeKcal).toLocaleString('pt-BR') : '—'} label="kcal ativas" icon={<Flame size={14} aria-hidden />} />
+          <MetricStat value={appleHealth.progress.steps ? appleHealth.progress.steps.toLocaleString('pt-BR') : '—'} label="passos" icon={<Footprints size={14} aria-hidden />} />
+          <MetricStat value={sleep} label="sono médio" icon={<Moon size={14} aria-hidden />} />
+        </div>
+      </div>
+      <Heatmap selectedDate={selectedDate} healthDays={healthDays} scheduled={scheduled} onSelect={onSelect} />
+    </section>
+  );
+}
+
+const DAY_SHORT: Record<string, string> = { DOM: 'dom', SEG: 'seg', TER: 'ter', QUA: 'qua', QUI: 'qui', SEX: 'sex', SAB: 'sáb' };
+
+/** Mini-strip dos 7 dias, destacando aqueles em que o treino é aplicado. */
+function WeekdayStrip({ days }: { days: string[] }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {DAY_CODES.map((code) => {
+        const active = days.includes(code);
+        return (
+          <span key={code} className={clsx('inline-flex min-w-[34px] justify-center rounded-md px-1.5 py-1 font-sans text-nav', active ? 'bg-primary/15 text-primary' : 'bg-surface-container-high text-on-surface-variant/60')}>{DAY_SHORT[code]}</span>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Biblioteca: treinos reais aplicados pelo profissional (design inicial). */
+function Library() {
+  const { workouts, isLoading } = useStudentWorkouts();
+  const items = useMemo(() => uniqueWorkouts(workouts), [workouts]);
+  return (
+    <section className="mt-6 space-y-5">
+      <div className="flex items-baseline justify-between gap-3">
+        <div>
+          <h2 className="font-sans text-title text-on-surface">Sua biblioteca</h2>
+          <p className="mt-1 font-sans text-body-sm text-on-surface-variant">Treinos aplicados pra você pelo seu profissional.</p>
+        </div>
+        {items.length ? <span className="shrink-0 font-sans text-counter text-on-surface-variant">{items.length} treinos</span> : null}
+      </div>
+      {isLoading ? (
+        <div className="space-y-3">{[0, 1, 2].map((index) => <div key={index} className="h-[104px] animate-pulse rounded-2xl bg-surface-container motion-reduce:animate-none" />)}</div>
+      ) : items.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-outline-variant/50 px-4 py-6 font-sans text-body-sm text-on-surface-variant">Nenhum treino aplicado ainda. Quando seu profissional montar seu treino, ele aparece aqui.</p>
+      ) : (
+        <div className="space-y-3">
+          {items.map((workout) => (
+            <article key={workout.workoutId ?? workout.assignmentId} className="rounded-2xl border border-outline-variant/40 bg-surface-container p-4">
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-primary/35 bg-primary/10 text-primary"><Dumbbell size={18} aria-hidden /></span>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-sans text-label leading-snug text-on-surface">{workout.title}</h3>
+                  <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{workout.exerciseCount} exercícios</p>
+                </div>
+              </div>
+              {workout.daysOfWeek.length ? <div className="mt-3 border-t border-outline-variant/30 pt-3"><WeekdayStrip days={workout.daysOfWeek} /></div> : null}
+            </article>
+          ))}
+        </div>
+      )}
+      <p className="rounded-xl border border-dashed border-outline-variant/50 px-4 py-4 font-sans text-body-sm text-on-surface-variant">Em breve: abrir o treino e executar série a série no Player, com seus exercícios e cargas. <span className="text-on-surface-variant/70">(design inicial)</span></p>
+    </section>
+  );
+}
+
 function AppleHealthCard({ appleHealth, compact }: { appleHealth: AppleHealthState; compact?: boolean }) {
   const { t } = useTranslation();
   const hasImportedData = appleHealth.importedActivities.length > 0 || appleHealth.dailySummaries.length > 0;
@@ -289,32 +473,120 @@ function AppleHealthCard({ appleHealth, compact }: { appleHealth: AppleHealthSta
   );
 }
 
-function History({ imported, onRecord }: { imported: ImportedActivity[]; onRecord: () => void }) {
+/** Histórico cronológico agrupado por dia, com contexto de saúde no cabeçalho do dia. */
+function HistoryList({ imported, healthDays, onOpenDay, onRecord }: { imported: ImportedActivity[]; healthDays: Map<string, HealthDay>; onOpenDay: (date: string) => void; onRecord: () => void }) {
   const { t } = useTranslation();
   const { scheduled } = useTraining();
-  const entries = [
-    ...scheduled.filter((item) => ['completed', 'partial', 'missed'].includes(item.status)).map((item) => ({ id: item.id, date: item.date, title: item.title, meta: item.summary ?? `${item.durationMin} min · ${statusLabel[item.status].toLowerCase()}`, status: item.status, surface: item.surface, importedFromWatch: false })),
-    ...imported.map((item) => ({ id: item.id, date: item.date, title: item.title, meta: formatActivityMeta(item), status: 'imported' as TrainingStatus, surface: item.surface, importedFromWatch: Boolean(item.importedFromWatch) })),
-  ].sort((a, b) => b.date.localeCompare(a.date));
+  const byDate = useMemo(() => {
+    const map = new Map<string, { id: string; title: string; meta: string; status: TrainingStatus; surface: TrainingSurface; importedFromWatch: boolean }[]>();
+    const push = (date: string, entry: { id: string; title: string; meta: string; status: TrainingStatus; surface: TrainingSurface; importedFromWatch: boolean }) => {
+      const list = map.get(date) ?? [];
+      list.push(entry);
+      map.set(date, list);
+    };
+    scheduled.filter((item) => ['completed', 'partial', 'missed'].includes(item.status)).forEach((item) => push(item.date, { id: item.id, title: item.title, meta: item.summary ?? `${item.durationMin} min · ${statusLabel[item.status].toLowerCase()}`, status: item.status, surface: item.surface, importedFromWatch: false }));
+    imported.forEach((item) => push(item.date, { id: item.id, title: item.title, meta: formatActivityMeta(item), status: 'imported', surface: item.surface, importedFromWatch: Boolean(item.importedFromWatch) }));
+    return map;
+  }, [imported, scheduled]);
+
+  const days = useMemo(() => [...byDate.keys()].sort((a, b) => b.localeCompare(a)), [byDate]);
+
   return (
     <section className="mt-6">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="font-sans text-title text-on-surface">Histórico</h2>
-          <p className="mt-1 font-sans text-body-sm text-on-surface-variant">Treinos e atividades registrados.</p>
+          <p className="mt-1 font-sans text-body-sm text-on-surface-variant">Treinos e atividades por dia.</p>
         </div>
         <button type="button" onClick={onRecord} className="flex min-h-10 shrink-0 items-center gap-2 rounded-full bg-primary px-4 font-sans text-counter text-on-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background" aria-label={t('meufit.training.history.record')}>
           <Plus size={16} aria-hidden />
           {t('meufit.training.history.record')}
         </button>
       </div>
-      <div className="mt-4 space-y-2">{entries.length ? entries.map((item) => <HistoryRow key={item.id} {...item} />) : <p className="rounded-xl border border-dashed border-outline-variant/50 px-4 py-5 font-sans text-body-sm text-on-surface-variant">Sem atividades registradas ainda.</p>}</div>
+      <div className="mt-4 space-y-5">
+        {days.length ? days.map((date) => {
+          const entries = byDate.get(date)!;
+          const day = healthDays.get(date);
+          const kcal = day?.activeKcal ? `${Math.round(day.activeKcal)} kcal` : null;
+          const steps = day?.steps ? `${day.steps.toLocaleString('pt-BR')} passos` : null;
+          const context = [kcal, steps].filter(Boolean).join(' · ');
+          return (
+            <div key={date}>
+              <button type="button" onClick={() => onOpenDay(date)} className="flex w-full items-baseline justify-between gap-3 text-left">
+                <span className="font-sans text-label capitalize text-on-surface">{weekdayFull(date)}, {dayMonth(date)}</span>
+                {context ? <span className="font-sans text-counter text-on-surface-variant">{context}</span> : null}
+              </button>
+              <div className="mt-2 space-y-2">
+                {entries.map((item) => <HistoryRow key={item.id} {...item} />)}
+              </div>
+            </div>
+          );
+        }) : <p className="rounded-xl border border-dashed border-outline-variant/50 px-4 py-5 font-sans text-body-sm text-on-surface-variant">Sem atividades registradas ainda.</p>}
+      </div>
     </section>
   );
 }
-function HistoryRow({ date, title, meta, status, surface, importedFromWatch }: { date: string; title: string; meta: string; status: TrainingStatus; surface: TrainingSurface; importedFromWatch?: boolean }) { return <div className="flex items-start gap-3 rounded-xl border border-outline-variant/40 bg-surface-container p-3"><TrainingBadge surface={surface} status={status} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="min-w-0 break-words font-sans text-label leading-snug text-on-surface">{title}</p>{importedFromWatch ? <WatchOriginChip /> : null}</div><p className="mt-0.5 break-words font-sans text-body-sm leading-snug text-on-surface-variant">{new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} · {meta}</p></div></div>; }
-function Progress({ appleHealth }: { appleHealth: AppleHealthState }) { const { scheduled } = useTraining(); const completed = scheduled.filter((item) => item.status === 'completed').length; const sleep = appleHealth.progress.avgSleepMinutes ? `${Math.floor(appleHealth.progress.avgSleepMinutes / 60)}h${String(appleHealth.progress.avgSleepMinutes % 60).padStart(2, '0')}` : '—'; return <section className="mt-6"><h2 className="font-sans text-title text-on-surface">Progresso</h2><p className="mt-1 font-sans text-body-sm text-on-surface-variant">Leitura simples da sua consistência com dados importados quando existirem.</p><div className="mt-5 grid grid-cols-2 gap-3"><Metric icon="✓" value={`${completed}`} label="treinos concluídos" /><Metric icon="↯" value={appleHealth.progress.activeKcal ? `${Math.round(appleHealth.progress.activeKcal)} kcal` : '—'} label="calorias ativas" /><Metric icon="⌁" value={appleHealth.progress.steps ? appleHealth.progress.steps.toLocaleString('pt-BR') : '—'} label="passos em 30 dias" /><Metric icon="☾" value={sleep} label="sono médio" /></div><div className="mt-5 rounded-2xl border border-outline-variant/40 bg-surface-container p-4"><div className="flex items-center gap-2 text-primary"><Watch size={18} aria-hidden /><span className="font-sans text-label">Fonte Apple Health</span></div><p className="mt-4 font-sans text-title-lg text-on-surface">{appleHealth.importedActivities.length}</p><p className="mt-1 font-sans text-body-sm text-on-surface-variant">atividades importadas do iPhone/Apple Watch.</p></div></section>; }
-function Metric({ icon, value, label }: { icon: string; value: string; label: string }) { return <div className="rounded-2xl border border-outline-variant/40 bg-surface-container p-4"><span className="font-sans text-label text-primary">{icon}</span><p className="mt-3 font-sans text-title text-on-surface">{value}</p><p className="mt-1 font-sans text-body-sm text-on-surface-variant">{label}</p></div>; }
+
+function HistoryRow({ title, meta, status, surface, importedFromWatch }: { title: string; meta: string; status: TrainingStatus; surface: TrainingSurface; importedFromWatch?: boolean }) {
+  return <div className="flex items-start gap-3 rounded-xl border border-outline-variant/40 bg-surface-container p-3"><TrainingBadge surface={surface} status={status} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="min-w-0 break-words font-sans text-label leading-snug text-on-surface">{title}</p>{importedFromWatch ? <WatchOriginChip /> : null}</div><p className="mt-0.5 break-words font-sans text-body-sm leading-snug text-on-surface-variant">{meta}</p></div></div>;
+}
+
+/** Calendário mensal heatmap: intensidade real por dia; tocar abre o detalhe. */
+function Heatmap({ selectedDate, healthDays, scheduled, onSelect }: { selectedDate: string; healthDays: Map<string, HealthDay>; scheduled: ScheduledWorkout[]; onSelect: (value: string) => void }) {
+  const [cursor, setCursor] = useState(() => new Date(`${selectedDate}T12:00:00`));
+  const year = cursor.getFullYear();
+  const month = cursor.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const days = Array.from({ length: firstDay + new Date(year, month + 1, 0).getDate() }, (_, index) => index < firstDay ? null : new Date(year, month, index - firstDay + 1));
+  const todayValue = today();
+  const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`;
+  const monthDays = [...healthDays.values()].filter((day) => day.date.startsWith(monthPrefix));
+  const activeDays = monthDays.filter((day) => day.hasData && day.intensity > 0).length;
+  const totalKcal = monthDays.reduce((sum, day) => sum + (day.activeKcal ?? 0), 0);
+
+  return (
+    <section className="mt-6">
+      <div className="flex items-center justify-between">
+        <button type="button" onClick={() => setCursor(new Date(year, month - 1, 1))} className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container text-on-surface" aria-label="Mês anterior"><ChevronLeft size={20} /></button>
+        <span className="font-sans text-title capitalize text-on-surface">{cursor.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</span>
+        <button type="button" onClick={() => setCursor(new Date(year, month + 1, 1))} className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container text-on-surface" aria-label="Próximo mês"><ChevronRight size={20} /></button>
+      </div>
+
+      <div className="mt-5 grid grid-cols-7 gap-1.5">
+        {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((name, index) => <span key={`${name}-${index}`} className="pb-1 text-center font-sans text-nav uppercase text-on-surface-variant">{name}</span>)}
+        {days.map((date, index) => {
+          if (!date) return <span key={`blank-${index}`} />;
+          const value = dateKey(date);
+          const day = healthDays.get(value);
+          const selected = value === selectedDate;
+          const item = scheduled.find((entry) => entry.date === value);
+          return (
+            <button key={value} type="button" onClick={() => onSelect(value)} className={clsx('relative flex aspect-square flex-col items-center justify-center rounded-xl font-sans text-body-sm tabular-nums transition-colors', heatClass(day, selected), value === todayValue && !selected && 'ring-1 ring-inset ring-primary')} aria-label={`${date.toLocaleDateString('pt-BR')}${day?.activities.length ? `, ${day.activities.length} atividade(s)` : ''}`}>
+              {date.getDate()}
+              {item ? <span className={clsx('absolute bottom-1 h-1 w-1 rounded-full', selected ? 'bg-on-primary' : statusTone[item.status])} /> : null}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-5 flex items-center justify-between rounded-2xl border border-outline-variant/40 bg-surface-container p-4">
+        <MetricStat value={`${activeDays}`} label="dias ativos no mês" icon={<Sparkles size={14} aria-hidden />} emphasis />
+        <MetricStat value={totalKcal ? Math.round(totalKcal).toLocaleString('pt-BR') : '—'} label="kcal ativas no mês" icon={<Flame size={14} aria-hidden />} />
+      </div>
+
+      <div className="mt-4 flex items-center justify-center gap-2 font-sans text-counter text-on-surface-variant">
+        <span>menos</span>
+        <span className="h-3 w-3 rounded bg-surface-container-high" />
+        <span className="h-3 w-3 rounded bg-primary/15" />
+        <span className="h-3 w-3 rounded bg-primary/30" />
+        <span className="h-3 w-3 rounded bg-primary/55" />
+        <span className="h-3 w-3 rounded bg-primary/85" />
+        <span>mais</span>
+      </div>
+    </section>
+  );
+}
+
 function TrainingBadge({ surface, status }: { surface: TrainingSurface; status: TrainingStatus }) {
   const completed = status === 'completed' || status === 'imported';
   const missed = status === 'missed';
@@ -332,6 +604,7 @@ function TrainingBadge({ surface, status }: { surface: TrainingSurface; status: 
     </span>
   );
 }
+
 const surfaces: { value: TrainingSurface; label: string; icon: ReactNode }[] = [
   { value: 'strength', label: 'Musculação', icon: <Dumbbell size={18} /> },
   { value: 'running', label: 'Corrida', icon: <Activity size={18} /> },
