@@ -1,11 +1,11 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { Activity, Bike, CalendarDays, ChevronLeft, ChevronRight, Dumbbell, Flame, Footprints, HeartPulse, Leaf, Moon, Play, Plus, RotateCcw, Sparkles, Waves, Watch } from 'lucide-react';
+import { Activity, Bike, CalendarDays, CalendarX2, ChevronLeft, ChevronRight, Dumbbell, Flame, Footprints, HeartPulse, Leaf, Moon, Play, Plus, RotateCcw, Sparkles, Waves, Watch } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { PageTopBar } from '@/components/layout/PageTopBar';
 import { ActivityRing, MetricStat } from '@/components/health/HealthVisuals';
-import { type ActivitySource, type ImportedActivity, type ScheduledWorkout, type TrainingStatus, type TrainingSurface, useTraining } from '@/features/training/TrainingProvider';
+import { type ActivitySource, type ImportedActivity, type ScheduledWorkout, type TrainingStatus, type TrainingSurface, type WorkoutTemplate, useTraining } from '@/features/training/TrainingProvider';
 import { DAY_CODES, uniqueWorkouts, useStudentWorkouts, type StudentWorkout, type WorkoutTrainingType } from '@/features/training/useStudentWorkouts';
 import { useAppleHealth } from '@/features/wearables/useAppleHealth';
 import { buildHealthDays, formatSleep, type HealthDay } from '@/features/wearables/healthDays';
@@ -115,9 +115,9 @@ function TrainingContent() {
 function Today({ items, active }: { items: ScheduledWorkout[]; active: ScheduledWorkout | null }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { templates, startSession, activeSession, reschedule } = useTraining();
+  const { templates, startSession, activeSession, skipToday } = useTraining();
   const [selectedSurface, setSelectedSurface] = useState<TrainingSurface | null>(null);
-  const workouts = items.filter((item) => item.status !== 'rest');
+  const workouts = items.filter((item) => item.status !== 'rest' && item.status !== 'missed');
   const types = Array.from(new Set(workouts.map((item) => item.surface)));
   const currentSurface = selectedSurface && types.includes(selectedSurface) ? selectedSurface : null;
   const selectedWorkouts = currentSurface ? workouts.filter((item) => item.surface === currentSurface) : [];
@@ -182,6 +182,7 @@ function Today({ items, active }: { items: ScheduledWorkout[]; active: Scheduled
           const template = templates.find((entry) => entry.id === item.templateId);
           const isActive = activeSession?.scheduledId === item.id;
           const canStart = item.status === 'planned' || item.status === 'active' || item.status === 'partial';
+          const anotherWorkoutIsActive = Boolean(activeSession && !isActive);
           return (
             <article key={item.id} className="rounded-xl border border-outline-variant/40 bg-surface-container p-4">
               <div className="flex items-start justify-between gap-3">
@@ -210,15 +211,15 @@ function Today({ items, active }: { items: ScheduledWorkout[]; active: Scheduled
                 )}
               </div>
               {canStart ? (
-                <button type="button" onClick={() => { startSession(item.id); navigate('/meu-fit/treino/player'); }} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary font-sans text-label text-on-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container">
+                <button type="button" disabled={anotherWorkoutIsActive} onClick={() => { startSession(item.id); navigate('/meu-fit/treino/player'); }} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary font-sans text-label text-on-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container disabled:cursor-not-allowed disabled:bg-surface-container-high disabled:text-on-surface-variant">
                   <Play size={18} fill="currentColor" aria-hidden />
-                  {t(isActive ? 'meufit.training.today.continue' : 'meufit.training.today.start')}
+                  {t(anotherWorkoutIsActive ? 'meufit.training.today.finishCurrent' : isActive ? 'meufit.training.today.continue' : 'meufit.training.today.start')}
                 </button>
               ) : null}
-              {item.status === 'missed' ? (
-                <button type="button" onClick={() => reschedule(item.id)} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-surface-container-high font-sans text-label text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                  <RotateCcw size={18} aria-hidden />
-                  {t('meufit.training.today.reschedule')}
+              {item.status === 'planned' ? (
+                <button type="button" onClick={() => skipToday(item.id)} className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl font-sans text-label text-on-surface-variant transition-colors hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                  <CalendarX2 size={18} aria-hidden />
+                  {t('meufit.training.today.skip')}
                 </button>
               ) : null}
             </article>
@@ -359,9 +360,38 @@ function WeekdayStrip({ days }: { days: string[] }) {
 
 type WorkoutGroup = { type: WorkoutTrainingType; workouts: StudentWorkout[]; exerciseCount: number };
 
+function playerTemplate(workout: StudentWorkout): WorkoutTemplate {
+  const exercises = workout.exercises.map((exercise, index) => {
+    const name = exercise.studentDisplayName || exercise.exerciseName || `Exercício ${index + 1}`;
+    return {
+      id: exercise.id,
+      name,
+      muscle: exercise.muscleGroup || 'Exercício',
+      sets: exercise.sets,
+      targetReps: exercise.reps,
+      lastWeight: 0,
+      lastReps: Number(exercise.reps.match(/\d+/)?.[0] ?? 10),
+      technique: exercise.notes || exercise.tempoNotes || 'Siga as orientações do seu profissional.',
+      demoLabel: name,
+      videoUrl: exercise.videoUrl,
+    };
+  });
+  const muscleGroups = [...new Set(exercises.map((exercise) => exercise.muscle).filter((muscle) => muscle !== 'Exercício'))];
+  const setCount = exercises.reduce((total, exercise) => total + exercise.sets, 0);
+  return {
+    id: `library-${workout.workoutId ?? workout.assignmentId}`,
+    title: workout.title,
+    focus: muscleGroups.slice(0, 3).join(' · ') || 'Treino prescrito',
+    durationMin: Math.max(20, Math.round(setCount * 2.5)),
+    exercises,
+  };
+}
+
 /** Biblioteca: primeiro os tipos; depois, os treinos daquele grupo. */
 function Library() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { activeSession, startWorkoutNow } = useTraining();
   const { workouts, isLoading } = useStudentWorkouts();
   const items = useMemo(() => uniqueWorkouts(workouts), [workouts]);
   const [selectedType, setSelectedType] = useState<WorkoutTrainingType | null>(null);
@@ -395,18 +425,35 @@ function Library() {
           </div>
         </div>
         <div className="mt-5 space-y-3">
-          {selectedGroup.workouts.map((workout) => (
-            <article key={workout.workoutId ?? workout.assignmentId} className="rounded-2xl border border-outline-variant/40 bg-surface-container p-4">
-              <div className="flex items-start gap-3">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary" aria-hidden>{surfaceIcon[workout.trainingType]}</span>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-sans text-label leading-snug text-on-surface">{workout.title}</h3>
-                  <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{t(workout.exerciseCount === 1 ? 'meufit.training.library.exerciseCount' : 'meufit.training.library.exerciseCountPlural', { count: workout.exerciseCount })}</p>
+          {selectedGroup.workouts.map((workout) => {
+            const template = playerTemplate(workout);
+            const isCurrentWorkout = activeSession?.templateId === template.id;
+            const anotherWorkoutIsActive = Boolean(activeSession && !isCurrentWorkout);
+            const hasExercises = template.exercises.length > 0;
+            return (
+              <article key={workout.workoutId ?? workout.assignmentId} className="rounded-2xl border border-outline-variant/40 bg-surface-container p-4">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary" aria-hidden>{surfaceIcon[workout.trainingType]}</span>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-sans text-label leading-snug text-on-surface">{workout.title}</h3>
+                    <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{t(workout.exerciseCount === 1 ? 'meufit.training.library.exerciseCount' : 'meufit.training.library.exerciseCountPlural', { count: workout.exerciseCount })}</p>
+                  </div>
                 </div>
-              </div>
-              {workout.daysOfWeek.length ? <div className="mt-3 border-t border-outline-variant/30 pt-3"><WeekdayStrip days={workout.daysOfWeek} /></div> : null}
-            </article>
-          ))}
+                {workout.daysOfWeek.length ? <div className="mt-3 border-t border-outline-variant/30 pt-3"><WeekdayStrip days={workout.daysOfWeek} /></div> : null}
+                <button
+                  type="button"
+                  disabled={!hasExercises || anotherWorkoutIsActive}
+                  onClick={() => {
+                    if (startWorkoutNow(template, workout.trainingType)) navigate('/meu-fit/treino/player');
+                  }}
+                  className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary font-sans text-label text-on-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container disabled:cursor-not-allowed disabled:bg-surface-container-high disabled:text-on-surface-variant"
+                >
+                  <Play size={18} fill="currentColor" aria-hidden />
+                  {t(!hasExercises ? 'meufit.training.library.noExercises' : anotherWorkoutIsActive ? 'meufit.training.today.finishCurrent' : isCurrentWorkout ? 'meufit.training.library.continue' : 'meufit.training.library.doNow')}
+                </button>
+              </article>
+            );
+          })}
         </div>
       </section>
     );

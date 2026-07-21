@@ -7,6 +7,19 @@ export const DAY_CODES = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'] as co
 
 export type WorkoutTrainingType = 'strength' | 'running' | 'cycling' | 'walking' | 'swimming' | 'functional' | 'hiit' | 'yoga' | 'pilates' | 'other';
 
+export interface StudentWorkoutExercise {
+  id: string;
+  exerciseName: string | null;
+  studentDisplayName: string | null;
+  muscleGroup: string | null;
+  sets: number;
+  reps: string;
+  notes: string | null;
+  tempoNotes: string | null;
+  videoUrl: string | null;
+  position: number | null;
+}
+
 /** Um treino aplicado pelo profissional (assignment + workout). */
 export interface StudentWorkout {
   assignmentId: string;
@@ -16,6 +29,7 @@ export interface StudentWorkout {
   startsAt: string | null;
   endsAt: string | null;
   exerciseCount: number;
+  exercises: StudentWorkoutExercise[];
   trainingType: WorkoutTrainingType;
 }
 
@@ -29,7 +43,18 @@ type AssignmentRow = {
     title: string | null;
     student_display_name: string | null;
     category: string | null;
-    workout_exercises: { count: number }[] | null;
+    workout_exercises: Array<{
+      id: string;
+      exercise_name: string | null;
+      student_display_name: string | null;
+      muscle_group: string | null;
+      sets: number | null;
+      reps: string | null;
+      notes: string | null;
+      tempo_notes: string | null;
+      pro_video_url: string | null;
+      position: number | null;
+    }> | null;
   } | null;
 };
 
@@ -53,6 +78,20 @@ export function workoutTrainingType(category: string | null | undefined): Workou
 }
 
 function toStudentWorkout(row: AssignmentRow): StudentWorkout {
+  const exercises = (row.workout?.workout_exercises ?? [])
+    .map((exercise) => ({
+      id: exercise.id,
+      exerciseName: exercise.exercise_name,
+      studentDisplayName: exercise.student_display_name,
+      muscleGroup: exercise.muscle_group,
+      sets: Math.max(1, exercise.sets ?? 1),
+      reps: exercise.reps?.trim() || '10',
+      notes: exercise.notes,
+      tempoNotes: exercise.tempo_notes,
+      videoUrl: exercise.pro_video_url,
+      position: exercise.position,
+    }))
+    .sort((a, b) => (a.position ?? Number.MAX_SAFE_INTEGER) - (b.position ?? Number.MAX_SAFE_INTEGER));
   return {
     assignmentId: row.id,
     workoutId: row.workout?.id ?? null,
@@ -60,7 +99,8 @@ function toStudentWorkout(row: AssignmentRow): StudentWorkout {
     daysOfWeek: row.days_of_week ?? [],
     startsAt: row.starts_at,
     endsAt: row.ends_at,
-    exerciseCount: row.workout?.workout_exercises?.[0]?.count ?? 0,
+    exerciseCount: exercises.length,
+    exercises,
     trainingType: workoutTrainingType(row.workout?.category),
   };
 }
@@ -81,7 +121,7 @@ export function useStudentWorkouts() {
     queryFn: async (): Promise<StudentWorkout[]> => {
       const { data, error } = await supabase
         .from('student_workout_assignments')
-        .select('id,days_of_week,starts_at,ends_at,workout:workouts(id,title,student_display_name,category,workout_exercises(count))')
+        .select('id,days_of_week,starts_at,ends_at,workout:workouts(id,title,student_display_name,category,workout_exercises(id,exercise_name,student_display_name,muscle_group,sets,reps,notes,tempo_notes,pro_video_url,position))')
         .eq('student_user_id', userId as string)
         .eq('status', 'active')
         .order('created_at', { ascending: false });
@@ -108,6 +148,7 @@ export function uniqueWorkouts(workouts: StudentWorkout[]): StudentWorkout[] {
     if (existing) {
       existing.daysOfWeek = [...new Set([...existing.daysOfWeek, ...workout.daysOfWeek])].sort((a, b) => dayIndex(a) - dayIndex(b));
       existing.exerciseCount = Math.max(existing.exerciseCount, workout.exerciseCount);
+      if (workout.exercises.length > existing.exercises.length) existing.exercises = workout.exercises;
     } else {
       byTitle.set(key, { ...workout, daysOfWeek: [...new Set(workout.daysOfWeek)].sort((a, b) => dayIndex(a) - dayIndex(b)) });
     }
