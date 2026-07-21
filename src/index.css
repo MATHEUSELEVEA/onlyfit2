@@ -86,6 +86,14 @@
   .feed-progress {
     bottom: var(--feed-inset-b);
   }
+
+  /* Faixa de stories: mesma altura do primeiro controle do cluster do topo
+   * (feed-ctrl-sound), mas parando antes da coluna de botões da direita. */
+  .feed-stories-bar {
+    top: calc(var(--feed-inset-t) + 8px);
+    left: 0;
+    right: 64px;
+  }
 }
 
 @layer utilities {

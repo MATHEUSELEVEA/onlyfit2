@@ -7,7 +7,12 @@ import { BottomNav } from './BottomNav';
 export function AppShell() {
   const { pathname } = useLocation();
   const immersiveFeed = pathname === '/feed' || pathname.startsWith('/video/');
+  const immersiveStories = pathname.startsWith('/stories/');
   const immersiveTraining = pathname.startsWith('/meu-fit/treino/player');
+  // Feed e viewer de stories compartilham a mesma status bar translúcida
+  // full-bleed — o viewer não tem BottomNav (ver immersiveStories abaixo), mas
+  // é tão "tela toda preta" quanto o feed.
+  const fullBleed = immersiveFeed || immersiveStories;
 
   const rootRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLDivElement>(null);
@@ -30,12 +35,20 @@ export function AppShell() {
   // translúcido sobre a mídia (texto claro, já garantido pelo style DARK do
   // capacitor.config) e volta ao normal ao sair do feed.
   useEffect(() => {
-    if (!immersiveFeed || !Capacitor.isNativePlatform()) return;
+    if (!fullBleed || !Capacitor.isNativePlatform()) return;
     void StatusBar.setOverlaysWebView({ overlay: true });
     return () => {
       void StatusBar.setOverlaysWebView({ overlay: false });
     };
-  }, [immersiveFeed]);
+  }, [fullBleed]);
+
+  if (immersiveStories) {
+    return (
+      <main className="h-full min-h-0 bg-black">
+        <Outlet />
+      </main>
+    );
+  }
 
   if (immersiveFeed) {
     return (

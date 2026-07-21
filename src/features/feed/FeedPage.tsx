@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useFeed } from './useFeed';
 import { PostCard } from './PostCard';
 import { FeedSportsBar } from './FeedSportsBar';
+import { StoriesBar } from '@/features/stories/StoriesBar';
 
 // Quantos vizinhos do post visível ficam montados de verdade. Como no TikTok,
 // só o atual e os adjacentes existem — o resto vira palco vazio, senão cada
@@ -189,6 +190,8 @@ export function FeedPage() {
           </div>
         ))}
       </div>
+
+      <StoriesBar />
 
       {/* Cluster de controles do topo: som (no PostCard) → filtro → criar */}
       <FeedSportsBar selected={sports} onSelect={setSports} />

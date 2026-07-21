@@ -24,6 +24,7 @@ import { ChallengeFormPage } from './features/challenges/ChallengeFormPage';
 import { ProductDetailPage } from './features/market/ProductDetailPage';
 import { ProductsPage } from './features/market/ProductsPage';
 import { StudioPage } from './features/studio/StudioPage';
+import { StoryViewerPage } from './features/stories/StoryViewerPage';
 import { ProfilePage } from './features/profile/ProfilePage';
 import { SettingsMenuPage } from './features/profile/SettingsMenuPage';
 import { EditProfilePage } from './features/profile/EditProfilePage';
@@ -77,6 +78,7 @@ function AuthenticatedApp() {
           <Route path="/" element={<Navigate to="/feed" replace />} />
           <Route path="/feed" element={<FeedPage />} />
           <Route path="/video/:postId" element={<VideoViewPage />} />
+          <Route path="/stories/:creatorId" element={<StoryViewerPage />} />
           <Route path="/explorar" element={<ExplorePage />} />
           <Route path="/studio" element={<StudioPage />} />
           <Route path="/meu-fit" element={<MeuFitPage />} />
