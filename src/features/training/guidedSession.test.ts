@@ -185,3 +185,22 @@ describe('defaults por esporte no editor', () => {
     expect(hiit.steps![1].kind).toBe('repeat');
   });
 });
+
+describe('buildSessionSummary (review na unidade nativa)', () => {
+  it('soma metros/reps realizados e preserva meta × realizado por passo', async () => {
+    const { buildSessionSummary } = await import('./sessionSummary');
+    const summary = buildSessionSummary({
+      sport: 'swimming',
+      steps: [
+        { label: 'Aquecimento', role: 'warmup', by: 'distance', meta: 200, realized: 200, realizedSec: 300 },
+        { label: 'Principal', role: 'main', by: 'distance', meta: 100, realized: 200, realizedSec: 120 },
+        { label: 'Educativo', role: 'main', by: 'reps', meta: 10, realized: 12, realizedSec: 60 },
+        { label: 'Solta', role: 'cooldown', by: 'time', meta: 300, realized: 280, realizedSec: 280 },
+      ],
+    });
+    expect(summary.version).toBe(1);
+    expect(summary.totalMeters).toBe(400);
+    expect(summary.totalReps).toBe(12);
+    expect(summary.steps[1]).toEqual({ label: 'Principal', by: 'distance', meta: 100, realized: 200 });
+  });
+});

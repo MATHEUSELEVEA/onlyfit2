@@ -4,7 +4,8 @@ import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { useTraining } from '@/features/training/TrainingProvider';
-import { useLogWorkoutSession } from '@/features/training/useWorkoutSessions';
+import { useLogWorkoutSession, type GuidedSessionSummary } from '@/features/training/useWorkoutSessions';
+import { buildSessionSummary, type ReviewBy, type ReviewStep } from '@/features/training/sessionSummary';
 import { flattenSteps, type Effort, type FlatStep, type GuidedFormat, type GuidedSingleStep, type StepBound, type StepRole, type SwimStroke } from '@/features/training/guidedSession';
 import type { WorkoutTrainingType } from '@/features/training/useStudentWorkouts';
 import { useTranslation, type TranslationKey } from '@/i18n/I18nProvider';
@@ -84,8 +85,7 @@ const parseClock = (value: string): number => {
   return Number.isFinite(n) ? n : 0;
 };
 
-interface ReviewStep { label: string; role: StepRole; metaSec: number; realizedSec: number }
-interface ReviewModel { startedAt: number; steps: ReviewStep[] }
+interface ReviewModel { startedAt: number; sport: WorkoutTrainingType; steps: ReviewStep[] }
 
 // Uma fase = trabalho de um passo ou a recuperação que vem logo depois.
 interface Phase {
@@ -158,17 +158,22 @@ export function GuidedSessionPage() {
     const checks = checkedAtRef.current;
     const checkedIndices = Object.keys(checks).map(Number).sort((a, b) => a - b);
     const steps: ReviewStep[] = workPhasesRef.current.map((wp, k) => {
-      const meta = plannedSeconds(wp);
-      // Precedência do realizado: check da Lista → parcial do modo Guiado → planejado.
-      let realized = splitsRef.current[k]?.seconds ?? meta;
+      const metaSec = plannedSeconds(wp);
+      // Precedência do tempo realizado: check da Lista → parcial do modo Guiado → planejado.
+      let realizedSec = splitsRef.current[k]?.seconds ?? metaSec;
       const li = workListIndex[k];
       if (li != null && checks[li] != null) {
         const prev = checkedIndices.filter((x) => x < li).pop();
-        realized = Math.max(1, checks[li] - (prev != null ? checks[prev] : 0));
+        realizedSec = Math.max(1, checks[li] - (prev != null ? checks[prev] : 0));
       }
-      return { label: wp.step.label ?? '', role: wp.step.role, metaSec: meta, realizedSec: realized };
+      // Unidade nativa do passo: distância/reps começam na meta (o cronômetro não
+      // mede metros) e o aluno edita; tempo começa no medido.
+      const by: ReviewBy = wp.bound.by === 'distance' ? 'distance' : wp.bound.by === 'reps' ? 'reps' : 'time';
+      const meta = wp.bound.by === 'distance' ? wp.bound.meters : wp.bound.by === 'reps' ? wp.bound.reps : metaSec;
+      const realized = by === 'time' ? realizedSec : meta;
+      return { label: wp.step.label ?? '', role: wp.step.role, by, meta, realized, realizedSec };
     });
-    setReview({ startedAt: guided.startedAt, steps });
+    setReview({ startedAt: guided.startedAt, sport: guided.plan.sport, steps });
   }, [guided]);
 
   const advance = useCallback(() => {
@@ -218,7 +223,7 @@ export function GuidedSessionPage() {
     return (
       <EditableReview
         model={review}
-        onSave={(totalSec) => {
+        onSave={(totalSec, summary) => {
           if (guided?.workoutId) {
             logSession.mutate({
               workoutId: guided.workoutId,
@@ -227,6 +232,7 @@ export function GuidedSessionPage() {
               completedAt: new Date(review.startedAt + totalSec * 1000).toISOString(),
               exercisesDone: totalWorkSteps,
               exercisesTotal: totalWorkSteps,
+              summary,
             });
           }
           training.completeGuided();
@@ -545,12 +551,20 @@ function ListSessionMain({ phases, sport, totalElapsed, checkedAt, onToggle }: {
   );
 }
 
-/** Resumo editável ao concluir: meta × realizado por etapa + tempo total. Provisório
- *  até os dados do relógio (Apple Health) refinarem. */
-function EditableReview({ model, onSave }: { model: ReviewModel; onSave: (totalSec: number) => void }) {
+/** Resumo editável ao concluir: meta × realizado por etapa NA UNIDADE NATIVA do passo
+ *  (tempo mm:ss, distância em m com ±25, reps). Wearable refina depois. */
+function EditableReview({ model, onSave }: { model: ReviewModel; onSave: (totalSec: number, summary: GuidedSessionSummary) => void }) {
   const { t } = useTranslation();
-  const [values, setValues] = useState<string[]>(() => model.steps.map((step) => formatClock(step.realizedSec)));
-  const totalSec = values.reduce((acc, value) => acc + parseClock(value), 0);
+  const [values, setValues] = useState<string[]>(() => model.steps.map((step) => (step.by === 'time' ? formatClock(step.realized) : String(step.realized))));
+  const realizedOf = (step: ReviewStep, index: number): number => (step.by === 'time' ? parseClock(values[index]) : Math.max(0, Math.round(Number(values[index].replace(/\D/g, '')) || 0)));
+  // Tempo total = tempo editado dos passos por tempo + tempo medido dos demais
+  // (editar metros não altera o relógio — o aluno ajusta o volume, não a duração).
+  const totalSec = model.steps.reduce((acc, step, index) => acc + (step.by === 'time' ? parseClock(values[index]) : step.realizedSec), 0);
+  const totalMeters = model.steps.reduce((acc, step, index) => acc + (step.by === 'distance' ? realizedOf(step, index) : 0), 0);
+  const hasDistance = model.steps.some((step) => step.by === 'distance');
+  const setValue = (index: number, value: string) => setValues((current) => current.map((entry, idx) => (idx === index ? value : entry)));
+  const bump = (step: ReviewStep, index: number, delta: number) => setValue(index, String(Math.max(0, realizedOf(step, index) + delta)));
+  const metaLabel = (step: ReviewStep) => (step.by === 'time' ? formatClock(step.meta) : step.by === 'distance' ? formatDistance(step.meta) : t('meufit.training.guided.byReps', { n: step.meta }));
   return (
     <div className="flex h-full flex-col bg-background pt-safe-top">
       <header className="px-5 pb-2 pt-2">
@@ -559,31 +573,62 @@ function EditableReview({ model, onSave }: { model: ReviewModel; onSave: (totalS
         <p className="mt-1 text-center font-sans text-body-sm text-on-surface-variant">{t('meufit.training.guided.metaVsDone')}</p>
       </header>
       <main className="min-h-0 flex-1 overflow-y-auto px-5 pb-2">
-        <div className="mb-4 flex items-center justify-between rounded-2xl bg-surface-container px-4 py-3">
-          <span className="font-sans text-label text-on-surface">{t('meufit.training.guided.total')}</span>
-          <span className="font-sans text-title-lg tabular-nums text-primary">{formatClock(totalSec)}</span>
+        <div className="mb-4 rounded-2xl bg-surface-container px-4 py-3">
+          <div className="flex items-center justify-between">
+            <span className="font-sans text-label text-on-surface">{t('meufit.training.guided.total')}</span>
+            <span className="font-sans text-title-lg tabular-nums text-primary">{formatClock(totalSec)}</span>
+          </div>
+          {hasDistance ? (
+            <div className="mt-1 flex items-center justify-between">
+              <span className="font-sans text-body-sm text-on-surface-variant">{t('meufit.training.guided.totalDistance')}</span>
+              <span className="font-sans text-label tabular-nums text-on-surface">{formatDistance(totalMeters)}</span>
+            </div>
+          ) : null}
         </div>
         <ul className="space-y-2">
           {model.steps.map((step, index) => (
-            <li key={index} className="flex items-center gap-3 rounded-xl bg-surface-container px-3 py-2.5">
+            <li key={index} className="flex items-center gap-2 rounded-xl bg-surface-container px-3 py-2.5">
               <div className="min-w-0 flex-1">
                 <p className="truncate font-sans text-label text-on-surface">{step.label || t(ROLE_KEY[step.role])}</p>
-                <p className="font-sans text-counter tabular-nums text-on-surface-variant">{t('meufit.training.guided.meta')} {formatClock(step.metaSec)}</p>
+                <p className="font-sans text-counter tabular-nums text-on-surface-variant">{t('meufit.training.guided.meta')} {metaLabel(step)}</p>
               </div>
-              <input
-                value={values[index]}
-                inputMode="numeric"
-                aria-label={step.label || t(ROLE_KEY[step.role])}
-                onChange={(event) => setValues((current) => current.map((value, idx) => (idx === index ? event.target.value : value)))}
-                className="w-20 rounded-lg bg-surface px-2 py-2 text-center font-sans text-body tabular-nums text-on-surface outline-none ring-1 ring-outline-variant/40 focus:ring-primary"
-              />
+              {step.by === 'distance' ? (
+                <>
+                  <button type="button" onClick={() => bump(step, index, -25)} aria-label={`−25 m`} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface font-sans text-label text-on-surface ring-1 ring-outline-variant/40">−</button>
+                  <label className="flex items-center gap-1">
+                    <input
+                      value={values[index]}
+                      inputMode="numeric"
+                      aria-label={step.label || t(ROLE_KEY[step.role])}
+                      onChange={(event) => setValue(index, event.target.value)}
+                      className="w-16 rounded-lg bg-surface px-2 py-2 text-center font-sans text-body tabular-nums text-on-surface outline-none ring-1 ring-outline-variant/40 focus:ring-primary"
+                    />
+                    <span className="font-sans text-counter text-on-surface-variant">m</span>
+                  </label>
+                  <button type="button" onClick={() => bump(step, index, 25)} aria-label={`+25 m`} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-surface font-sans text-label text-on-surface ring-1 ring-outline-variant/40">+</button>
+                </>
+              ) : (
+                <input
+                  value={values[index]}
+                  inputMode="numeric"
+                  aria-label={step.label || t(ROLE_KEY[step.role])}
+                  onChange={(event) => setValue(index, event.target.value)}
+                  className="w-20 rounded-lg bg-surface px-2 py-2 text-center font-sans text-body tabular-nums text-on-surface outline-none ring-1 ring-outline-variant/40 focus:ring-primary"
+                />
+              )}
             </li>
           ))}
         </ul>
         <p className="mt-4 font-sans text-counter text-on-surface-variant">{t('meufit.training.guided.summaryWearableHint')}</p>
       </main>
       <footer className="shrink-0 px-5 pb-safe-bottom pt-2">
-        <button type="button" onClick={() => onSave(Math.max(1, totalSec))} className="min-h-12 w-full rounded-full bg-primary font-sans text-label text-on-primary transition-opacity hover:opacity-90 active:opacity-80">{t('meufit.training.guided.reviewSave')}</button>
+        <button
+          type="button"
+          onClick={() => onSave(Math.max(1, totalSec), buildSessionSummary({ sport: model.sport, steps: model.steps.map((step, index) => ({ ...step, realized: realizedOf(step, index) })) }))}
+          className="min-h-12 w-full rounded-xl bg-primary font-sans text-label text-on-primary transition-opacity hover:opacity-90 active:opacity-80"
+        >
+          {t('meufit.training.guided.reviewSave')}
+        </button>
       </footer>
     </div>
   );

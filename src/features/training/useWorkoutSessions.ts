@@ -84,6 +84,15 @@ export function useTodayWorkoutSessions() {
   return { byWorkoutId: query.data ?? EMPTY, isLoading: query.isLoading };
 }
 
+/** Realizado por passo do player guiado, na unidade nativa (workout_sessions.summary). */
+export interface GuidedSessionSummary {
+  version: 1;
+  sport: string;
+  totalMeters?: number;
+  totalReps?: number;
+  steps: { label: string; by: 'time' | 'distance' | 'reps'; meta: number; realized: number }[];
+}
+
 export interface LogWorkoutSessionInput {
   workoutId: string;
   assignmentId?: string | null;
@@ -93,6 +102,7 @@ export interface LogWorkoutSessionInput {
   exercisesDone: number;
   exercisesTotal: number;
   calories?: number | null;
+  summary?: GuidedSessionSummary | null;
 }
 
 /** Grava uma sessão concluída. Sem workoutId real não persiste (só local). */
@@ -104,7 +114,7 @@ export function useLogWorkoutSession() {
   return useMutation({
     mutationFn: async (input: LogWorkoutSessionInput) => {
       if (!userId || !input.workoutId) return;
-      const { error } = await supabase.from('workout_sessions').insert({
+      const row: Record<string, unknown> = {
         student_id: userId,
         workout_id: input.workoutId,
         student_workout_assignment_id: input.assignmentId ?? null,
@@ -113,7 +123,14 @@ export function useLogWorkoutSession() {
         exercises_completed_count: input.exercisesDone,
         exercises_total_count: input.exercisesTotal,
         calories_logged: input.calories ?? null,
-      });
+      };
+      const { error } = await supabase.from('workout_sessions').insert(input.summary ? { ...row, summary: input.summary } : row);
+      // Coluna summary ainda não migrada → regrava sem ela (a sessão não pode se perder).
+      if (error && input.summary && (error.code === 'PGRST204' || error.code === '42703')) {
+        const { error: retryError } = await supabase.from('workout_sessions').insert(row);
+        if (retryError) throw retryError;
+        return;
+      }
       if (error) throw error;
     },
     onSuccess: () => {
