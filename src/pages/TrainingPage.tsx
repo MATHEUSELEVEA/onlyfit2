@@ -9,6 +9,7 @@ import { type ActivitySource, type ImportedActivity, type ScheduledWorkout, type
 import { useStudentWorkouts, type StudentWorkout } from '@/features/training/useStudentWorkouts';
 import { useTodayWorkoutSessions, type TodayWorkoutSession } from '@/features/training/useWorkoutSessions';
 import { useTrainingLibrary, type LibraryProtocol, type LibraryWorkout } from '@/features/training/useTrainingLibrary';
+import { estimateDurationSeconds, flattenSteps, toGuidedWorkout } from '@/features/training/guidedSession';
 import { useAppleHealth } from '@/features/wearables/useAppleHealth';
 import { buildHealthDays, formatSleep, type HealthDay } from '@/features/wearables/healthDays';
 import { activityMetaLine, activityMetrics, activitySportDetails, paceMinPerKm, PACE_SURFACES } from '@/features/wearables/sportActivityMetrics';
@@ -128,6 +129,8 @@ function TrainingContent() {
 function Today({ items, active }: { items: ScheduledWorkout[]; active: ScheduledWorkout | null }) {
   const { t } = useTranslation();
   const { byWorkoutId } = useTodayWorkoutSessions();
+  const { workouts: studentWorkouts } = useStudentWorkouts();
+  const byAssignment = useMemo(() => new Map(studentWorkouts.map((workout) => [workout.assignmentId, workout])), [studentWorkouts]);
   const workouts = items.filter((item) => item.status !== 'rest' && item.status !== 'missed');
   const types = Array.from(new Set(workouts.map((item) => item.surface)));
   const sessionFor = (item: ScheduledWorkout) => (item.workoutId ? byWorkoutId.get(item.workoutId) ?? null : null);
@@ -152,7 +155,7 @@ function Today({ items, active }: { items: ScheduledWorkout[]; active: Scheduled
                   <span className="shrink-0 font-sans text-counter tabular-nums text-on-surface-variant">{t('meufit.training.today.doneOf', { done: doneCount, total: surfaceWorkouts.length })}</span>
                 </div>
                 <div className="mt-4 space-y-3">
-                  {surfaceWorkouts.map((item) => <TodayWorkoutCard key={item.id} item={item} session={sessionFor(item)} isActive={active?.id === item.id} />)}
+                  {surfaceWorkouts.map((item) => <TodayWorkoutCard key={item.id} item={item} session={sessionFor(item)} isActive={active?.id === item.id} studentWorkout={item.assignmentId ? byAssignment.get(item.assignmentId) : undefined} />)}
                 </div>
               </div>
             );
@@ -175,17 +178,28 @@ function Today({ items, active }: { items: ScheduledWorkout[]; active: Scheduled
  *   e "Refazer". Exercícios ficam recolhidos por padrão (toque para ver).
  * Acabamento premium por contenção: profundidade tonal, lime como única cor de ação.
  */
-function TodayWorkoutCard({ item, session, isActive }: { item: ScheduledWorkout; session: TodayWorkoutSession | null; isActive: boolean }) {
+function TodayWorkoutCard({ item, session, isActive, studentWorkout }: { item: ScheduledWorkout; session: TodayWorkoutSession | null; isActive: boolean; studentWorkout?: StudentWorkout }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { templates, startSession, activeSession } = useTraining();
+  const { templates, startSession, startGuided, activeSession } = useTraining();
   const [expanded, setExpanded] = useState(false);
   const template = templates.find((entry) => entry.id === item.templateId);
-  const exerciseCount = template?.exercises.length ?? 0;
+  // Esportes não-musculação executam pelo player guiado (deriva os passos do treino).
+  const guidedPlan = useMemo(() => (studentWorkout && item.surface !== 'strength' ? toGuidedWorkout(studentWorkout) : null), [studentWorkout, item.surface]);
+  const exerciseCount = guidedPlan ? flattenSteps(guidedPlan.steps).length : template?.exercises.length ?? 0;
+  const displayMinutes = guidedPlan ? Math.round(estimateDurationSeconds(guidedPlan.steps) / 60) : item.durationMin;
   const running = isActive || activeSession?.scheduledId === item.id || item.status === 'active';
   const done = Boolean(session) || item.status === 'completed';
-  const canStart = item.canStart !== false && exerciseCount > 0;
-  const open = () => { startSession(item.id); navigate('/meu-fit/treino/player'); };
+  const canStart = guidedPlan ? true : item.canStart !== false && exerciseCount > 0;
+  const open = () => {
+    if (guidedPlan) {
+      startGuided({ scheduledId: item.id, workoutId: item.workoutId ?? null, assignmentId: item.assignmentId, title: item.title, surface: item.surface, plan: guidedPlan });
+      navigate('/meu-fit/treino/player/guiado');
+      return;
+    }
+    startSession(item.id);
+    navigate('/meu-fit/treino/player');
+  };
 
   const doneMeta = session
     ? [
@@ -207,12 +221,19 @@ function TodayWorkoutCard({ item, session, isActive }: { item: ScheduledWorkout;
             {done
               ? [t('meufit.training.today.doneToday'), doneMeta].filter(Boolean).join(' · ')
               : [
-                  item.durationMin ? t('meufit.training.today.minutes', { minutes: item.durationMin }) : null,
-                  exerciseCount ? t(exerciseCount === 1 ? 'meufit.training.library.exerciseCount' : 'meufit.training.library.exerciseCountPlural', { count: exerciseCount }) : null,
+                  displayMinutes ? t('meufit.training.today.minutes', { minutes: displayMinutes }) : null,
+                  exerciseCount
+                    ? t(
+                        guidedPlan
+                          ? (exerciseCount === 1 ? 'meufit.training.guided.stepCount' : 'meufit.training.guided.stepCountPlural')
+                          : (exerciseCount === 1 ? 'meufit.training.library.exerciseCount' : 'meufit.training.library.exerciseCountPlural'),
+                        { count: exerciseCount },
+                      )
+                    : null,
                 ].filter(Boolean).join(' · ') || item.focus}
           </p>
         </div>
-        {exerciseCount ? (
+        {!guidedPlan && exerciseCount ? (
           <button
             type="button"
             onClick={() => setExpanded((value) => !value)}
@@ -225,7 +246,7 @@ function TodayWorkoutCard({ item, session, isActive }: { item: ScheduledWorkout;
         ) : null}
       </div>
 
-      {expanded ? <WorkoutExercisePreview exercises={template?.exercises ?? []} emptyLabel={t('meufit.training.today.noExercises')} /> : null}
+      {expanded && !guidedPlan ? <WorkoutExercisePreview exercises={template?.exercises ?? []} emptyLabel={t('meufit.training.today.noExercises')} /> : null}
 
       {done ? (
         <div className="p-3 pt-1">
@@ -269,7 +290,20 @@ function WorkoutExercisePreview({ exercises, emptyLabel }: { exercises: WorkoutT
 /** Conteúdo do dia: anel de energia, métricas, atividades e treinos, usado nos detalhes do Histórico e Progresso. */
 function DayDetailContent({ date, healthDays, scheduled, showScheduled = true, onOpenActivity }: { date: string; healthDays: Map<string, HealthDay>; scheduled: ScheduledWorkout[]; showScheduled?: boolean; onOpenActivity?: (activity: ImportedActivity) => void }) {
   const navigate = useNavigate();
-  const { startSession, reschedule } = useTraining();
+  const { startSession, startGuided, reschedule } = useTraining();
+  const { workouts: studentWorkouts } = useStudentWorkouts();
+  const byAssignment = useMemo(() => new Map(studentWorkouts.map((workout) => [workout.assignmentId, workout])), [studentWorkouts]);
+  const launchScheduled = (item: ScheduledWorkout) => {
+    const workout = item.assignmentId ? byAssignment.get(item.assignmentId) : undefined;
+    const guidedPlan = workout ? toGuidedWorkout(workout) : null;
+    if (workout && guidedPlan) {
+      startGuided({ scheduledId: item.id, workoutId: item.workoutId ?? null, assignmentId: item.assignmentId, title: item.title, surface: item.surface, plan: guidedPlan });
+      navigate('/meu-fit/treino/player/guiado');
+      return;
+    }
+    startSession(item.id);
+    navigate('/meu-fit/treino/player');
+  };
   const day = healthDays.get(date);
   const dayScheduled = showScheduled ? scheduled.filter((item) => item.date === date) : [];
   const metrics = useMemo(() => {
@@ -329,7 +363,7 @@ function DayDetailContent({ date, healthDays, scheduled, showScheduled = true, o
             <p className="font-sans text-label text-on-surface">{item.title}</p>
             <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{statusLabel[item.status]} · {item.summary ?? `${item.durationMin} min`}</p>
           </div>
-          {item.status === 'planned' && item.canStart !== false ? <button type="button" onClick={() => { startSession(item.id); navigate('/meu-fit/treino/player'); }} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary" aria-label={`Começar ${item.title}`}><Play size={16} fill="currentColor" aria-hidden /></button> : null}
+          {item.status === 'planned' && item.canStart !== false ? <button type="button" onClick={() => launchScheduled(item)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary" aria-label={`Começar ${item.title}`}><Play size={16} fill="currentColor" aria-hidden /></button> : null}
           {item.status === 'missed' ? <button type="button" onClick={() => reschedule(item.id)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-primary" aria-label={`Reagendar ${item.title}`}><RotateCcw size={16} aria-hidden /></button> : null}
         </div>
       ))}
@@ -525,12 +559,19 @@ function Library() {
   const navigate = useNavigate();
   const { groups, isLoading } = useTrainingLibrary();
   const { workouts } = useStudentWorkouts();
-  const { startWorkoutNow } = useTraining();
+  const { startWorkoutNow, startGuided } = useTraining();
   const byAssignment = useMemo(() => new Map(workouts.map((workout) => [workout.assignmentId, workout])), [workouts]);
 
   const start = (assignmentId: string) => {
     const workout = byAssignment.get(assignmentId);
     if (!workout) return;
+    // Não-musculação → player guiado (deriva os passos do treino).
+    const guidedPlan = toGuidedWorkout(workout);
+    if (guidedPlan) {
+      startGuided({ scheduledId: `guided-${workout.assignmentId}`, workoutId: workout.workoutId, assignmentId: workout.assignmentId, title: workout.title, surface: workout.trainingType, plan: guidedPlan });
+      navigate('/meu-fit/treino/player/guiado');
+      return;
+    }
     const template = playerTemplate(workout);
     if (startWorkoutNow(template, workout.trainingType)) navigate('/meu-fit/treino/player');
   };

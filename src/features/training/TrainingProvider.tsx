@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { localDateKey } from '@/lib/localDate';
 import { DAY_CODES, useStudentWorkouts } from './useStudentWorkouts';
+import type { GuidedWorkout } from './guidedSession';
 
 export type TrainingStatus = 'planned' | 'active' | 'partial' | 'completed' | 'missed' | 'imported' | 'rest';
 export type TrainingSurface = 'strength' | 'running' | 'cycling' | 'walking' | 'swimming' | 'functional' | 'hiit' | 'yoga' | 'pilates' | 'other';
@@ -29,6 +30,16 @@ export interface ImportedActivity {
   importedFromWatch?: boolean;
 }
 export interface WorkoutSession { id: string; scheduledId: string; templateId: string; startedAt: number; activeExercise: number; logs: Record<string, ExerciseSetLog[]>; note: string; }
+/** Sessão guiada (esportes não-musculação): o plano executável já resolvido + metadados p/ o check. */
+export interface ActiveGuidedSession {
+  scheduledId: string;
+  workoutId: string | null;
+  assignmentId?: string;
+  title: string;
+  surface: TrainingSurface;
+  plan: GuidedWorkout;
+  startedAt: number;
+}
 
 interface TrainingContextValue {
   templates: WorkoutTemplate[];
@@ -45,6 +56,10 @@ interface TrainingContextValue {
   reschedule: (scheduledId: string) => void;
   startWorkoutNow: (template: WorkoutTemplate, surface: TrainingSurface) => boolean;
   skipToday: (scheduledId: string) => void;
+  activeGuided: ActiveGuidedSession | null;
+  startGuided: (input: Omit<ActiveGuidedSession, 'startedAt'>) => void;
+  completeGuided: () => void;
+  cancelGuided: () => void;
 }
 
 const TrainingContext = createContext<TrainingContextValue | null>(null);
@@ -136,7 +151,9 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
         durationMin: template?.durationMin || 0,
         status: 'planned',
         surface: workout.trainingType,
-        canStart: Boolean(template?.exercises.length),
+        // Musculação exige exercícios; demais esportes sempre iniciam (player guiado
+        // deriva os passos da prescrição/exercícios ou cai num passo aberto).
+        canStart: workout.trainingType === 'strength' ? Boolean(template?.exercises.length) : true,
       });
     }
     return [...byWorkout.values()];
@@ -269,7 +286,19 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     ? { ...entry, status: 'missed' }
     : entry));
   const addActivity = (activity: Omit<ImportedActivity, 'id'>) => setImported((current) => [{ ...activity, id: `activity-${Date.now()}` }, ...current]);
-  const value = { templates, scheduled, imported, addActivity, activeSession, startSession, toggleSet, updateSet, setActiveExercise, updateSessionNote, completeSession, reschedule, startWorkoutNow, skipToday };
+  const [activeGuided, setActiveGuided] = useState<ActiveGuidedSession | null>(null);
+  const startGuided = (input: Omit<ActiveGuidedSession, 'startedAt'>) => {
+    setActiveGuided({ ...input, startedAt: Date.now() });
+    setScheduled((current) => current.map((entry) => entry.id === input.scheduledId ? { ...entry, status: 'active' } : entry));
+  };
+  const completeGuided = () => {
+    if (activeGuided) {
+      setScheduled((current) => current.map((entry) => entry.id === activeGuided.scheduledId ? { ...entry, status: 'completed' } : entry));
+    }
+    setActiveGuided(null);
+  };
+  const cancelGuided = () => setActiveGuided(null);
+  const value = { templates, scheduled, imported, addActivity, activeSession, startSession, toggleSet, updateSet, setActiveExercise, updateSessionNote, completeSession, reschedule, startWorkoutNow, skipToday, activeGuided, startGuided, completeGuided, cancelGuided };
   return <TrainingContext.Provider value={value}>{children}</TrainingContext.Provider>;
 }
 
