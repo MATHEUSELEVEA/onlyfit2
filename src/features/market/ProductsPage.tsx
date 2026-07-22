@@ -430,15 +430,18 @@ function OfficialStoresRail({
   if (!loading && stores.length === 0) return null;
 
   return (
-    <section className="pt-4" aria-labelledby="official-stores-title">
-      <div className="px-4">
-        <h2 id="official-stores-title" className="inline-flex items-center gap-1 font-sans text-title text-on-surface">
-          <BadgeCheck size={14} aria-hidden />
-          {t('market.officialStores')}
-        </h2>
+    <section className="mx-4 mt-4 rounded-[28px] border border-outline-variant/20 bg-surface-container-lowest p-4" aria-labelledby="official-stores-title">
+      <div className="mb-3.5 flex items-center gap-2.5">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary" aria-hidden>
+          <BadgeCheck size={16} />
+        </span>
+        <div className="min-w-0">
+          <h2 id="official-stores-title" className="font-sans text-title leading-tight text-on-surface">{t('market.officialStores')}</h2>
+          <p className="font-sans text-body-sm text-on-surface-variant">{t('market.officialStoresSubtitle')}</p>
+        </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-3 px-4 pb-1">
+      <div className="grid grid-cols-2 gap-3">
         {loading
           ? Array.from({ length: 4 }).map((_, index) => (
               <div key={index} className="aspect-square min-w-0 animate-pulse rounded-3xl bg-surface-container" aria-hidden />
@@ -453,13 +456,13 @@ function OfficialStoresRail({
                   aria-pressed={active}
                   onClick={() => onSelect(store)}
                   className={clsx(
-                    'flex aspect-square min-w-0 flex-col overflow-hidden rounded-3xl border p-3 text-left transition-colors duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                    active ? 'border-primary bg-primary/[0.05]' : 'border-outline-variant/30 bg-surface-container',
+                    'flex aspect-square min-w-0 flex-col overflow-hidden rounded-3xl border p-3 text-center transition-colors duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                    active ? 'border-primary bg-primary/[0.06]' : 'border-outline-variant/25 bg-surface-container',
                   )}
                 >
                   {/* Painel do logo: branco sempre (marcas são desenhadas p/ fundo claro),
                       emoldurado e centralizado. Ocupa o corpo do quadrado. */}
-                  <div className="relative flex min-h-0 flex-1 items-center justify-center rounded-2xl bg-white">
+                  <div className="relative flex min-h-0 flex-1 items-center justify-center rounded-2xl bg-white ring-1 ring-black/[0.04]">
                     {(markUrl || store.logoUrl) ? (
                       <img
                         src={markUrl || store.logoUrl || undefined}
@@ -471,9 +474,8 @@ function OfficialStoresRail({
                       // Fallback: iniciais sobre o painel branco fixo (cor concreta escura, como texto sobre mídia).
                       <span className="font-sans text-display text-zinc-800">{store.name.split(/\s+/).slice(0, 2).map((part) => part[0]).join('')}</span>
                     )}
-                    <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-background/85 px-2 py-0.5 font-sans text-nav leading-none text-primary">
-                      <BadgeCheck size={11} aria-hidden />
-                      {t('market.official')}
+                    <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-on-primary" aria-label={t('market.official')}>
+                      <BadgeCheck size={12} aria-hidden />
                     </span>
                   </div>
                   <div className="mt-2.5 min-w-0 px-0.5">
