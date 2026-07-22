@@ -161,11 +161,20 @@ function AmbassadorRail({
   const { labelFor } = useAffinityGroups();
   if (!loading && ambassadors.length === 0) return null;
 
+  const railRows = ambassadors.length > 4 || loading ? 2 : 1;
+  const placeholders = Array.from({ length: railRows === 2 ? 8 : 4 });
+
   return (
-    <section className="pt-4">
-      <div className="grid grid-flow-col grid-rows-2 gap-x-5 gap-y-4 overflow-x-auto px-4 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <section className="px-4 pt-4">
+      <div className="rounded-2xl border border-outline-variant/30 bg-surface-container-low px-3 py-3">
+        <div
+          className={clsx(
+            'grid grid-flow-col gap-x-5 gap-y-4 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
+            railRows === 2 ? 'grid-rows-2' : 'grid-rows-1',
+          )}
+        >
         {loading
-          ? Array.from({ length: 8 }).map((_, index) => (
+          ? placeholders.map((_, index) => (
               <div key={index} className="w-[84px]" aria-hidden>
                 <div className="mx-auto h-16 w-16 animate-pulse rounded-full bg-surface-container" />
                 <div className="mx-auto mt-1.5 h-2.5 w-14 animate-pulse rounded bg-surface-container" />
@@ -205,6 +214,7 @@ function AmbassadorRail({
                 </div>
               );
             })}
+        </div>
       </div>
     </section>
   );
