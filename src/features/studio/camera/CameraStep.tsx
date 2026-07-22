@@ -26,21 +26,44 @@ interface CameraStepProps {
 // iluminar o rosto na câmera frontal antes de capturar o quadro.
 const SCREEN_FLASH_MS = 160;
 
-function capturePhotoBlob(video: HTMLVideoElement): Promise<Blob | null> {
+/**
+ * Captura WYSIWYG: recorta o quadro exatamente como o preview `object-cover`
+ * mostra (mesma proporção da tela) — a foto sai igual ao que o usuário
+ * enquadrou, nunca o quadro paisagem cru do sensor. Selfie sai espelhada
+ * como no preview.
+ */
+function capturePhotoBlob(video: HTMLVideoElement, mirror: boolean): Promise<Blob | null> {
   return new Promise((resolve) => {
-    if (video.videoWidth === 0 || video.videoHeight === 0) {
+    const frameWidth = video.videoWidth;
+    const frameHeight = video.videoHeight;
+    if (frameWidth === 0 || frameHeight === 0) {
       resolve(null);
       return;
     }
+    const viewAspect = video.clientWidth > 0 && video.clientHeight > 0 ? video.clientWidth / video.clientHeight : 9 / 16;
+    let cropWidth = frameWidth;
+    let cropHeight = frameHeight;
+    if (frameWidth / frameHeight > viewAspect) {
+      cropWidth = Math.round(frameHeight * viewAspect);
+    } else {
+      cropHeight = Math.round(frameWidth / viewAspect);
+    }
+    const cropX = Math.round((frameWidth - cropWidth) / 2);
+    const cropY = Math.round((frameHeight - cropHeight) / 2);
+
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = cropWidth;
+    canvas.height = cropHeight;
     const ctx = canvas.getContext('2d');
     if (!ctx) {
       resolve(null);
       return;
     }
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    if (mirror) {
+      ctx.translate(cropWidth, 0);
+      ctx.scale(-1, 1);
+    }
+    ctx.drawImage(video, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
     canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.95);
   });
 }
@@ -69,7 +92,7 @@ export function CameraStep({
   onDismissStoryError,
 }: CameraStepProps) {
   const [facing, setFacing] = useState<CameraFacing>('environment');
-  const { stream, error, retry } = useCameraStream(facing);
+  const { stream, error, retry } = useCameraStream(facing, mode !== 'photo');
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [capturingPhoto, setCapturingPhoto] = useState(false);
@@ -116,7 +139,7 @@ export function CameraStep({
         await new Promise((resolve) => setTimeout(resolve, SCREEN_FLASH_MS));
         void applyTorch(true);
       }
-      const blob = await capturePhotoBlob(videoRef.current);
+      const blob = await capturePhotoBlob(videoRef.current, facing === 'user');
       if (flashOn) {
         void applyTorch(false);
         setScreenFlash(false);

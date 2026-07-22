@@ -18,7 +18,15 @@ function mapError(error: unknown): CameraError {
 // Abre e mantém o MediaStream de preview da câmera. Pede vídeo e áudio juntos
 // (mesmo em modo Foto) para não pedir permissão de microfone separadamente
 // depois, ao trocar para o modo Vídeo.
-export function useCameraStream(facing: CameraFacing) {
+//
+// Resolução por modo:
+// · Foto → orientação NATIVA do sensor (paisagem, 1920×1080). Pedir retrato faz
+//   o WebKit do iOS recortar o centro do sensor para satisfazer a constraint —
+//   o famoso "zoom gigante". O enquadramento retrato fica por conta do preview
+//   (object-cover) e do recorte WYSIWYG na captura (CameraStep).
+// · Vídeo/Stories → retrato (1080×1920), porque o MediaRecorder grava o stream
+//   cru: o arquivo precisa sair igual ao preview.
+export function useCameraStream(facing: CameraFacing, portrait: boolean) {
   const [state, setState] = useState<CameraStreamState>({ stream: null, error: null, loading: true });
   // Incrementar força o efeito a rodar de novo mesmo com facing inalterado
   // (botão "Tentar de novo" após erro de permissão/dispositivo).
@@ -36,12 +44,10 @@ export function useCameraStream(facing: CameraFacing) {
       .then(() => {
         setState((prev) => ({ ...prev, loading: true, error: null }));
         return navigator.mediaDevices.getUserMedia({
-          // Full HD vertical (9:16) para qualidade top: 1080×1920 ideal, com
-          // degradação graciosa em aparelhos que não suportam (ideal, não exact).
           video: {
             facingMode: { ideal: facing },
-            width: { ideal: 1080 },
-            height: { ideal: 1920 },
+            width: { ideal: portrait ? 1080 : 1920 },
+            height: { ideal: portrait ? 1920 : 1080 },
             frameRate: { ideal: 30, max: 60 },
           },
           audio: {
@@ -71,7 +77,7 @@ export function useCameraStream(facing: CameraFacing) {
       streamRef.current?.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     };
-  }, [facing, retryTick]);
+  }, [facing, portrait, retryTick]);
 
   const retry = useCallback(() => setRetryTick((tick) => tick + 1), []);
 
