@@ -230,6 +230,17 @@ function TodayWorkoutCard({ item, session, isActive, isPrimary, studentWorkout }
   return (
     <article className={clsx('overflow-hidden rounded-2xl border bg-surface-container transition-colors', running && !done ? 'border-primary/40 bg-primary/[0.05]' : 'border-outline-variant/40')}>
       <div className="flex items-start gap-3 p-4">
+        {!guidedPlan && exerciseCount ? (
+          <button
+            type="button"
+            onClick={() => setExpanded((value) => !value)}
+            aria-expanded={expanded}
+            aria-label={t(expanded ? 'meufit.training.hideExercises' : 'meufit.training.showExercises')}
+            className="-ml-1 mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-on-surface-variant/30 transition-colors duration-150 hover:text-on-surface-variant focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <ChevronDown size={16} className={clsx('transition-transform duration-200', expanded ? 'rotate-180' : 'rotate-0')} aria-hidden />
+          </button>
+        ) : null}
         <span className={clsx('mt-0.5 shrink-0', done ? 'text-primary' : 'text-on-surface-variant')} aria-hidden>
           {done ? <Check size={18} /> : surfaceIcon[item.surface]}
         </span>
@@ -251,17 +262,6 @@ function TodayWorkoutCard({ item, session, isActive, isPrimary, studentWorkout }
                 ].filter(Boolean).join(' · ') || item.focus}
           </p>
         </div>
-        {!guidedPlan && exerciseCount ? (
-          <button
-            type="button"
-            onClick={() => setExpanded((value) => !value)}
-            aria-expanded={expanded}
-            aria-label={t(expanded ? 'meufit.training.hideExercises' : 'meufit.training.showExercises')}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-on-surface-variant transition-colors duration-150 hover:text-on-surface active:text-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-          >
-            <ChevronDown size={18} className={clsx('transition-transform duration-200', expanded ? 'rotate-180' : 'rotate-0')} aria-hidden />
-          </button>
-        ) : null}
       </div>
 
       {expanded && !guidedPlan ? <WorkoutExercisePreview exercises={template?.exercises ?? []} emptyLabel={t('meufit.training.today.noExercises')} /> : null}
@@ -576,6 +576,11 @@ function Library() {
   const { workouts } = useStudentWorkouts();
   const { startWorkoutNow, startGuided } = useTraining();
   const byAssignment = useMemo(() => new Map(workouts.map((workout) => [workout.assignmentId, workout])), [workouts]);
+  // Exercícios do treino (mesmo mapeamento do Player) para a prévia expansível.
+  const exercisesFor = (assignmentId: string) => {
+    const workout = byAssignment.get(assignmentId);
+    return workout ? playerTemplate(workout).exercises : undefined;
+  };
 
   const start = (assignmentId: string) => {
     const workout = byAssignment.get(assignmentId);
@@ -627,8 +632,8 @@ function Library() {
                   )}
                 </div>
                 <div className="space-y-3">
-                  {author.protocols.map((protocol) => <ProtocolCard key={protocol.cycleId} protocol={protocol} onStart={start} />)}
-                  {author.workouts.map((workout) => <LibraryWorkoutRow key={workout.assignmentId} workout={workout} onStart={() => start(workout.assignmentId)} asCard />)}
+                  {author.protocols.map((protocol) => <ProtocolCard key={protocol.cycleId} protocol={protocol} onStart={start} exercisesFor={exercisesFor} />)}
+                  {author.workouts.map((workout) => <LibraryWorkoutRow key={workout.assignmentId} workout={workout} exercises={exercisesFor(workout.assignmentId)} onStart={() => start(workout.assignmentId)} asCard />)}
                 </div>
               </div>
             ))}
@@ -649,7 +654,7 @@ function MarketBadge() {
   );
 }
 
-function ProtocolCard({ protocol, onStart }: { protocol: LibraryProtocol; onStart: (assignmentId: string) => void }) {
+function ProtocolCard({ protocol, onStart, exercisesFor }: { protocol: LibraryProtocol; onStart: (assignmentId: string) => void; exercisesFor: (assignmentId: string) => WorkoutTemplate['exercises'] | undefined }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const subtitle = [
@@ -669,7 +674,7 @@ function ProtocolCard({ protocol, onStart }: { protocol: LibraryProtocol; onStar
       </button>
       {open ? (
         <div className="border-t border-outline-variant/20 bg-surface-container-lowest">
-          {protocol.workouts.map((workout) => <LibraryWorkoutRow key={workout.assignmentId} workout={workout} onStart={() => onStart(workout.assignmentId)} />)}
+          {protocol.workouts.map((workout) => <LibraryWorkoutRow key={workout.assignmentId} workout={workout} exercises={exercisesFor(workout.assignmentId)} onStart={() => onStart(workout.assignmentId)} />)}
         </div>
       ) : null}
     </article>
@@ -677,24 +682,42 @@ function ProtocolCard({ protocol, onStart }: { protocol: LibraryProtocol; onStar
 }
 
 /** Linha de treino da Biblioteca. `asCard` = avulso (card próprio); sem = dentro do acordeão do protocolo. */
-function LibraryWorkoutRow({ workout, onStart, asCard = false }: { workout: LibraryWorkout; onStart: () => void; asCard?: boolean }) {
+function LibraryWorkoutRow({ workout, exercises, onStart, asCard = false }: { workout: LibraryWorkout; exercises?: WorkoutTemplate['exercises']; onStart: () => void; asCard?: boolean }) {
   const { t } = useTranslation();
+  const [expanded, setExpanded] = useState(false);
+  // Setinha discreta à esquerda revela os exercícios sem abrir o treino.
+  const canExpand = (exercises?.length ?? 0) > 0;
   return (
-    <div className={clsx('flex items-center gap-3', asCard ? 'rounded-2xl border border-outline-variant/40 bg-surface-container p-4' : 'border-b border-outline-variant/15 px-4 py-3 last:border-b-0')}>
-      {asCard ? <span className="shrink-0 text-on-surface-variant" aria-hidden>{surfaceIcon[workout.trainingType]}</span> : null}
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <p className="min-w-0 font-sans text-label leading-snug text-on-surface">{workout.title}</p>
-          {workout.isMarket && asCard ? <MarketBadge /> : null}
+    <div className={clsx(asCard ? 'overflow-hidden rounded-2xl border border-outline-variant/40 bg-surface-container' : 'border-b border-outline-variant/15 last:border-b-0')}>
+      <div className={clsx('flex items-center gap-3', asCard ? 'p-4' : 'px-4 py-3')}>
+        {canExpand ? (
+          <button
+            type="button"
+            onClick={() => setExpanded((value) => !value)}
+            aria-expanded={expanded}
+            aria-label={t(expanded ? 'meufit.training.hideExercises' : 'meufit.training.showExercises')}
+            className="-ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-on-surface-variant/30 transition-colors duration-150 hover:text-on-surface-variant focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <ChevronDown size={16} className={clsx('transition-transform duration-200', expanded ? 'rotate-180' : 'rotate-0')} aria-hidden />
+          </button>
+        ) : asCard ? (
+          <span className="shrink-0 text-on-surface-variant" aria-hidden>{surfaceIcon[workout.trainingType]}</span>
+        ) : null}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="min-w-0 font-sans text-label leading-snug text-on-surface">{workout.title}</p>
+            {workout.isMarket && asCard ? <MarketBadge /> : null}
+          </div>
+          <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{workout.exerciseCount ? t(workout.exerciseCount === 1 ? 'meufit.training.library.exerciseCount' : 'meufit.training.library.exerciseCountPlural', { count: workout.exerciseCount }) : t('meufit.training.library.noExercises')}</p>
         </div>
-        <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{workout.exerciseCount ? t(workout.exerciseCount === 1 ? 'meufit.training.library.exerciseCount' : 'meufit.training.library.exerciseCountPlural', { count: workout.exerciseCount }) : t('meufit.training.library.noExercises')}</p>
+        {workout.exerciseCount ? (
+          <button type="button" onClick={onStart} className="flex min-h-10 shrink-0 items-center gap-1.5 font-sans text-label text-primary transition-opacity duration-150 hover:opacity-80 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+            <Play size={15} fill="currentColor" aria-hidden />
+            {t('meufit.training.library.doNow')}
+          </button>
+        ) : null}
       </div>
-      {workout.exerciseCount ? (
-        <button type="button" onClick={onStart} className="flex min-h-10 shrink-0 items-center gap-1.5 font-sans text-label text-primary transition-opacity duration-150 hover:opacity-80 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-          <Play size={15} fill="currentColor" aria-hidden />
-          {t('meufit.training.library.doNow')}
-        </button>
-      ) : null}
+      {expanded && canExpand ? <WorkoutExercisePreview exercises={exercises ?? []} emptyLabel={t('meufit.training.today.noExercises')} /> : null}
     </div>
   );
 }
