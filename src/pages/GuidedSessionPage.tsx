@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Check, ChevronRight, Gauge, Repeat, SkipForward, Timer, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronRight, Gauge, Repeat, SkipForward, Timer, Waves, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { useTraining } from '@/features/training/TrainingProvider';
 import { useLogWorkoutSession } from '@/features/training/useWorkoutSessions';
-import { flattenSteps, type Effort, type FlatStep, type GuidedSingleStep, type StepBound, type StepRole } from '@/features/training/guidedSession';
+import { flattenSteps, type Effort, type FlatStep, type GuidedSingleStep, type StepBound, type StepRole, type SwimStroke } from '@/features/training/guidedSession';
 import type { WorkoutTrainingType } from '@/features/training/useStudentWorkouts';
 import { useTranslation, type TranslationKey } from '@/i18n/I18nProvider';
 
@@ -34,6 +34,14 @@ const CUE_KEY: Record<Effort, TranslationKey> = {
   hard: 'meufit.training.guided.cue.hard',
   max: 'meufit.training.guided.cue.max',
   recover: 'meufit.training.guided.cue.recover',
+};
+const STROKE_KEY: Record<SwimStroke, TranslationKey> = {
+  free: 'meufit.training.guided.stroke.free',
+  back: 'meufit.training.guided.stroke.back',
+  breast: 'meufit.training.guided.stroke.breast',
+  fly: 'meufit.training.guided.stroke.fly',
+  medley: 'meufit.training.guided.stroke.medley',
+  choice: 'meufit.training.guided.stroke.choice',
 };
 const strongEffort = (effort: Effort) => effort === 'hard' || effort === 'max';
 
@@ -178,12 +186,13 @@ export function GuidedSessionPage() {
   const effort = phase.step.target?.effort ?? 'moderate';
   const isRest = phase.type === 'rest';
   const endurance = ENDURANCE.includes(guided.surface);
+  const swim = guided.surface === 'swimming';
   const countdown = isTimed && remaining <= 3 && remaining > 0;
   const isLast = phaseIndex + 1 >= phases.length;
   const pace = phase.step.target?.paceSecPerKm;
   const cadence = phase.step.target?.cadence;
 
-  const primaryLabel = isLast ? t('meufit.training.guided.finish') : isTimed ? t('meufit.training.guided.skip') : isRest ? t('meufit.training.guided.next') : t('meufit.training.guided.nextDone');
+  const primaryLabel = isLast ? t('meufit.training.guided.finish') : isTimed ? t('meufit.training.guided.skip') : isRest ? t('meufit.training.guided.next') : (swim ? t('meufit.training.guided.lapDone') : t('meufit.training.guided.nextDone'));
   const primaryIcon = isLast ? <Check size={18} aria-hidden /> : isTimed ? <SkipForward size={18} aria-hidden /> : <Check size={18} aria-hidden />;
 
   return (
@@ -222,6 +231,30 @@ export function GuidedSessionPage() {
         </div>
       )}
 
+      {swim ? (
+      <main className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center">
+        <span className={clsx('font-sans text-label uppercase tracking-[0.14em]', isRest ? 'text-on-surface-variant' : 'text-primary')}>
+          {isRest ? t('meufit.training.guided.rest') : t(ROLE_KEY[phase.step.role])}
+          {phase.repeatLabel ? ` · ${phase.repeatLabel}` : ''}
+        </span>
+        {isRest ? (
+          <>
+            <p className="mt-5 font-sans tabular-nums text-primary" style={{ fontSize: 'clamp(3.25rem, 20vw, 5.5rem)', lineHeight: 1 }}>{formatClock(remaining)}</p>
+            <p className="mt-1 font-sans text-body-sm text-on-surface-variant">{t('meufit.training.guided.swimRest')}</p>
+          </>
+        ) : (
+          <>
+            <p className="mt-5 font-sans tabular-nums text-on-surface" style={{ fontSize: 'clamp(3.25rem, 20vw, 5.5rem)', lineHeight: 1 }}>{phase.bound.by === 'distance' ? formatDistance(phase.bound.meters) : isTimed ? formatClock(remaining) : t('meufit.training.guided.byOpen')}</p>
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-high px-4 py-2 font-sans text-label text-on-surface"><Waves size={15} aria-hidden />{t(STROKE_KEY[phase.step.sport?.stroke ?? 'free'])}</span>
+              <span className={clsx('inline-flex items-center rounded-full px-4 py-2 font-sans text-label', strongEffort(effort) ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface')}>{t(EFFORT_KEY[effort])}</span>
+            </div>
+            {phase.step.rest?.by === 'time' ? <p className="mt-3 font-sans text-body-sm text-on-surface-variant">{t('meufit.training.guided.restAfter', { n: phase.step.rest.seconds })}</p> : null}
+          </>
+        )}
+        <p className="mt-4 max-w-[22rem] font-sans text-body text-on-surface-variant">{phase.step.note?.trim() ? phase.step.note : t(cueKey(phase.step, isRest))}</p>
+      </main>
+      ) : (
       <main className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center">
         <span className={clsx('inline-flex items-center gap-1.5 font-sans text-label uppercase tracking-[0.14em]', isRest ? 'text-on-surface-variant' : 'text-primary')}>
           {isRest ? t('meufit.training.guided.rest') : t(ROLE_KEY[phase.step.role])}
@@ -257,6 +290,7 @@ export function GuidedSessionPage() {
           </div>
         ) : null}
       </main>
+      )}
 
       {nextWork ? (
         <div className="mx-4 mb-2 flex items-center gap-2 rounded-2xl bg-surface-container px-4 py-2.5">
