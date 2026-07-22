@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { useTraining } from '@/features/training/TrainingProvider';
 import { useLogWorkoutSession } from '@/features/training/useWorkoutSessions';
-import { flattenSteps, type Effort, type FlatStep, type GuidedSingleStep, type StepBound, type StepRole, type SwimStroke } from '@/features/training/guidedSession';
+import { flattenSteps, type Effort, type FlatStep, type GuidedFormat, type GuidedSingleStep, type StepBound, type StepRole, type SwimStroke } from '@/features/training/guidedSession';
 import type { WorkoutTrainingType } from '@/features/training/useStudentWorkouts';
 import { useTranslation, type TranslationKey } from '@/i18n/I18nProvider';
 
@@ -42,6 +42,15 @@ const STROKE_KEY: Record<SwimStroke, TranslationKey> = {
   fly: 'meufit.training.guided.stroke.fly',
   medley: 'meufit.training.guided.stroke.medley',
   choice: 'meufit.training.guided.stroke.choice',
+};
+const FORMAT_KEY: Record<GuidedFormat, TranslationKey> = {
+  intervals: 'meufit.training.guided.format.intervals',
+  amrap: 'meufit.training.guided.format.amrap',
+  emom: 'meufit.training.guided.format.emom',
+  tabata: 'meufit.training.guided.format.tabata',
+  forTime: 'meufit.training.guided.format.forTime',
+  flow: 'meufit.training.guided.format.flow',
+  sets: 'meufit.training.guided.format.sets',
 };
 const strongEffort = (effort: Effort) => effort === 'hard' || effort === 'max';
 
@@ -318,7 +327,7 @@ export function GuidedSessionPage() {
       ))}
 
       {viewMode === 'list' ? (
-        <ListSessionMain phases={phases} totalElapsed={totalElapsed} checkedAt={checkedAt} onToggle={toggleCheck} />
+        <ListSessionMain phases={phases} sport={guided.plan.sport} totalElapsed={totalElapsed} checkedAt={checkedAt} onToggle={toggleCheck} />
       ) : swim ? (
       <main className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center">
         <span className={clsx('font-sans text-label uppercase tracking-[0.14em]', isRest ? 'text-on-surface-variant' : 'text-primary')}>
@@ -334,8 +343,12 @@ export function GuidedSessionPage() {
           <>
             <p className="mt-5 font-sans tabular-nums text-on-surface" style={{ fontSize: 'clamp(3.25rem, 20vw, 5.5rem)', lineHeight: 1 }}>{phase.bound.by === 'distance' ? formatDistance(phase.bound.meters) : isTimed ? formatClock(remaining) : t('meufit.training.guided.byOpen')}</p>
             <p className="mt-5 font-sans text-label">
-              <span className="text-on-surface">{t(STROKE_KEY[phase.step.sport?.stroke ?? 'free'])}</span>
-              <span className="text-on-surface-variant"> · </span>
+              {phase.step.sport?.stroke ? (
+                <>
+                  <span className="text-on-surface">{t(STROKE_KEY[phase.step.sport.stroke])}</span>
+                  <span className="text-on-surface-variant"> · </span>
+                </>
+              ) : null}
               <span className={strongEffort(effort) ? 'text-primary' : 'text-on-surface-variant'}>{t(EFFORT_KEY[effort])}</span>
             </p>
             {phase.step.rest?.by === 'time' ? <p className="mt-3 font-sans text-body-sm text-on-surface-variant">{t('meufit.training.guided.restAfter', { n: phase.step.rest.seconds })}</p> : null}
@@ -347,6 +360,7 @@ export function GuidedSessionPage() {
       <main className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center">
         <span className="inline-flex items-center gap-1.5 font-sans text-label uppercase tracking-[0.14em] text-primary">
           <Zap size={13} aria-hidden />
+          {guided.plan.format ? `${t(FORMAT_KEY[guided.plan.format])} · ` : ''}
           {isRest ? t('meufit.training.guided.rest') : phase.repeatLabel ? t('meufit.training.guided.roundLabel', { label: phase.repeatLabel }) : t(ROLE_KEY[phase.step.role])}
         </span>
         {phase.step.label && !isRest ? <h1 className="mt-2 text-balance font-sans text-title-lg text-on-surface">{phase.step.label}</h1> : null}
@@ -414,7 +428,7 @@ export function GuidedSessionPage() {
         <div className="mx-4 mb-2 flex items-center gap-2 rounded-2xl bg-surface-container px-4 py-2.5">
           <ChevronRight size={16} className="shrink-0 text-on-surface-variant" aria-hidden />
           <span className="min-w-0 flex-1 truncate font-sans text-body-sm text-on-surface-variant">
-            <span className="text-on-surface">{t('meufit.training.guided.next')}:</span> {nextWork.step.label || t(ROLE_KEY[nextWork.step.role])} · {t(EFFORT_KEY[nextWork.step.target?.effort ?? 'moderate'])} · {boundLabel(nextWork.bound, t)}
+            <span className="text-on-surface">{t('meufit.training.guided.next')}:</span> {nextWork.step.label || t(ROLE_KEY[nextWork.step.role])} · {stepDetail(nextWork.step, guided.plan.sport, t)} · {boundLabel(nextWork.bound, t)}
           </span>
         </div>
       ) : null}
@@ -450,9 +464,25 @@ function boundLabel(bound: StepBound, t: (key: TranslationKey, params?: Record<s
   return t('meufit.training.guided.byOpen');
 }
 
+/**
+ * Linha secundária do passo, específica do esporte: natação lidera com o estilo
+ * ("Costas · Forte"); endurance com esforço + alvos ("Forte · 5:30 /km · 90 rpm").
+ */
+function stepDetail(step: GuidedSingleStep, sport: WorkoutTrainingType, t: (key: TranslationKey, params?: Record<string, string | number>) => string): string {
+  const effort = t(EFFORT_KEY[step.target?.effort ?? 'moderate']);
+  if (sport === 'swimming') {
+    return step.sport?.stroke ? `${t(STROKE_KEY[step.sport.stroke])} · ${effort}` : effort;
+  }
+  const parts = [effort];
+  if (step.target?.paceSecPerKm) parts.push(t('meufit.training.guided.pacePerKm', { pace: formatClock(step.target.paceSecPerKm) }));
+  if (step.target?.cadence) parts.push(t('meufit.training.guided.cadence', { n: step.target.cadence }));
+  if (step.target?.power) parts.push(`${step.target.power} W`);
+  return parts.join(' · ');
+}
+
 /** Visão Lista/timeline: sessão inteira; o relógio corre sozinho e mostra onde
  *  você deveria estar. Glanceable (natação, mãos molhadas etc.) — sem tocar por passo. */
-function ListSessionMain({ phases, totalElapsed, checkedAt, onToggle }: { phases: Phase[]; totalElapsed: number; checkedAt: Record<number, number>; onToggle: (rowIndex: number) => void }) {
+function ListSessionMain({ phases, sport, totalElapsed, checkedAt, onToggle }: { phases: Phase[]; sport: WorkoutTrainingType; totalElapsed: number; checkedAt: Record<number, number>; onToggle: (rowIndex: number) => void }) {
   const { t } = useTranslation();
   const rows = phases.reduce<{ phase: Phase; start: number; end: number; dur: number }[]>((acc, p) => {
     const start = acc.length ? acc[acc.length - 1].end : 0;
@@ -482,7 +512,6 @@ function ListSessionMain({ phases, totalElapsed, checkedAt, onToggle }: { phases
           const current = index === expectedIndex;
           const behind = current ? Math.min(100, ((totalElapsed - r.start) / Math.max(1, r.dur)) * 100) : 0;
           const rest = r.phase.type === 'rest';
-          const effort = r.phase.step.target?.effort ?? 'moderate';
           const checked = checkedAt[index] != null;
           const segment = segmentFor(index);
           const measure = r.phase.bound.by === 'time' ? formatClock(r.phase.bound.seconds) : r.phase.bound.by === 'distance' ? formatDistance(r.phase.bound.meters) : r.phase.bound.by === 'reps' ? t('meufit.training.guided.byReps', { n: r.phase.bound.reps }) : formatClock(r.dur);
@@ -501,7 +530,7 @@ function ListSessionMain({ phases, totalElapsed, checkedAt, onToggle }: { phases
                 </button>
                 <div className="min-w-0 flex-1">
                   <p className={clsx('truncate font-sans text-label', checked ? 'text-on-surface-variant line-through' : 'text-on-surface')}>{rest ? t('meufit.training.guided.rest') : (r.phase.step.label || t(ROLE_KEY[r.phase.step.role]))}{r.phase.repeatLabel ? ` · ${r.phase.repeatLabel}` : ''}</p>
-                  {!rest ? <p className="truncate font-sans text-body-sm text-on-surface-variant">{t(EFFORT_KEY[effort])}</p> : null}
+                  {!rest ? <p className="truncate font-sans text-body-sm text-on-surface-variant">{stepDetail(r.phase.step, sport, t)}</p> : null}
                 </div>
                 <span className="shrink-0 text-right">
                   {segment != null ? <span className="block font-sans text-label tabular-nums text-primary">{formatClock(segment)}</span> : null}

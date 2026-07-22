@@ -8,6 +8,8 @@ import {
   parsePaceToSecPerKm,
   parseRepeatTimes,
   inferEffort,
+  parseSwimStroke,
+  parseGuidedFormat,
   type GuidedSingleStep,
 } from './guidedSession';
 import type { StudentWorkout } from './useStudentWorkouts';
@@ -105,5 +107,81 @@ describe('toGuidedWorkout — musculação', () => {
     const g = toGuidedWorkout(workout({ trainingType: 'yoga', prescription: null, exercises: [] }));
     expect(g!.steps).toHaveLength(1);
     expect((g!.steps[0] as GuidedSingleStep).bound).toEqual({ by: 'open' });
+  });
+});
+
+describe('parseSwimStroke / parseGuidedFormat', () => {
+  it('estilos com acento, inglês e dentro de frase', () => {
+    expect(parseSwimStroke('Borboleta')).toBe('fly');
+    expect(parseSwimStroke('4x50 costas')).toBe('back');
+    expect(parseSwimStroke('crawl solto')).toBe('free');
+    expect(parseSwimStroke('nado peito')).toBe('breast');
+    expect(parseSwimStroke('Bloco principal')).toBeNull();
+  });
+  it('formatos HIIT', () => {
+    expect(parseGuidedFormat('AMRAP 12 min')).toBe('amrap');
+    expect(parseGuidedFormat('emom')).toBe('emom');
+    expect(parseGuidedFormat('For Time')).toBe('forTime');
+    expect(parseGuidedFormat('circuito')).toBeNull();
+  });
+});
+
+describe('toGuidedWorkout — específicos por esporte', () => {
+  const swimPrescription = (steps: unknown, stroke: string) => ({
+    schemaVersion: 1, modality: 'swimming',
+    session: { sessionType: '', objective: '', periodizationPhase: '', estimatedDuration: '', totalVolume: '', intensityModel: '', environment: '', equipment: '', monitoring: '', postWorkoutRecovery: '', interruptionCriteria: '' },
+    specifics: { stroke }, blocks: [], steps,
+  }) as unknown as StudentWorkout['prescription'];
+
+  it('natação: specifics.stroke vira default dos passos sem estilo, sem sobrescrever', () => {
+    const g = toGuidedWorkout(workout({
+      trainingType: 'swimming',
+      prescription: swimPrescription([
+        { kind: 'single', id: 's1', role: 'warmup', bound: { by: 'distance', meters: 200 }, target: { effort: 'easy' } },
+        { kind: 'single', id: 's2', role: 'main', bound: { by: 'distance', meters: 100 }, target: { effort: 'hard' }, sport: { stroke: 'fly' } },
+        { kind: 'repeat', id: 'r1', times: 4, steps: [{ kind: 'single', id: 's3', role: 'main', bound: { by: 'distance', meters: 50 }, target: { effort: 'hard' } }] },
+      ], 'Costas'),
+    }));
+    const flat = flattenSteps(g!.steps);
+    expect(flat[0].step.sport?.stroke).toBe('back');
+    expect(flat[1].step.sport?.stroke).toBe('fly');
+    expect(flat[2].step.sport?.stroke).toBe('back');
+  });
+
+  it('natação: bloco textual "4x50 costas" ganha o estilo do texto', () => {
+    const g = toGuidedWorkout(workout({
+      trainingType: 'swimming',
+      prescription: {
+        schemaVersion: 1, modality: 'swimming',
+        session: { sessionType: '', objective: '', periodizationPhase: '', estimatedDuration: '', totalVolume: '', intensityModel: '', environment: '', equipment: '', monitoring: '', postWorkoutRecovery: '', interruptionCriteria: '' },
+        specifics: {},
+        blocks: [{ id: 'b1', role: 'main', name: '4x50 costas', task: '', series: '', repetitions: '', distance: '50 m', duration: '', intensityType: '', intensityTarget: 'forte', intensityRange: '', recoveryDuration: '', recoveryType: '', recoveryIntensity: '', technique: '', equipment: '', progressionCriteria: '', interruptionCriteria: '' }],
+      } as unknown as StudentWorkout['prescription'],
+    }));
+    const flat = flattenSteps(g!.steps);
+    expect(flat[0].step.sport?.stroke).toBe('back');
+  });
+
+  it('hiit: specifics.format preenche GuidedWorkout.format', () => {
+    const g = toGuidedWorkout(workout({
+      trainingType: 'hiit',
+      prescription: {
+        schemaVersion: 1, modality: 'hiit',
+        session: { sessionType: '', objective: '', periodizationPhase: '', estimatedDuration: '', totalVolume: '', intensityModel: '', environment: '', equipment: '', monitoring: '', postWorkoutRecovery: '', interruptionCriteria: '' },
+        specifics: { format: 'AMRAP 12 min' }, blocks: [],
+        steps: [{ kind: 'single', id: 's1', role: 'main', bound: { by: 'reps', reps: 10 }, target: { effort: 'hard' } }],
+      } as unknown as StudentWorkout['prescription'],
+    }));
+    expect(g!.format).toBe('amrap');
+  });
+});
+
+describe('defaults por esporte no editor', () => {
+  it('natação começa por distância; hiit por rodadas de reps', async () => {
+    const { createWorkoutPrescription } = await import('@/features/profile/offerings/workoutPrescription');
+    const swim = createWorkoutPrescription('swimming');
+    expect(swim.steps![0].kind === 'single' && swim.steps![0].bound.by).toBe('distance');
+    const hiit = createWorkoutPrescription('hiit');
+    expect(hiit.steps![1].kind).toBe('repeat');
   });
 });

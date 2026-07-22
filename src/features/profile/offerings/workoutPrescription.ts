@@ -220,8 +220,30 @@ export function createPrescriptionBlock(role: PrescriptionBlock['role'] = 'main'
   };
 }
 
-/** Passos padrão (aquecimento → principal → desaquecimento) para começar a edição guiada. */
-export function defaultGuidedSteps(): GuidedStep[] {
+/**
+ * Passos padrão (aquecimento → principal → desaquecimento) na medida nativa do
+ * esporte: natação por distância, HIIT/funcional por rodadas de reps, resto por tempo.
+ */
+export function defaultGuidedSteps(modality: WorkoutTrainingType): GuidedStep[] {
+  if (modality === 'swimming') {
+    return [
+      { kind: 'single', id: crypto.randomUUID(), role: 'warmup', label: '', bound: { by: 'distance', meters: 200 }, target: { effort: 'easy' } },
+      { kind: 'single', id: crypto.randomUUID(), role: 'main', label: '', bound: { by: 'distance', meters: 400 }, target: { effort: 'moderate' } },
+      { kind: 'single', id: crypto.randomUUID(), role: 'cooldown', label: '', bound: { by: 'distance', meters: 100 }, target: { effort: 'easy' } },
+    ];
+  }
+  if (modality === 'hiit' || modality === 'functional') {
+    return [
+      { kind: 'single', id: crypto.randomUUID(), role: 'warmup', label: '', bound: { by: 'time', seconds: 300 }, target: { effort: 'easy' } },
+      {
+        kind: 'repeat',
+        id: crypto.randomUUID(),
+        times: 3,
+        steps: [{ kind: 'single', id: crypto.randomUUID(), role: 'main', label: '', bound: { by: 'reps', reps: 10 }, target: { effort: 'hard' }, rest: { by: 'time', seconds: 60 } }],
+      },
+      { kind: 'single', id: crypto.randomUUID(), role: 'cooldown', label: '', bound: { by: 'time', seconds: 300 }, target: { effort: 'easy' } },
+    ];
+  }
   return [
     { kind: 'single', id: crypto.randomUUID(), role: 'warmup', label: '', bound: { by: 'time', seconds: 600 }, target: { effort: 'easy' } },
     { kind: 'single', id: crypto.randomUUID(), role: 'main', label: '', bound: { by: 'time', seconds: 1200 }, target: { effort: 'moderate' } },
@@ -252,7 +274,7 @@ export function createWorkoutPrescription(modality: WorkoutTrainingType): Workou
       createPrescriptionBlock('main'),
       createPrescriptionBlock('cooldown'),
     ],
-    steps: modality === 'strength' ? undefined : defaultGuidedSteps(),
+    steps: modality === 'strength' ? undefined : defaultGuidedSteps(modality),
   };
 }
 
