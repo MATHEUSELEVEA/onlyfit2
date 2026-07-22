@@ -71,18 +71,23 @@ export function CameraStep({
   // mesma — só o motor de captura muda.
   const native = isNativeCamera();
 
-  // Lente ultra-angular (0,5×) traseira — descoberta via enumerateDevices no
-  // caminho web (ver lens.ts). O camera-preview ainda não expõe seleção de
-  // lente, então no nativo o toggle não aparece (ultraWideId fica null).
+  // Lente ultra-angular (0,5×) traseira. Nativo: via patch Swift do plugin
+  // (useUltraWideLens). Web: via enumerateDevices (ver lens.ts), que só acha a
+  // lente em alguns WebViews. `ultraWide` é a intenção do usuário no toggle.
   const [ultraWideId, setUltraWideId] = useState<string | null>(null);
   const [ultraWide, setUltraWide] = useState(false);
-  const useUltraWide = facing === 'environment' && ultraWide && !!ultraWideId;
+  const ultraWideActive = facing === 'environment' && ultraWide;
 
-  const nativeCam = useNativeCameraPreview({ enabled: native, facing, withAudio: mode !== 'photo' });
+  const nativeCam = useNativeCameraPreview({
+    enabled: native,
+    facing,
+    withAudio: mode !== 'photo',
+    ultraWide: ultraWideActive,
+  });
   const { stream, error: webError, retry: webRetry } = useCameraStream(
     facing,
     mode !== 'photo',
-    useUltraWide ? ultraWideId : null,
+    ultraWideActive && ultraWideId ? ultraWideId : null,
     { enabled: !native },
   );
   const error = native ? nativeCam.error : webError;
@@ -345,9 +350,10 @@ export function CameraStep({
 
       {/* Controles flutuantes na base (sobre o scrim): modos + galeria/obturador/virar. */}
       <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-5 pb-safe-bottom pt-4">
-        {/* Seletor de lente: só a traseira tem ultra-angular (0,5×), e só quando
-            o WebView a expõe. Some no modo frontal e onde a lente não existe. */}
-        {facing === 'environment' && ultraWideId && !isRecording && (
+        {/* Seletor de lente: só a traseira tem ultra-angular (0,5×). No nativo
+            aparece sempre na traseira (cai na 1× se o aparelho não tem a lente);
+            no web, só quando o WebView expõe a lente. Some na frontal/gravando. */}
+        {facing === 'environment' && !isRecording && (native || ultraWideId) && (
           <div className="flex items-center gap-1 rounded-full bg-black/35 p-1 backdrop-blur-sm">
             {([
               { wide: true, label: '0,5×' },

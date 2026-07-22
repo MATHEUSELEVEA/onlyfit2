@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CameraPreview } from '@capacitor-community/camera-preview';
+import { CameraPreview, type CameraPreviewOptions } from '@capacitor-community/camera-preview';
 import { Capacitor } from '@capacitor/core';
 import type { CameraError, CameraFacing } from './useCameraStream';
 import { cropFrameToView, decodeBase64Image, viewportAspect } from './frameCrop';
@@ -12,6 +12,10 @@ interface NativeCameraOptions {
   // Áudio só liga no modo vídeo — evita pedir permissão de microfone à toa na
   // foto (e é o que dispensava o preview de mídia que causava o "pause").
   withAudio: boolean;
+  // Lente ultra-angular (0,5×) na traseira. Depende do patch Swift do plugin
+  // (ver patches/@capacitor-community+camera-preview...); em aparelho sem a
+  // lente o nativo cai na 1× sozinho.
+  ultraWide: boolean;
 }
 
 export interface NativeCameraApi {
@@ -39,7 +43,7 @@ function fullScreenSize() {
 // Câmera NATIVA via camera-preview (AVFoundation por baixo, preview renderizado
 // atrás do webview com `toBack`). Espelha a mesma interface que a CameraStep
 // consome no caminho web, para o componente só trocar o motor sem mudar a UI.
-export function useNativeCameraPreview({ enabled, facing, withAudio }: NativeCameraOptions): NativeCameraApi {
+export function useNativeCameraPreview({ enabled, facing, withAudio, ultraWide }: NativeCameraOptions): NativeCameraApi {
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<CameraError | null>(null);
   const [isRecording, setIsRecording] = useState(false);
@@ -63,16 +67,19 @@ export function useNativeCameraPreview({ enabled, facing, withAudio }: NativeCam
         setError(null);
       })
       .then(() => CameraPreview.stop().catch(() => {}))
-      .then(() =>
-        CameraPreview.start({
+      .then(() => {
+        // `useUltraWideLens` é lido pelo patch Swift; só faz efeito na traseira.
+        const startOptions: CameraPreviewOptions & { useUltraWideLens?: boolean } = {
           ...fullScreenSize(),
           position: positionFor(facing),
           toBack: true,
           enableHighResolution: true,
           disableAudio: !withAudio,
           storeToFile: false,
-        }),
-      )
+          useUltraWideLens: ultraWide && facing !== 'user',
+        };
+        return CameraPreview.start(startOptions);
+      })
       .then(() => {
         if (cancelled) {
           void CameraPreview.stop().catch(() => {});
@@ -90,7 +97,7 @@ export function useNativeCameraPreview({ enabled, facing, withAudio }: NativeCam
       cancelled = true;
       void CameraPreview.stop().catch(() => {});
     };
-  }, [enabled, facing, withAudio, retryTick]);
+  }, [enabled, facing, withAudio, ultraWide, retryTick]);
 
   // Backstop: nunca deixa o timer de gravação vazar ao desmontar.
   useEffect(

@@ -11,7 +11,8 @@
     "ios:open": "open ios/App/App.xcworkspace",
     "preview": "vite preview",
     "lint": "eslint .",
-    "ios:sync": "bash scripts/ios-sync.sh"
+    "ios:sync": "bash scripts/ios-sync.sh",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@capacitor-community/camera-preview": "^8.0.1",
@@ -42,6 +43,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.7.0",
+    "patch-package": "^8.0.1",
     "postcss": "^8.5.1",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3",
