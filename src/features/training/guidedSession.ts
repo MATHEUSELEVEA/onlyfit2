@@ -119,19 +119,20 @@ export function parseRepeatTimes(raw: string | null | undefined): number | null 
 }
 
 export function inferEffort(...texts: (string | null | undefined)[]): Effort {
+  // Regex por RADICAL (sem \b final) para casar "aquecimento", "intenso" etc.
   const value = deaccent(texts.filter(Boolean).join(' '));
-  if (/\b(recupera|recovery|descanso|solto|regenerativ)\b/.test(value)) return 'recover';
-  if (/\b(max|maxim|all ?out|tiro|sprint)\b/.test(value)) return 'max';
-  if (/\b(forte|intens|hard|limiar|threshold|z4|z5|ritmo de prova)\b/.test(value)) return 'hard';
-  if (/\b(leve|facil|easy|trote|z1|z2|aquec|conversa)\b/.test(value)) return 'easy';
+  if (/\b(recupera|recovery|descanso|solto|regenerativ)/.test(value)) return 'recover';
+  if (/\b(max|maxim|all ?out)/.test(value)) return 'max';
+  if (/\b(forte|intens|hard|limiar|threshold|z4|z5|ritmo de prova|tiro|sprint)/.test(value)) return 'hard';
+  if (/\b(leve|facil|easy|trote|z1|z2|aquec|conversa)/.test(value)) return 'easy';
   return 'moderate';
 }
 
 function inferRole(...texts: (string | null | undefined)[]): StepRole {
   const value = deaccent(texts.filter(Boolean).join(' '));
-  if (/\b(aquec|warm|mobilidade|ativa)\b/.test(value)) return 'warmup';
-  if (/\b(desaquec|cool|volta a calma|solto|alonga)\b/.test(value)) return 'cooldown';
-  if (/\b(recupera|recovery|descanso)\b/.test(value)) return 'recovery';
+  if (/\b(desaquec|cool|volta a calma|alonga)/.test(value)) return 'cooldown';
+  if (/\b(aquec|warm|mobilidade|ativa)/.test(value)) return 'warmup';
+  if (/\b(recupera|recovery|descanso)/.test(value)) return 'recovery';
   return 'main';
 }
 
