@@ -1,5 +1,6 @@
 import type { TranslationKey } from '@/i18n/translations';
 import type { WorkoutTrainingType } from '@/features/training/useStudentWorkouts';
+import type { GuidedStep } from '@/features/training/guidedSession';
 
 export type PrescriptionField = {
   key: string;
@@ -47,6 +48,8 @@ export type WorkoutPrescription = {
   specifics: Record<string, string>;
   blocks: PrescriptionBlock[];
   strengthExercises?: StrengthExercisePrescription[];
+  /** Passos executáveis (esportes não-musculação) lidos pelo player guiado. */
+  steps?: GuidedStep[];
 };
 
 export type StrengthExercisePrescription = {
@@ -217,6 +220,15 @@ export function createPrescriptionBlock(role: PrescriptionBlock['role'] = 'main'
   };
 }
 
+/** Passos padrão (aquecimento → principal → desaquecimento) para começar a edição guiada. */
+export function defaultGuidedSteps(): GuidedStep[] {
+  return [
+    { kind: 'single', id: crypto.randomUUID(), role: 'warmup', label: '', bound: { by: 'time', seconds: 600 }, target: { effort: 'easy' } },
+    { kind: 'single', id: crypto.randomUUID(), role: 'main', label: '', bound: { by: 'time', seconds: 1200 }, target: { effort: 'moderate' } },
+    { kind: 'single', id: crypto.randomUUID(), role: 'cooldown', label: '', bound: { by: 'time', seconds: 300 }, target: { effort: 'easy' } },
+  ];
+}
+
 export function createWorkoutPrescription(modality: WorkoutTrainingType): WorkoutPrescription {
   return {
     schemaVersion: 1,
@@ -240,6 +252,7 @@ export function createWorkoutPrescription(modality: WorkoutTrainingType): Workou
       createPrescriptionBlock('main'),
       createPrescriptionBlock('cooldown'),
     ],
+    steps: modality === 'strength' ? undefined : defaultGuidedSteps(),
   };
 }
 
@@ -263,5 +276,6 @@ export function normalizeWorkoutPrescription(
       ...block,
       id: block.id || crypto.randomUUID(),
     })),
+    steps: Array.isArray(candidate.steps) ? (candidate.steps as GuidedStep[]) : fallback.steps,
   };
 }
