@@ -21,7 +21,7 @@ export interface WorkoutExercise {
   videoUrl?: string | null;
 }
 export interface WorkoutTemplate { id: string; title: string; focus: string; durationMin: number; exercises: WorkoutExercise[]; }
-export interface ScheduledWorkout { id: string; date: string; templateId?: string; title: string; focus: string; durationMin: number; status: TrainingStatus; surface: TrainingSurface; summary?: string; canStart?: boolean; }
+export interface ScheduledWorkout { id: string; date: string; templateId?: string; workoutId?: string | null; assignmentId?: string; title: string; focus: string; durationMin: number; status: TrainingStatus; surface: TrainingSurface; summary?: string; canStart?: boolean; }
 /** Boundary for wearable adapters. External data never becomes a prescribed workout. */
 export interface ImportedActivity {
   id: string; date: string; title: string; durationMin: number; surface: TrainingSurface; source: ActivitySource;
@@ -111,26 +111,35 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
     const current = new Date();
     const todayCode = DAY_CODES[current.getDay()];
     const date = localDateKey(current);
-    return workouts
+    const matches = workouts
       .filter((workout) => workout.daysOfWeek.includes(todayCode))
       .filter((workout) => !workout.weeks.length || workout.weeks.includes(currentWeekFromStart(workout.startsAt, date)))
       .filter((workout) => !workout.startsAt || workout.startsAt.slice(0, 10) <= date)
-      .filter((workout) => !workout.endsAt || workout.endsAt.slice(0, 10) >= date)
-      .map((workout) => {
-        const templateId = `library-${workout.workoutId ?? workout.assignmentId}`;
-        const template = realTemplates.find((item) => item.id === templateId);
-        return {
-          id: workout.assignmentId,
-          date,
-          templateId,
-          title: workout.title,
-          focus: template?.focus || workout.prescription?.session.objective || '',
-          durationMin: template?.durationMin || 0,
-          status: 'planned',
-          surface: workout.trainingType,
-          canStart: Boolean(template?.exercises.length),
-        };
+      .filter((workout) => !workout.endsAt || workout.endsAt.slice(0, 10) >= date);
+    // Deduplica: o mesmo treino costuma ser prescrito em várias semanas/dias do
+    // mesociclo; sem isto o mesmo card se repetia no dia. Chave = treino real
+    // (workoutId) ou, na falta, tipo+título.
+    const byWorkout = new Map<string, ScheduledWorkout>();
+    for (const workout of matches) {
+      const key = workout.workoutId ?? `${workout.trainingType}:${workout.title.trim().toLowerCase()}`;
+      if (byWorkout.has(key)) continue;
+      const templateId = `library-${workout.workoutId ?? workout.assignmentId}`;
+      const template = realTemplates.find((item) => item.id === templateId);
+      byWorkout.set(key, {
+        id: workout.assignmentId,
+        date,
+        templateId,
+        workoutId: workout.workoutId,
+        assignmentId: workout.assignmentId,
+        title: workout.title,
+        focus: template?.focus || workout.prescription?.session.objective || '',
+        durationMin: template?.durationMin || 0,
+        status: 'planned',
+        surface: workout.trainingType,
+        canStart: Boolean(template?.exercises.length),
       });
+    }
+    return [...byWorkout.values()];
   }, [realTemplates, workouts]);
   const [templates, setTemplates] = useState<WorkoutTemplate[]>([]);
   const [scheduled, setScheduled] = useState<ScheduledWorkout[]>([]);

@@ -18,6 +18,7 @@ import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { useTraining, type ExerciseSetLog } from '@/features/training/TrainingProvider';
+import { useLogWorkoutSession } from '@/features/training/useWorkoutSessions';
 import { RestTimerBanner } from '@/features/training/components/RestTimerBanner';
 
 type Sheet = 'exit' | 'list' | 'effort' | 'note' | 'video' | 'substitute' | null;
@@ -29,6 +30,7 @@ const formatTime = (seconds: number) =>
 export function TrainingPlayerPage() {
   const navigate = useNavigate();
   const training = useTraining();
+  const logSession = useLogWorkoutSession();
   const [elapsed, setElapsed] = useState(0);
   const [rest, setRest] = useState(0);
   const [sheet, setSheet] = useState<Sheet>(null);
@@ -126,6 +128,19 @@ export function TrainingPlayerPage() {
       volume: totals.volume,
       prs: totals.volume > 0 ? 2 : 0,
     });
+    // Persiste a conclusão (fonte de verdade do "feito hoje"). Só quando há um
+    // workout real por trás; sessões avulsas ficam só no estado local.
+    const scheduledItem = training.scheduled.find((entry) => entry.id === session.scheduledId);
+    const exercisesDone = template.exercises.filter((ex) => (session.logs[ex.id] ?? []).some((set) => set.completed)).length;
+    if (scheduledItem?.workoutId) {
+      logSession.mutate({
+        workoutId: scheduledItem.workoutId,
+        assignmentId: scheduledItem.assignmentId ?? null,
+        startedAt: new Date(session.startedAt).toISOString(),
+        exercisesDone,
+        exercisesTotal: template.exercises.length,
+      });
+    }
     training.completeSession();
   };
 
