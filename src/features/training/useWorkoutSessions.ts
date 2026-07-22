@@ -88,6 +88,8 @@ export interface LogWorkoutSessionInput {
   workoutId: string;
   assignmentId?: string | null;
   startedAt: string;
+  /** Fim da sessão; default = agora. Permite gravar o tempo total editado no resumo. */
+  completedAt?: string;
   exercisesDone: number;
   exercisesTotal: number;
   calories?: number | null;
@@ -107,7 +109,7 @@ export function useLogWorkoutSession() {
         workout_id: input.workoutId,
         student_workout_assignment_id: input.assignmentId ?? null,
         started_at: input.startedAt,
-        completed_at: new Date().toISOString(),
+        completed_at: input.completedAt ?? new Date().toISOString(),
         exercises_completed_count: input.exercisesDone,
         exercises_total_count: input.exercisesTotal,
         calories_logged: input.calories ?? null,

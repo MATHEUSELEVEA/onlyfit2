@@ -59,6 +59,25 @@ function phaseWeight(bound: StepBound): number {
   return 60;
 }
 
+/** Duração planejada de uma fase, em segundos (estima passos por distância/reps). */
+function plannedSeconds(phase: Phase): number {
+  const b = phase.bound;
+  if (b.by === 'time') return b.seconds;
+  if (b.by === 'reps') return b.reps * 4;
+  if (b.by === 'distance') return Math.round((b.meters / 1000) * (phase.step.target?.paceSecPerKm ?? 360));
+  return 60;
+}
+
+const parseClock = (value: string): number => {
+  const m = value.trim().match(/^(\d{1,3}):(\d{1,2})$/);
+  if (m) return Number(m[1]) * 60 + Math.min(59, Number(m[2]));
+  const n = Number(value.replace(/\D/g, ''));
+  return Number.isFinite(n) ? n : 0;
+};
+
+interface ReviewStep { label: string; role: StepRole; metaSec: number; realizedSec: number }
+interface ReviewModel { startedAt: number; steps: ReviewStep[] }
+
 // Uma fase = trabalho de um passo ou a recuperação que vem logo depois.
 interface Phase {
   type: 'work' | 'rest';
@@ -96,68 +115,116 @@ export function GuidedSessionPage() {
   const [phaseStartedAt, setPhaseStartedAt] = useState(() => Date.now());
   const [now, setNow] = useState(() => Date.now());
   const [splits, setSplits] = useState<{ label: string; seconds: number }[]>([]);
-  const [summary, setSummary] = useState<{ durationSec: number; steps: number } | null>(null);
+  const [viewMode, setViewMode] = useState<'guided' | 'list'>('guided');
+  const [review, setReview] = useState<ReviewModel | null>(null);
   const [exitOpen, setExitOpen] = useState(false);
+  // Modo Lista: tempo (segundos desde o início) carimbado ao marcar cada linha.
+  const [checkedAt, setCheckedAt] = useState<Record<number, number>>({});
 
   const phasesRef = useRef(phases);
   const phaseIndexRef = useRef(phaseIndex);
   const phaseStartedAtRef = useRef(phaseStartedAt);
+  const splitsRef = useRef<{ label: string; seconds: number }[]>([]);
+  const viewModeRef = useRef(viewMode);
+  const workPhasesRef = useRef(workPhases);
+  const checkedAtRef = useRef(checkedAt);
 
-  const finish = useCallback(() => {
+  const toggleCheck = useCallback((rowIndex: number) => {
     if (!guided) return;
-    const durationSec = Math.max(1, Math.round((Date.now() - guided.startedAt) / 1000));
-    if (guided.workoutId) {
-      logSession.mutate({
-        workoutId: guided.workoutId,
-        assignmentId: guided.assignmentId ?? null,
-        startedAt: new Date(guided.startedAt).toISOString(),
-        exercisesDone: totalWorkSteps,
-        exercisesTotal: totalWorkSteps,
-      });
-    }
-    training.completeGuided();
-    setSummary({ durationSec, steps: totalWorkSteps });
-  }, [guided, logSession, totalWorkSteps, training]);
+    const stamp = Math.max(0, Math.floor((Date.now() - guided.startedAt) / 1000));
+    setCheckedAt((current) => {
+      const nextValue = { ...current };
+      if (nextValue[rowIndex] != null) delete nextValue[rowIndex]; else nextValue[rowIndex] = stamp;
+      checkedAtRef.current = nextValue;
+      return nextValue;
+    });
+  }, [guided]);
+
+  // Abre o resumo editável (meta × realizado); ainda não grava — só ao salvar.
+  const openReview = useCallback(() => {
+    if (!guided) return;
+    const allPhases = phasesRef.current;
+    const workListIndex: number[] = [];
+    allPhases.forEach((entry, i) => { if (entry.type === 'work') workListIndex.push(i); });
+    const checks = checkedAtRef.current;
+    const checkedIndices = Object.keys(checks).map(Number).sort((a, b) => a - b);
+    const steps: ReviewStep[] = workPhasesRef.current.map((wp, k) => {
+      const meta = plannedSeconds(wp);
+      // Precedência do realizado: check da Lista → parcial do modo Guiado → planejado.
+      let realized = splitsRef.current[k]?.seconds ?? meta;
+      const li = workListIndex[k];
+      if (li != null && checks[li] != null) {
+        const prev = checkedIndices.filter((x) => x < li).pop();
+        realized = Math.max(1, checks[li] - (prev != null ? checks[prev] : 0));
+      }
+      return { label: wp.step.label ?? '', role: wp.step.role, metaSec: meta, realizedSec: realized };
+    });
+    setReview({ startedAt: guided.startedAt, steps });
+  }, [guided]);
 
   const advance = useCallback(() => {
     const index = phaseIndexRef.current;
     const leaving = phasesRef.current[index];
-    // Registra a parcial (tempo real do trecho) ao sair de um passo de trabalho.
     if (leaving && leaving.type === 'work') {
       const elapsed = Math.max(0, Math.round((Date.now() - phaseStartedAtRef.current) / 1000));
-      setSplits((current) => [...current, { label: leaving.step.label ?? '', seconds: elapsed }]);
+      splitsRef.current = [...splitsRef.current, { label: leaving.step.label ?? '', seconds: elapsed }];
+      setSplits(splitsRef.current);
     }
     const next = index + 1;
     phaseIndexRef.current = next;
     if (next >= phasesRef.current.length) {
-      finish();
+      openReview();
       return;
     }
     setPhaseIndex(next);
     setPhaseStartedAt(Date.now());
-  }, [finish]);
+  }, [openReview]);
 
   useEffect(() => {
     phasesRef.current = phases;
     phaseIndexRef.current = phaseIndex;
     phaseStartedAtRef.current = phaseStartedAt;
-  }, [phases, phaseIndex, phaseStartedAt]);
+    viewModeRef.current = viewMode;
+    workPhasesRef.current = workPhases;
+    checkedAtRef.current = checkedAt;
+  }, [phases, phaseIndex, phaseStartedAt, viewMode, workPhases, checkedAt]);
 
   useEffect(() => {
-    if (summary) return undefined;
+    if (review) return undefined;
     const id = window.setInterval(() => {
-      const current = phasesRef.current[phaseIndexRef.current];
-      if (current && current.bound.by === 'time') {
-        const elapsed = Math.floor((Date.now() - phaseStartedAtRef.current) / 1000);
-        if (elapsed >= current.bound.seconds) { advance(); return; }
+      // No modo Lista o relógio só corre (glanceable); não auto-avança nem finaliza.
+      if (viewModeRef.current === 'guided') {
+        const current = phasesRef.current[phaseIndexRef.current];
+        if (current && current.bound.by === 'time') {
+          const elapsed = Math.floor((Date.now() - phaseStartedAtRef.current) / 1000);
+          if (elapsed >= current.bound.seconds) { advance(); return; }
+        }
       }
       setNow(Date.now());
     }, 1000);
     return () => window.clearInterval(id);
-  }, [summary, advance]);
+  }, [review, advance]);
 
-  if (summary) {
-    return <GuidedSummary durationSec={summary.durationSec} steps={summary.steps} onClose={() => navigate('/meu-fit/treino')} />;
+  if (review) {
+    return (
+      <EditableReview
+        model={review}
+        onSave={(totalSec) => {
+          if (guided?.workoutId) {
+            logSession.mutate({
+              workoutId: guided.workoutId,
+              assignmentId: guided.assignmentId ?? null,
+              startedAt: new Date(review.startedAt).toISOString(),
+              completedAt: new Date(review.startedAt + totalSec * 1000).toISOString(),
+              exercisesDone: totalWorkSteps,
+              exercisesTotal: totalWorkSteps,
+            });
+          }
+          training.completeGuided();
+          navigate('/meu-fit/treino');
+        }}
+      />
+    );
   }
 
   if (!guided || !phases.length) {
@@ -217,8 +284,16 @@ export function GuidedSessionPage() {
         <span className="flex h-11 w-11 items-center justify-center font-sans text-counter tabular-nums text-on-surface-variant">{phase.workIndex + 1}/{totalWorkSteps}</span>
       </header>
 
-      {/* Mapa de intervalos (endurance) ou trilha simples */}
-      {endurance ? (
+      {/* Alternador de visualização: Guiado × Lista */}
+      <div className="mb-1 flex justify-center px-4">
+        <div className="inline-flex rounded-full bg-surface-container p-0.5">
+          <button type="button" onClick={() => setViewMode('guided')} className={clsx('min-h-8 rounded-full px-3 font-sans text-counter transition-colors', viewMode === 'guided' ? 'bg-primary text-on-primary' : 'text-on-surface-variant')}>{t('meufit.training.guided.viewGuided')}</button>
+          <button type="button" onClick={() => setViewMode('list')} className={clsx('min-h-8 rounded-full px-3 font-sans text-counter transition-colors', viewMode === 'list' ? 'bg-primary text-on-primary' : 'text-on-surface-variant')}>{t('meufit.training.guided.viewList')}</button>
+        </div>
+      </div>
+
+      {/* Mapa de intervalos (endurance) ou trilha simples — só no modo Guiado */}
+      {viewMode === 'guided' && (endurance ? (
         <div className="flex items-end gap-1 px-4" style={{ height: '22px' }}>
           {workPhases.map((wp, index) => {
             const done = index < phase.workIndex;
@@ -238,9 +313,11 @@ export function GuidedSessionPage() {
             <span key={index} className={clsx('h-1 flex-1 rounded-full', index < phase.workIndex ? 'bg-primary' : index === phase.workIndex ? 'bg-primary/50' : 'bg-surface-container-high')} />
           ))}
         </div>
-      )}
+      ))}
 
-      {swim ? (
+      {viewMode === 'list' ? (
+        <ListSessionMain phases={phases} totalElapsed={totalElapsed} checkedAt={checkedAt} onToggle={toggleCheck} />
+      ) : swim ? (
       <main className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center">
         <span className={clsx('font-sans text-label uppercase tracking-[0.14em]', isRest ? 'text-on-surface-variant' : 'text-primary')}>
           {isRest ? t('meufit.training.guided.rest') : t(ROLE_KEY[phase.step.role])}
@@ -330,7 +407,7 @@ export function GuidedSessionPage() {
       </main>
       )}
 
-      {nextWork ? (
+      {nextWork && viewMode === 'guided' ? (
         <div className="mx-4 mb-2 flex items-center gap-2 rounded-2xl bg-surface-container px-4 py-2.5">
           <ChevronRight size={16} className="shrink-0 text-on-surface-variant" aria-hidden />
           <span className="min-w-0 flex-1 truncate font-sans text-body-sm text-on-surface-variant">
@@ -342,11 +419,10 @@ export function GuidedSessionPage() {
       <footer className="shrink-0 px-4 pb-safe-bottom pt-2">
         <button
           type="button"
-          onClick={advance}
+          onClick={viewMode === 'list' ? openReview : advance}
           className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-full bg-primary font-sans text-label text-on-primary transition-opacity duration-150 hover:opacity-90 active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
-          {primaryIcon}
-          {primaryLabel}
+          {viewMode === 'list' ? <><Check size={18} aria-hidden />{t('meufit.training.guided.finish')}</> : <>{primaryIcon}{primaryLabel}</>}
         </button>
       </footer>
 
@@ -371,34 +447,112 @@ function boundLabel(bound: StepBound, t: (key: TranslationKey, params?: Record<s
   return t('meufit.training.guided.byOpen');
 }
 
-function GuidedSummary({ durationSec, steps, onClose }: { durationSec: number; steps: number; onClose: () => void }) {
+/** Visão Lista/timeline: sessão inteira; o relógio corre sozinho e mostra onde
+ *  você deveria estar. Glanceable (natação, mãos molhadas etc.) — sem tocar por passo. */
+function ListSessionMain({ phases, totalElapsed, checkedAt, onToggle }: { phases: Phase[]; totalElapsed: number; checkedAt: Record<number, number>; onToggle: (rowIndex: number) => void }) {
   const { t } = useTranslation();
+  const rows = phases.reduce<{ phase: Phase; start: number; end: number; dur: number }[]>((acc, p) => {
+    const start = acc.length ? acc[acc.length - 1].end : 0;
+    const dur = plannedSeconds(p);
+    acc.push({ phase: p, start, end: start + dur, dur });
+    return acc;
+  }, []);
+  const totalPlanned = rows.length ? rows[rows.length - 1].end : 0;
+  const expectedIndex = rows.findIndex((r) => totalElapsed < r.end);
+  const currentRow = expectedIndex >= 0 ? rows[expectedIndex] : null;
+  const checkedIndices = Object.keys(checkedAt).map(Number).sort((a, b) => a - b);
+  // Tempo de cada linha marcada = do check anterior até este.
+  const segmentFor = (rowIndex: number): number | null => {
+    if (checkedAt[rowIndex] == null) return null;
+    const prev = checkedIndices.filter((x) => x < rowIndex).pop();
+    return Math.max(0, checkedAt[rowIndex] - (prev != null ? checkedAt[prev] : 0));
+  };
   return (
-    <div className="flex h-full flex-col bg-background px-5 pb-safe-bottom pt-safe-top">
-      <div className="flex justify-end">
-        <button type="button" onClick={onClose} aria-label={t('common.close')} className="flex h-11 w-11 items-center justify-center rounded-full text-on-surface active:bg-surface-container-high">
-          <X size={22} aria-hidden />
-        </button>
+    <main className="min-h-0 flex-1 overflow-y-auto px-4 pb-2">
+      <div className="mb-4 rounded-2xl bg-surface-container p-4 text-center">
+        <p className="font-sans text-counter uppercase tracking-wide text-on-surface-variant">{t('meufit.training.guided.listAhead')}</p>
+        <p className="mt-1 font-sans text-title-lg text-on-surface">{currentRow ? (currentRow.phase.type === 'rest' ? t('meufit.training.guided.rest') : (currentRow.phase.step.label || t(ROLE_KEY[currentRow.phase.step.role]))) : t('meufit.training.guided.listDoneAll')}</p>
+        <p className="mt-1 font-sans text-body-sm tabular-nums text-on-surface-variant">{formatClock(totalElapsed)} / {t('meufit.training.guided.listPlannedTotal', { time: formatClock(totalPlanned) })}</p>
       </div>
-      <main className="flex flex-1 flex-col justify-center">
-        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary text-on-primary">
-          <Check size={34} aria-hidden />
+      <ol className="space-y-2 pb-4">
+        {rows.map((r, index) => {
+          const current = index === expectedIndex;
+          const behind = current ? Math.min(100, ((totalElapsed - r.start) / Math.max(1, r.dur)) * 100) : 0;
+          const rest = r.phase.type === 'rest';
+          const effort = r.phase.step.target?.effort ?? 'moderate';
+          const checked = checkedAt[index] != null;
+          const segment = segmentFor(index);
+          const measure = r.phase.bound.by === 'time' ? formatClock(r.phase.bound.seconds) : r.phase.bound.by === 'distance' ? formatDistance(r.phase.bound.meters) : r.phase.bound.by === 'reps' ? t('meufit.training.guided.byReps', { n: r.phase.bound.reps }) : formatClock(r.dur);
+          return (
+            <li key={index} className={clsx('relative overflow-hidden rounded-xl border', checked ? 'border-primary/50' : current ? 'border-primary' : 'border-outline-variant/30', rest ? 'bg-surface-container/50' : 'bg-surface-container')}>
+              {current && !checked ? <span className="absolute inset-y-0 left-0 bg-primary/10" style={{ width: `${behind}%` }} aria-hidden /> : null}
+              <div className="relative flex items-center gap-3 px-3 py-2.5">
+                <button
+                  type="button"
+                  onClick={() => onToggle(index)}
+                  aria-pressed={checked}
+                  aria-label={r.phase.step.label || t(ROLE_KEY[r.phase.step.role])}
+                  className={clsx('flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors', checked ? 'border-primary bg-primary text-on-primary' : 'border-outline-variant/60 text-transparent')}
+                >
+                  <Check size={15} aria-hidden />
+                </button>
+                <div className="min-w-0 flex-1">
+                  <p className={clsx('truncate font-sans text-label', checked ? 'text-on-surface-variant line-through' : 'text-on-surface')}>{rest ? t('meufit.training.guided.rest') : (r.phase.step.label || t(ROLE_KEY[r.phase.step.role]))}{r.phase.repeatLabel ? ` · ${r.phase.repeatLabel}` : ''}</p>
+                  {!rest ? <p className="truncate font-sans text-body-sm text-on-surface-variant">{t(EFFORT_KEY[effort])}</p> : null}
+                </div>
+                <span className="shrink-0 text-right">
+                  {segment != null ? <span className="block font-sans text-label tabular-nums text-primary">{formatClock(segment)}</span> : null}
+                  <span className="block font-sans text-counter tabular-nums text-on-surface-variant">{measure}</span>
+                </span>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </main>
+  );
+}
+
+/** Resumo editável ao concluir: meta × realizado por etapa + tempo total. Provisório
+ *  até os dados do relógio (Apple Health) refinarem. */
+function EditableReview({ model, onSave }: { model: ReviewModel; onSave: (totalSec: number) => void }) {
+  const { t } = useTranslation();
+  const [values, setValues] = useState<string[]>(() => model.steps.map((step) => formatClock(step.realizedSec)));
+  const totalSec = values.reduce((acc, value) => acc + parseClock(value), 0);
+  return (
+    <div className="flex h-full flex-col bg-background pt-safe-top">
+      <header className="px-5 pb-2 pt-2">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary text-on-primary"><Check size={26} aria-hidden /></div>
+        <h1 className="mt-3 text-center font-sans text-title-lg text-on-surface">{t('meufit.training.guided.summaryTitle')}</h1>
+        <p className="mt-1 text-center font-sans text-body-sm text-on-surface-variant">{t('meufit.training.guided.metaVsDone')}</p>
+      </header>
+      <main className="min-h-0 flex-1 overflow-y-auto px-5 pb-2">
+        <div className="mb-4 flex items-center justify-between rounded-2xl bg-surface-container px-4 py-3">
+          <span className="font-sans text-label text-on-surface">{t('meufit.training.guided.total')}</span>
+          <span className="font-sans text-title-lg tabular-nums text-primary">{formatClock(totalSec)}</span>
         </div>
-        <h1 className="mt-6 text-center font-sans text-display text-on-surface">{t('meufit.training.guided.summaryTitle')}</h1>
-        <p className="mt-2 text-center font-sans text-body-sm text-on-surface-variant">{t('meufit.training.guided.summarySubtitle')}</p>
-        <div className="mx-auto mt-8 grid w-full max-w-sm grid-cols-2 gap-3">
-          <div className="rounded-2xl border border-outline-variant/35 bg-surface-container p-4">
-            <p className="font-sans text-title-lg tabular-nums text-on-surface">{formatClock(durationSec)}</p>
-            <p className="mt-1 font-sans text-body-sm text-on-surface-variant">{t('meufit.training.guided.summaryDuration')}</p>
-          </div>
-          <div className="rounded-2xl border border-outline-variant/35 bg-surface-container p-4">
-            <p className="font-sans text-title-lg tabular-nums text-on-surface">{steps}</p>
-            <p className="mt-1 font-sans text-body-sm text-on-surface-variant">{t('meufit.training.guided.summarySteps')}</p>
-          </div>
-        </div>
-        <p className="mx-auto mt-4 max-w-sm text-center font-sans text-counter text-on-surface-variant">{t('meufit.training.guided.summaryWearableHint')}</p>
+        <ul className="space-y-2">
+          {model.steps.map((step, index) => (
+            <li key={index} className="flex items-center gap-3 rounded-xl bg-surface-container px-3 py-2.5">
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-sans text-label text-on-surface">{step.label || t(ROLE_KEY[step.role])}</p>
+                <p className="font-sans text-counter tabular-nums text-on-surface-variant">{t('meufit.training.guided.meta')} {formatClock(step.metaSec)}</p>
+              </div>
+              <input
+                value={values[index]}
+                inputMode="numeric"
+                aria-label={step.label || t(ROLE_KEY[step.role])}
+                onChange={(event) => setValues((current) => current.map((value, idx) => (idx === index ? event.target.value : value)))}
+                className="w-20 rounded-lg bg-surface px-2 py-2 text-center font-sans text-body tabular-nums text-on-surface outline-none ring-1 ring-outline-variant/40 focus:ring-primary"
+              />
+            </li>
+          ))}
+        </ul>
+        <p className="mt-4 font-sans text-counter text-on-surface-variant">{t('meufit.training.guided.summaryWearableHint')}</p>
       </main>
-      <button type="button" onClick={onClose} className="min-h-12 rounded-full bg-primary font-sans text-label text-on-primary">{t('meufit.training.guided.summaryBack')}</button>
+      <footer className="shrink-0 px-5 pb-safe-bottom pt-2">
+        <button type="button" onClick={() => onSave(Math.max(1, totalSec))} className="min-h-12 w-full rounded-full bg-primary font-sans text-label text-on-primary transition-opacity hover:opacity-90 active:opacity-80">{t('meufit.training.guided.reviewSave')}</button>
+      </footer>
     </div>
   );
 }
