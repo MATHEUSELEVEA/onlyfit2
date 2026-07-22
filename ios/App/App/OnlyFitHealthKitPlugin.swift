@@ -68,7 +68,10 @@ public class OnlyFitHealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc public func syncDelta(_ call: CAPPluginCall) {
         let endDate = Date()
-        let startDate = calendar.date(byAdding: .day, value: -14, to: endDate) ?? endDate
+        // Janela de 30 dias (não 14): treinos de terceiros via Apple Health podem
+        // sincronizar com vários dias de atraso; a janela maior garante que sejam
+        // relidos e feito upsert por UUID antes de saírem do alcance.
+        let startDate = calendar.date(byAdding: .day, value: -30, to: endDate) ?? endDate
         syncRange(startDate: startDate, endDate: endDate, call: call, mode: "delta", anchors: anchors(from: call))
     }
 
@@ -276,16 +279,21 @@ public class OnlyFitHealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
         anchor: String?,
         completion: @escaping (Result<(rows: [[String: Any]], deletedIds: [String], anchor: String?), Error>) -> Void
     ) {
-        let predicate: NSPredicate?
-        if mode == "initial" {
-            predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [.strictStartDate])
-        } else {
-            predicate = nil
-        }
+        // Treinos de terceiros (Nike, Strava, Garmin) chegam ao Apple Health com
+        // ATRASO e datados no passado (backdated). Um HKQueryAnchor só entrega o
+        // que foi gravado DEPOIS dele — então um treino que aparece atrasado cai
+        // ATRÁS do anchor e a delta nunca mais o entrega (some sem erro). Como o
+        // volume de treinos é baixo e a deduplicação é por UUID no servidor,
+        // relemos SEMPRE a janela por intervalo de data (anchor nil), em delta e
+        // inicial. É isso que torna o Apple Health um hub confiável: nenhum
+        // treino de terceiro é perdido, mesmo chegando tarde. (`anchor` só é
+        // mantido na assinatura por compatibilidade; não é mais usado aqui.)
+        _ = anchor
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: [.strictStartDate])
         let query = HKAnchoredObjectQuery(
             type: HKObjectType.workoutType(),
             predicate: predicate,
-            anchor: mode == "initial" ? nil : decodeAnchor(anchor),
+            anchor: nil,
             limit: HKObjectQueryNoLimit
         ) { _, samples, deletedObjects, newAnchor, error in
             if let error = error {
