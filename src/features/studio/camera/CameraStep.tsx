@@ -3,6 +3,10 @@ import { Images, Loader2, SwitchCamera, X, Zap, ZapOff } from 'lucide-react';
 import { clsx } from 'clsx';
 import { CameraModeSwitcher } from './CameraModeSwitcher';
 import { useCameraStream, type CameraFacing } from './useCameraStream';
+import { useNativeCameraPreview } from './useNativeCameraPreview';
+import { isNativeCamera } from './nativeCamera';
+import { findUltraWideCameraId } from './lens';
+import { cropFrameToView, viewportAspect } from './frameCrop';
 import { useVideoCapture } from './useVideoCapture';
 import { createDraftMediaFromCapture, type CaptureMode, type DraftMedia } from '../media';
 
@@ -33,39 +37,9 @@ const SCREEN_FLASH_MS = 160;
  * como no preview.
  */
 function capturePhotoBlob(video: HTMLVideoElement, mirror: boolean): Promise<Blob | null> {
-  return new Promise((resolve) => {
-    const frameWidth = video.videoWidth;
-    const frameHeight = video.videoHeight;
-    if (frameWidth === 0 || frameHeight === 0) {
-      resolve(null);
-      return;
-    }
-    const viewAspect = video.clientWidth > 0 && video.clientHeight > 0 ? video.clientWidth / video.clientHeight : 9 / 16;
-    let cropWidth = frameWidth;
-    let cropHeight = frameHeight;
-    if (frameWidth / frameHeight > viewAspect) {
-      cropWidth = Math.round(frameHeight * viewAspect);
-    } else {
-      cropHeight = Math.round(frameWidth / viewAspect);
-    }
-    const cropX = Math.round((frameWidth - cropWidth) / 2);
-    const cropY = Math.round((frameHeight - cropHeight) / 2);
-
-    const canvas = document.createElement('canvas');
-    canvas.width = cropWidth;
-    canvas.height = cropHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      resolve(null);
-      return;
-    }
-    if (mirror) {
-      ctx.translate(cropWidth, 0);
-      ctx.scale(-1, 1);
-    }
-    ctx.drawImage(video, cropX, cropY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
-    canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.95);
-  });
+  const viewAspect =
+    video.clientWidth > 0 && video.clientHeight > 0 ? video.clientWidth / video.clientHeight : viewportAspect();
+  return cropFrameToView(video, video.videoWidth, video.videoHeight, viewAspect, mirror);
 }
 
 function formatElapsed(elapsedMs: number): string {
@@ -76,9 +50,10 @@ function formatElapsed(elapsedMs: number): string {
 }
 
 // Tela de câmera full-screen: primeiro passo do Studio (substitui a entrada
-// direta no picker de galeria). Preview em tempo real via getUserMedia,
-// captura de foto/vídeo local, com a galeria disponível como opção secundária
-// — igual ao Instagram, câmera é o padrão, mas nunca a única saída.
+// direta no picker de galeria). Captura de foto/vídeo local, com a galeria como
+// opção secundária — igual ao Instagram, câmera é o padrão, mas nunca a única
+// saída. Dois motores atrás da MESMA UI: no app iOS/Android usa a câmera NATIVA
+// (camera-preview → AVFoundation), no navegador cai no getUserMedia.
 export function CameraStep({
   mode,
   onModeChange,
@@ -92,7 +67,26 @@ export function CameraStep({
   onDismissStoryError,
 }: CameraStepProps) {
   const [facing, setFacing] = useState<CameraFacing>('environment');
-  const { stream, error, retry } = useCameraStream(facing, mode !== 'photo');
+  // Câmera nativa no app instalado; getUserMedia no navegador. A UI abaixo é a
+  // mesma — só o motor de captura muda.
+  const native = isNativeCamera();
+
+  // Lente ultra-angular (0,5×) traseira — descoberta via enumerateDevices no
+  // caminho web (ver lens.ts). O camera-preview ainda não expõe seleção de
+  // lente, então no nativo o toggle não aparece (ultraWideId fica null).
+  const [ultraWideId, setUltraWideId] = useState<string | null>(null);
+  const [ultraWide, setUltraWide] = useState(false);
+  const useUltraWide = facing === 'environment' && ultraWide && !!ultraWideId;
+
+  const nativeCam = useNativeCameraPreview({ enabled: native, facing, withAudio: mode !== 'photo' });
+  const { stream, error: webError, retry: webRetry } = useCameraStream(
+    facing,
+    mode !== 'photo',
+    useUltraWide ? ultraWideId : null,
+    { enabled: !native },
+  );
+  const error = native ? nativeCam.error : webError;
+  const retry = native ? nativeCam.retry : webRetry;
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [capturingPhoto, setCapturingPhoto] = useState(false);
@@ -102,9 +96,41 @@ export function CameraStep({
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    video.srcObject = stream;
-    if (stream) video.play().catch(() => {});
+    // Só as trilhas de vídeo vão pro preview: um <video> com trilha de áudio ao
+    // vivo faz o iOS tratar como reprodução de mídia e sobrepor controles de
+    // play/pause. O áudio continua no `stream` original (usado pelo gravador em
+    // useVideoCapture), só não é espelhado no elemento de preview.
+    if (!stream) {
+      video.srcObject = null;
+      return;
+    }
+    video.srcObject = new MediaStream(stream.getVideoTracks());
+    video.play().catch(() => {});
   }, [stream]);
+
+  // Câmera nativa: o preview é renderizado ATRÁS do webview (`toBack`), então
+  // toda a pilha visível precisa ficar transparente enquanto a câmera está
+  // aberta. A classe é removida ao sair — o app volta ao fundo normal. Ver a
+  // regra `html.native-camera-active` em index.css.
+  useEffect(() => {
+    if (!native) return;
+    const root = document.documentElement;
+    root.classList.add('native-camera-active');
+    return () => root.classList.remove('native-camera-active');
+  }, [native]);
+
+  // Procura a ultra-angular só depois que a traseira abriu (enumerateDevices só
+  // devolve labels com a permissão já concedida). Uma vez achada, não repete.
+  useEffect(() => {
+    if (facing !== 'environment' || !stream || ultraWideId) return;
+    let cancelled = false;
+    void findUltraWideCameraId().then((id) => {
+      if (!cancelled && id) setUltraWideId(id);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [facing, stream, ultraWideId]);
 
   // Lanterna (torch): tentativa best-effort. O WebView do iOS quase nunca
   // expõe a constraint `torch`, então isto costuma ser um no-op silencioso —
@@ -119,7 +145,12 @@ export function CameraStep({
     }
   };
 
-  const { isRecording, elapsedMs, start: startRecording, stop: stopRecording } = useVideoCapture({
+  const {
+    isRecording: webRecording,
+    elapsedMs: webElapsed,
+    start: startRecording,
+    stop: stopRecording,
+  } = useVideoCapture({
     stream,
     previewVideoRef: videoRef,
     onCaptured: (result) => {
@@ -127,26 +158,39 @@ export function CameraStep({
       onCapturedVideo(createDraftMediaFromCapture(result.file, 'video', result.posterBlob));
     },
   });
+  // Estado de gravação unificado: vem do motor nativo ou do web conforme a
+  // plataforma. A UI (tempo, botão) não sabe qual está por baixo.
+  const isRecording = native ? nativeCam.isRecording : webRecording;
+  const elapsedMs = native ? nativeCam.elapsedMs : webElapsed;
 
   const handleShutterTap = async () => {
     if (storyPublishing) return;
 
     if (mode === 'photo') {
-      if (!videoRef.current || capturingPhoto) return;
+      if (capturingPhoto || (!native && !videoRef.current)) return;
       setCapturingPhoto(true);
-      if (flashOn) {
-        setScreenFlash(true);
-        await new Promise((resolve) => setTimeout(resolve, SCREEN_FLASH_MS));
-        void applyTorch(true);
-      }
-      const blob = await capturePhotoBlob(videoRef.current, facing === 'user');
-      if (flashOn) {
-        void applyTorch(false);
-        setScreenFlash(false);
+      let file: File | null;
+      if (native) {
+        // Câmera nativa dispara o flash real do aparelho na captura.
+        if (flashOn) await nativeCam.setFlash('on');
+        file = await nativeCam.capturePhoto(facing === 'user');
+        if (flashOn) void nativeCam.setFlash('off');
+      } else {
+        // Web: clarão de tela (selfie) + tentativa de torch, e recorte do <video>.
+        if (flashOn) {
+          setScreenFlash(true);
+          await new Promise((resolve) => setTimeout(resolve, SCREEN_FLASH_MS));
+          void applyTorch(true);
+        }
+        const blob = await capturePhotoBlob(videoRef.current!, facing === 'user');
+        if (flashOn) {
+          void applyTorch(false);
+          setScreenFlash(false);
+        }
+        file = blob ? new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' }) : null;
       }
       setCapturingPhoto(false);
-      if (!blob) return;
-      const file = new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' });
+      if (!file) return;
       onCapturedPhoto(createDraftMediaFromCapture(file, 'image'));
       return;
     }
@@ -154,16 +198,27 @@ export function CameraStep({
     // Vídeo e Stories gravam do mesmo jeito (Stories é vídeo com validade de
     // 24h); o que muda é o destino da mídia, decidido no StudioPage pelo modo.
     if (isRecording) {
-      void applyTorch(false);
-      stopRecording();
+      if (native) {
+        if (flashOn) void nativeCam.setFlash('off');
+        const file = await nativeCam.stopVideo();
+        if (file) onCapturedVideo(createDraftMediaFromCapture(file, 'video'));
+      } else {
+        void applyTorch(false);
+        stopRecording();
+      }
       return;
     }
-    if (flashOn) void applyTorch(true);
-    void startRecording();
+    if (native) {
+      if (flashOn) void nativeCam.setFlash('torch');
+      void nativeCam.startVideo();
+    } else {
+      if (flashOn) void applyTorch(true);
+      void startRecording();
+    }
   };
 
   return (
-    <div className="relative h-full overflow-hidden bg-black">
+    <div className={clsx('relative h-full overflow-hidden', native ? 'bg-transparent' : 'bg-black')}>
       <input
         ref={fileInputRef}
         type="file"
@@ -290,6 +345,30 @@ export function CameraStep({
 
       {/* Controles flutuantes na base (sobre o scrim): modos + galeria/obturador/virar. */}
       <div className="absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-5 pb-safe-bottom pt-4">
+        {/* Seletor de lente: só a traseira tem ultra-angular (0,5×), e só quando
+            o WebView a expõe. Some no modo frontal e onde a lente não existe. */}
+        {facing === 'environment' && ultraWideId && !isRecording && (
+          <div className="flex items-center gap-1 rounded-full bg-black/35 p-1 backdrop-blur-sm">
+            {([
+              { wide: true, label: '0,5×' },
+              { wide: false, label: '1×' },
+            ] as const).map((lens) => (
+              <button
+                key={lens.label}
+                type="button"
+                onClick={() => setUltraWide(lens.wide)}
+                aria-pressed={ultraWide === lens.wide}
+                className={clsx(
+                  'min-h-[34px] rounded-full px-3 font-sans text-counter tabular-nums transition-colors',
+                  ultraWide === lens.wide ? 'bg-white text-black' : 'text-white',
+                )}
+              >
+                {lens.label}
+              </button>
+            ))}
+          </div>
+        )}
+
         <CameraModeSwitcher mode={mode} onChange={onModeChange} />
 
         <div className="grid w-full grid-cols-3 items-center px-8 pb-5">

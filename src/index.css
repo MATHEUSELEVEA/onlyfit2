@@ -22,6 +22,30 @@
     overscroll-behavior-y: none;
   }
 
+  /* iOS/WKWebView sobrepõe um botão nativo de play/pause em <video> inline (o
+   * "start-playback button") — é o "símbolo de pause do nada" sobre o preview
+   * da câmera e os vídeos do feed. Toda reprodução aqui usa UI própria e nunca
+   * o atributo `controls`, então escondemos os controles nativos por completo. */
+  video::-webkit-media-controls,
+  video::-webkit-media-controls-panel,
+  video::-webkit-media-controls-play-button,
+  video::-webkit-media-controls-start-playback-button {
+    display: none !important;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  /* Câmera nativa (camera-preview): o preview AVFoundation é renderizado atrás
+   * do webview, então enquanto a câmera está aberta toda a pilha visível fica
+   * transparente para ele aparecer. A classe é ligada/desligada pela CameraStep;
+   * fora dela o app volta ao fundo normal. (O webview do iOS também precisa ser
+   * não-opaco — o plugin cuida disso ao iniciar.) */
+  html.native-camera-active,
+  html.native-camera-active body,
+  html.native-camera-active #root {
+    background: transparent !important;
+  }
+
   /* Reserva a faixa da barra em navegadores com scrollbar clássica, para ela
    * não atravessar cartões e abas do Perfil ao rolar. */
   .scrollbar-gutter-stable {

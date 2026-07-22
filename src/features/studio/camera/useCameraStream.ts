@@ -20,13 +20,30 @@ function mapError(error: unknown): CameraError {
 // depois, ao trocar para o modo Vídeo.
 //
 // Resolução por modo:
-// · Foto → orientação NATIVA do sensor (paisagem, 1920×1080). Pedir retrato faz
-//   o WebKit do iOS recortar o centro do sensor para satisfazer a constraint —
-//   o famoso "zoom gigante". O enquadramento retrato fica por conta do preview
-//   (object-cover) e do recorte WYSIWYG na captura (CameraStep).
+// · Foto → paisagem 4:3 (1440×1080), o formato NATIVO de foto do iPhone (as
+//   duas câmeras leem o sensor inteiro em 4:3). Pedir retrato (9:16) fazia o
+//   WebKit do iOS recortar o centro do sensor pra satisfazer a constraint — o
+//   "zoom gigante". Além de matar o zoom, 4:3 é MAIS AMPLO que 16:9 no
+//   resultado: o recorte WYSIWYG (CameraStep) usa a altura inteira do quadro e
+//   uma fatia central da largura, e um quadro 4:3 (mais estreito em pixels,
+//   mesmo ângulo horizontal) entrega mais campo de visão nessa fatia do que um
+//   16:9. A proporção da fonte não muda o formato do post (o recorte cuida
+//   disso) — só o FOV.
 // · Vídeo/Stories → retrato (1080×1920), porque o MediaRecorder grava o stream
 //   cru: o arquivo precisa sair igual ao preview.
-export function useCameraStream(facing: CameraFacing, portrait: boolean) {
+//
+// `deviceId` (opcional): abre EXATAMENTE aquela lente em vez de deixar o
+// facingMode escolher a padrão — usado pela ultra-angular 0.5× traseira, quando
+// o WebView a expõe (ver lens.ts).
+export function useCameraStream(
+  facing: CameraFacing,
+  portrait: boolean,
+  deviceId?: string | null,
+  options?: { enabled?: boolean },
+) {
+  // No app nativo a câmera vem do camera-preview (useNativeCameraPreview) — aqui
+  // fica desligado para não abrir uma segunda captura via getUserMedia.
+  const enabled = options?.enabled ?? true;
   const [state, setState] = useState<CameraStreamState>({ stream: null, error: null, loading: true });
   // Incrementar força o efeito a rodar de novo mesmo com facing inalterado
   // (botão "Tentar de novo" após erro de permissão/dispositivo).
@@ -35,6 +52,13 @@ export function useCameraStream(facing: CameraFacing, portrait: boolean) {
   const generationRef = useRef(0);
 
   useEffect(() => {
+    if (!enabled) {
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      // setState fora do corpo síncrono do efeito (mesma convenção do resto).
+      Promise.resolve().then(() => setState({ stream: null, error: null, loading: false }));
+      return;
+    }
     const generation = ++generationRef.current;
 
     // Todo setState roda dentro de .then()/.catch() (depois de um gap
@@ -45,8 +69,10 @@ export function useCameraStream(facing: CameraFacing, portrait: boolean) {
         setState((prev) => ({ ...prev, loading: true, error: null }));
         return navigator.mediaDevices.getUserMedia({
           video: {
-            facingMode: { ideal: facing },
-            width: { ideal: portrait ? 1080 : 1920 },
+            // Lente exata (ex.: ultra-angular) tem prioridade; senão, facingMode
+            // deixa o iOS escolher a lente padrão daquele lado.
+            ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: facing } }),
+            width: { ideal: portrait ? 1080 : 1440 },
             height: { ideal: portrait ? 1920 : 1080 },
             frameRate: { ideal: 30, max: 60 },
           },
@@ -77,7 +103,7 @@ export function useCameraStream(facing: CameraFacing, portrait: boolean) {
       streamRef.current?.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     };
-  }, [facing, portrait, retryTick]);
+  }, [facing, portrait, deviceId, enabled, retryTick]);
 
   const retry = useCallback(() => setRetryTick((tick) => tick + 1), []);
 
