@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { DEFAULT_CAPTION_STYLE, sanitizeCues, type CaptionCue, type CaptionTrack } from '@/lib/captions';
 import type { FeedMedia, FeedPost } from './types';
+import { sanitizeMediaFraming, type MediaFraming } from '@/features/mediaFraming';
 
 const PAGE_SIZE = 10;
 
@@ -53,6 +54,7 @@ interface PostMediaRow {
   kind: 'image' | 'video';
   url: string;
   thumbnail_url: string | null;
+  metadata: Record<string, unknown> | null;
 }
 
 // Páginas de carrossel por post (tabela post_media, migration 20260712180000).
@@ -63,14 +65,14 @@ async function fetchPostMedia(postIds: string[]): Promise<Map<string, FeedMedia[
 
   const { data, error } = await supabase
     .from('post_media')
-    .select('post_id, position, kind, url, thumbnail_url')
+    .select('post_id, position, kind, url, thumbnail_url, metadata')
     .in('post_id', postIds)
     .order('position', { ascending: true });
   if (error) throw error;
 
   for (const row of (data ?? []) as PostMediaRow[]) {
     const list = byPost.get(row.post_id) ?? [];
-    list.push({ kind: row.kind, url: row.url, thumbnailUrl: row.thumbnail_url });
+    list.push({ kind: row.kind, url: row.url, thumbnailUrl: row.thumbnail_url, framing: sanitizeMediaFraming(row.metadata?.framing) });
     byPost.set(row.post_id, list);
   }
   return byPost;
@@ -82,10 +84,10 @@ async function fetchPostMedia(postIds: string[]): Promise<Map<string, FeedMedia[
 function singleMedia(row: PostRow): FeedMedia[] {
   if (row.video_url) {
     const hlsUrl = row.stream_status === 'ready' ? row.stream_playback_url : null;
-    return [{ kind: 'video', url: row.video_url, thumbnailUrl: row.thumbnail_url, hlsUrl, captions: readCaptions(row.metadata) }];
+    return [{ kind: 'video', url: row.video_url, thumbnailUrl: row.thumbnail_url, hlsUrl, captions: readCaptions(row.metadata), framing: readMediaFraming(row.metadata, 0) }];
   }
   if (row.thumbnail_url) {
-    return [{ kind: 'image', url: row.thumbnail_url, thumbnailUrl: null }];
+    return [{ kind: 'image', url: row.thumbnail_url, thumbnailUrl: null, framing: readMediaFraming(row.metadata, 0) }];
   }
   return [];
 }
@@ -145,6 +147,12 @@ function readCaptions(metadata: PostRow['metadata']): CaptionTrack | null {
 function readLocationName(metadata: PostRow['metadata']): string | null {
   const loc = metadata?.location as { name?: unknown } | undefined;
   return loc && typeof loc.name === 'string' && loc.name.trim() ? loc.name.trim() : null;
+}
+
+function readMediaFraming(metadata: PostRow['metadata'], position: number): MediaFraming | null {
+  const raw = metadata?.media_framing;
+  if (Array.isArray(raw)) return sanitizeMediaFraming(raw[position]);
+  return sanitizeMediaFraming(raw);
 }
 
 async function fetchLikedPostIds(userId: string, postIds: string[]): Promise<Set<string>> {

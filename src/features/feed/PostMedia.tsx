@@ -4,6 +4,7 @@ import { clsx } from 'clsx';
 import type { FeedMedia } from './types';
 import { muteAfterAutoplayBlock, setVideoMuted, useVideoMuted } from './videoSound';
 import { CaptionOverlay } from './CaptionOverlay';
+import { mediaFramingStyle } from '@/features/mediaFraming';
 
 type MediaFit = 'cover' | 'contain';
 
@@ -149,12 +150,13 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
   };
 
   const backdropUrl = media.kind === 'image' ? media.url : media.thumbnailUrl;
-  const mediaClass = clsx('relative h-full w-full', fit === 'cover' ? 'object-cover' : 'object-contain');
+  const resolvedFit = media.framing?.fit ?? fit;
+  const mediaClass = clsx('relative h-full w-full', resolvedFit === 'cover' ? 'object-cover' : 'object-contain', media.framing && 'transition-transform duration-150 ease-out');
 
   return (
     <div ref={stageRef} className="absolute inset-0 overflow-hidden bg-surface-container-lowest">
       {/* Fundo desfocado preenche as bordas quando a mídia não é vertical */}
-      {fit === 'contain' && backdropUrl && (
+      {resolvedFit === 'contain' && backdropUrl && (
         <img
           src={backdropUrl}
           alt=""
@@ -168,6 +170,7 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
           ref={videoRef}
           poster={media.thumbnailUrl ?? undefined}
           className={mediaClass}
+          style={media.framing ? mediaFramingStyle(media.framing) : undefined}
           loop
           playsInline
           controlsList="nodownload noremoteplayback"
@@ -200,6 +203,7 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
           alt={alt}
           draggable={false}
           className={mediaClass}
+          style={media.framing ? mediaFramingStyle(media.framing) : undefined}
           loading="lazy"
           onLoad={(event) =>
             applyFit(event.currentTarget.naturalWidth / event.currentTarget.naturalHeight)

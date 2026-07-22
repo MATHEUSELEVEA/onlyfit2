@@ -8,6 +8,7 @@ import { useLocationSearch } from '../useLocationSearch';
 import { CaptionEditor } from './CaptionEditor';
 import type { CaptionTrack } from '@/lib/captions';
 import type { PostVisibility } from '../useCreatePost';
+import { mediaFramingStyle } from '@/features/mediaFraming';
 
 interface DetailsStepProps {
   media: DraftMedia[];
@@ -123,11 +124,16 @@ export function DetailsStep({
             <div className="relative h-24 w-[76px] shrink-0 overflow-hidden rounded-xl bg-surface-container">
               {cover.kind === 'video' ? (
                 <>
-                  <video src={cover.previewUrl} className="h-full w-full object-cover" muted preload="metadata" />
+                  <video src={cover.previewUrl} className="h-full w-full object-contain" muted preload="metadata" />
                   <span className="absolute bottom-1 right-1 text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]"><Play size={11} fill="currentColor" aria-hidden /></span>
                 </>
               ) : (
-                <img src={cover.previewUrl} alt="" className="h-full w-full object-cover" />
+                <img
+                  src={cover.previewUrl}
+                  alt=""
+                  className="h-full w-full"
+                  style={mediaFramingStyle(cover.framing)}
+                />
               )}
               {media.length > 1 && (
                 <span className="absolute left-1 top-1 rounded-full bg-black/55 px-1.5 py-0.5 font-sans text-nav text-white backdrop-blur-sm">
