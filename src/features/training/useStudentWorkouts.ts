@@ -35,6 +35,12 @@ export interface StudentWorkout {
   exercises: StudentWorkoutExercise[];
   trainingType: WorkoutTrainingType;
   prescription: WorkoutPrescription | null;
+  /** Protocolo (ciclo) a que pertence, se houver. */
+  cycleId: string | null;
+  /** Origem: 'coach' (profissional) | 'market' (comprado) | etc. */
+  sourceType: string | null;
+  /** Quem passou: id do coach (source_type=coach) ou da oferta (market). */
+  assignedBy: string | null;
 }
 
 type AssignmentRow = {
@@ -44,6 +50,9 @@ type AssignmentRow = {
   starts_at: string | null;
   ends_at: string | null;
   protocol_starts_at: string | null;
+  cycle_id: string | null;
+  source_type: string | null;
+  source_id: string | null;
   workout: {
     id: string;
     title: string | null;
@@ -117,6 +126,9 @@ function toStudentWorkout(row: AssignmentRow): StudentWorkout {
     exercises,
     trainingType: prescriptionRow?.modality ?? workoutTrainingType(row.workout?.category),
     prescription: prescriptionRow?.prescription ?? null,
+    cycleId: row.cycle_id,
+    sourceType: row.source_type,
+    assignedBy: row.source_id,
   };
 }
 
@@ -139,7 +151,7 @@ export function useStudentWorkouts() {
     queryFn: async (): Promise<StudentWorkout[]> => {
       const { data, error } = await supabase
         .from('student_workout_assignments')
-        .select('id,days_of_week,week_number,starts_at,ends_at,protocol_starts_at,workout:workouts(id,title,student_display_name,category,workout_exercises(id,exercise_name,student_display_name,muscle_group,sets,reps,notes,tempo_notes,pro_video_url,position),workout_prescriptions(modality,prescription))')
+        .select('id,days_of_week,week_number,starts_at,ends_at,protocol_starts_at,cycle_id,source_type,source_id,workout:workouts(id,title,student_display_name,category,workout_exercises(id,exercise_name,student_display_name,muscle_group,sets,reps,notes,tempo_notes,pro_video_url,position),workout_prescriptions(modality,prescription))')
         .eq('student_user_id', userId as string)
         .eq('status', 'active')
         .order('created_at', { ascending: false });
