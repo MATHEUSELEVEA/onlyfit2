@@ -208,7 +208,7 @@ export function TrainingPlayerPage() {
                 {activeSetIndex + 1} de {logs.length}
               </p>
             </div>
-            <div className="rounded-full bg-surface-container px-3 py-2 font-sans text-counter text-on-surface-variant">
+            <div className="font-sans text-counter text-on-surface-variant">
               Meta {exercise.targetReps}
             </div>
           </div>
@@ -465,7 +465,7 @@ function ExerciseListSheet({
             >
               <span
                 className={clsx(
-                  'flex h-9 w-9 items-center justify-center rounded-full font-sans text-counter',
+                  'flex h-9 w-9 items-center justify-center rounded-lg font-sans text-counter',
                   selected ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface-variant',
                 )}
               >
@@ -652,8 +652,8 @@ function WorkoutSummary({ summary, onClose }: { summary: Summary; onClose: () =>
         </button>
       </div>
       <main className="flex flex-1 flex-col justify-center">
-        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary text-on-primary">
-          <Check size={34} />
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary text-on-primary">
+          <Check size={26} />
         </div>
         <h1 className="mt-6 text-center font-sans text-display text-on-surface">{summary.title}</h1>
         <p className="mt-2 text-center font-sans text-body-sm text-on-surface-variant">Treino concluído</p>

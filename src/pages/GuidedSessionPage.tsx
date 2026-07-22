@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Check, ChevronRight, Dot, Gauge, Repeat, SkipForward, Timer, Waves, X, Zap } from 'lucide-react';
+import { ArrowLeft, Check, ChevronRight, Dot, Repeat, SkipForward, Timer, X, Zap } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -285,11 +285,13 @@ export function GuidedSessionPage() {
       </header>
 
       {/* Alternador de visualização: Guiado × Lista */}
-      <div className="mb-1 flex justify-center px-4">
-        <div className="inline-flex rounded-full bg-surface-container p-0.5">
-          <button type="button" onClick={() => setViewMode('guided')} className={clsx('min-h-8 rounded-full px-3 font-sans text-counter transition-colors', viewMode === 'guided' ? 'bg-primary text-on-primary' : 'text-on-surface-variant')}>{t('meufit.training.guided.viewGuided')}</button>
-          <button type="button" onClick={() => setViewMode('list')} className={clsx('min-h-8 rounded-full px-3 font-sans text-counter transition-colors', viewMode === 'list' ? 'bg-primary text-on-primary' : 'text-on-surface-variant')}>{t('meufit.training.guided.viewList')}</button>
-        </div>
+      <div className="mb-1 flex justify-center gap-5 px-4">
+        {(['guided', 'list'] as const).map((mode) => (
+          <button key={mode} type="button" onClick={() => setViewMode(mode)} className={clsx('relative min-h-8 font-sans text-counter transition-colors', viewMode === mode ? 'text-on-surface' : 'text-on-surface-variant hover:text-on-surface')}>
+            {t(mode === 'guided' ? 'meufit.training.guided.viewGuided' : 'meufit.training.guided.viewList')}
+            {viewMode === mode ? <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-primary" aria-hidden /> : null}
+          </button>
+        ))}
       </div>
 
       {/* Mapa de intervalos (endurance) ou trilha simples — só no modo Guiado */}
@@ -331,10 +333,11 @@ export function GuidedSessionPage() {
         ) : (
           <>
             <p className="mt-5 font-sans tabular-nums text-on-surface" style={{ fontSize: 'clamp(3.25rem, 20vw, 5.5rem)', lineHeight: 1 }}>{phase.bound.by === 'distance' ? formatDistance(phase.bound.meters) : isTimed ? formatClock(remaining) : t('meufit.training.guided.byOpen')}</p>
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-high px-4 py-2 font-sans text-label text-on-surface"><Waves size={15} aria-hidden />{t(STROKE_KEY[phase.step.sport?.stroke ?? 'free'])}</span>
-              <span className={clsx('inline-flex items-center rounded-full px-4 py-2 font-sans text-label', strongEffort(effort) ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface')}>{t(EFFORT_KEY[effort])}</span>
-            </div>
+            <p className="mt-5 font-sans text-label">
+              <span className="text-on-surface">{t(STROKE_KEY[phase.step.sport?.stroke ?? 'free'])}</span>
+              <span className="text-on-surface-variant"> · </span>
+              <span className={strongEffort(effort) ? 'text-primary' : 'text-on-surface-variant'}>{t(EFFORT_KEY[effort])}</span>
+            </p>
             {phase.step.rest?.by === 'time' ? <p className="mt-3 font-sans text-body-sm text-on-surface-variant">{t('meufit.training.guided.restAfter', { n: phase.step.rest.seconds })}</p> : null}
           </>
         )}
@@ -351,7 +354,7 @@ export function GuidedSessionPage() {
           {phase.bound.by === 'reps' ? `${phase.bound.reps}` : isTimed ? formatClock(remaining) : formatClock(phaseElapsed)}
         </p>
         <p className="mt-1 font-sans text-body-sm text-on-surface-variant">{phase.bound.by === 'reps' ? t('meufit.training.guided.repsLabel') : isRest ? t('meufit.training.guided.swimRest') : boundLabel(phase.bound, t)}</p>
-        {!isRest ? <span className={clsx('mt-5 inline-flex items-center rounded-full px-4 py-2 font-sans text-label', strongEffort(effort) ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface')}>{t(EFFORT_KEY[effort])}</span> : null}
+        {!isRest ? <p className={clsx('mt-5 font-sans text-label', strongEffort(effort) ? 'text-primary' : 'text-on-surface-variant')}>{t(EFFORT_KEY[effort])}</p> : null}
         {roundMovements.length > 1 ? (
           <ul className="mt-6 w-full max-w-xs space-y-1.5">
             {roundMovements.map((mv) => {
@@ -385,11 +388,11 @@ export function GuidedSessionPage() {
 
         {/* Alvo: esforço + (opcional) pace/cadência */}
         {!isRest ? (
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
-            <span className={clsx('inline-flex items-center rounded-full px-4 py-2 font-sans text-label', strongEffort(effort) ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface')}>{t(EFFORT_KEY[effort])}</span>
-            {pace ? <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-high px-3 py-2 font-sans text-label tabular-nums text-on-surface"><Gauge size={15} aria-hidden />{t('meufit.training.guided.pacePerKm', { pace: formatClock(pace) })}</span> : null}
-            {cadence ? <span className="inline-flex items-center rounded-full bg-surface-container-high px-3 py-2 font-sans text-counter tabular-nums text-on-surface">{t('meufit.training.guided.cadence', { n: cadence })}</span> : null}
-          </div>
+          <p className="mt-6 font-sans text-label tabular-nums">
+            <span className={strongEffort(effort) ? 'text-primary' : 'text-on-surface-variant'}>{t(EFFORT_KEY[effort])}</span>
+            {pace ? <span className="text-on-surface"><span className="text-on-surface-variant"> · </span>{t('meufit.training.guided.pacePerKm', { pace: formatClock(pace) })}</span> : null}
+            {cadence ? <span className="text-on-surface"><span className="text-on-surface-variant"> · </span>{t('meufit.training.guided.cadence', { n: cadence })}</span> : null}
+          </p>
         ) : null}
 
         {/* Frase de coaching */}
@@ -420,7 +423,7 @@ export function GuidedSessionPage() {
         <button
           type="button"
           onClick={viewMode === 'list' ? openReview : advance}
-          className="flex min-h-[56px] w-full items-center justify-center gap-2 rounded-full bg-primary font-sans text-label text-on-primary transition-opacity duration-150 hover:opacity-90 active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary font-sans text-label text-on-primary transition-opacity duration-150 hover:opacity-90 active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           {viewMode === 'list' ? <><Check size={18} aria-hidden />{t('meufit.training.guided.finish')}</> : <>{primaryIcon}{primaryLabel}</>}
         </button>
@@ -428,8 +431,8 @@ export function GuidedSessionPage() {
 
       <BottomSheet open={exitOpen} onClose={() => setExitOpen(false)} title={t('meufit.training.guided.exitTitle')} description={t('meufit.training.guided.exitDescription')}>
         <div className="px-5 pb-6">
-          <button type="button" onClick={() => setExitOpen(false)} className="min-h-12 w-full rounded-full bg-primary font-sans text-label text-on-primary">{t('meufit.training.guided.exitStay')}</button>
-          <button type="button" onClick={() => { training.cancelGuided(); navigate('/meu-fit/treino'); }} className="mt-3 min-h-12 w-full rounded-full border border-outline-variant/40 font-sans text-label text-on-surface">{t('meufit.training.guided.exitLeave')}</button>
+          <button type="button" onClick={() => setExitOpen(false)} className="min-h-12 w-full rounded-xl bg-primary font-sans text-label text-on-primary">{t('meufit.training.guided.exitStay')}</button>
+          <button type="button" onClick={() => { training.cancelGuided(); navigate('/meu-fit/treino'); }} className="mt-3 min-h-12 w-full rounded-xl border border-outline-variant/40 font-sans text-label text-on-surface">{t('meufit.training.guided.exitLeave')}</button>
         </div>
       </BottomSheet>
     </div>

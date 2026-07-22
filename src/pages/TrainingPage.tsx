@@ -68,7 +68,7 @@ function formatActivityDateTime(value?: string) {
 }
 
 function formatActivitySource(activity: ImportedActivity) {
-  const source = activitySourceInfo(activity).label;
+  const source = activitySourceLabel(activity);
   const device = typeof activity.sourcePayload?.device_name === 'string' ? activity.sourcePayload.device_name : null;
   return device ? `${source} · ${device}` : source;
 }
@@ -88,7 +88,9 @@ function heatClass(day: HealthDay | undefined, selected: boolean): string {
 function sourceText(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
 }
-function activitySourceInfo(activity: ImportedActivity): { label: string; tone: 'apple' | 'nike' | 'strava' | 'garmin' | 'manual' | 'default' } {
+// Fonte da atividade como texto ("Apple Watch", "Strava"…) — entra no meta com "·",
+// hierarquia por tipografia em vez de badge (padrão premium do Market).
+function activitySourceLabel(activity: ImportedActivity): string {
   const payload = activity.sourcePayload ?? {};
   const raw = [
     sourceText(payload.source_name),
@@ -98,32 +100,15 @@ function activitySourceInfo(activity: ImportedActivity): { label: string; tone: 
     sourceText(activity.source),
   ].filter(Boolean).join(' ').toLowerCase();
 
-  if (/nike|nrc|run club/.test(raw)) return { label: 'Nike Run', tone: 'nike' };
-  if (/strava/.test(raw)) return { label: 'Strava', tone: 'strava' };
-  if (/garmin/.test(raw)) return { label: 'Garmin', tone: 'garmin' };
-  if (/coros/.test(raw)) return { label: 'COROS', tone: 'default' };
-  if (/fitbit/.test(raw)) return { label: 'Fitbit', tone: 'default' };
-  if (activity.source === 'manual') return { label: 'Manual', tone: 'manual' };
-  if (activity.importedFromWatch || /watch/.test(raw)) return { label: 'Apple Watch', tone: 'apple' };
-  if (/apple|health|healthkit|saúde|saude/.test(raw)) return { label: 'Apple Saúde', tone: 'apple' };
-  return { label: sourceLabel(activity.source), tone: 'default' };
-}
-function ActivitySourceBadge({ activity }: { activity: ImportedActivity }) {
-  const info = activitySourceInfo(activity);
-  return (
-    <span
-      className={clsx(
-        'inline-flex min-h-6 shrink-0 items-center rounded-full border px-2 font-sans text-counter',
-        info.tone === 'apple' && 'border-primary/25 bg-primary/10 text-primary',
-        info.tone === 'nike' && 'border-on-surface/20 bg-on-surface text-surface',
-        info.tone === 'strava' && 'border-tertiary/30 bg-tertiary/10 text-tertiary',
-        info.tone === 'garmin' && 'border-secondary/30 bg-secondary/10 text-secondary',
-        (info.tone === 'manual' || info.tone === 'default') && 'border-outline-variant/45 bg-surface-container-high text-on-surface-variant',
-      )}
-    >
-      {info.label}
-    </span>
-  );
+  if (/nike|nrc|run club/.test(raw)) return 'Nike Run';
+  if (/strava/.test(raw)) return 'Strava';
+  if (/garmin/.test(raw)) return 'Garmin';
+  if (/coros/.test(raw)) return 'COROS';
+  if (/fitbit/.test(raw)) return 'Fitbit';
+  if (activity.source === 'manual') return 'Manual';
+  if (activity.importedFromWatch || /watch/.test(raw)) return 'Apple Watch';
+  if (/apple|health|healthkit|saúde|saude/.test(raw)) return 'Apple Saúde';
+  return sourceLabel(activity.source);
 }
 
 export function TrainingPage() { return <TrainingContent />; }
@@ -145,7 +130,7 @@ function TrainingContent() {
   return <div className="relative flex h-full flex-col overflow-y-auto bg-background pb-8">
     <PageTopBar title={t('meufit.training.pageTitle')} backFallback="/meu-fit" />
     <main className="mx-auto w-full max-w-[720px] px-5 pb-6 pt-5">
-      <div className="grid grid-cols-4 gap-1 rounded-full bg-surface-container p-1" role="tablist" aria-label={t('meufit.training.tabs.aria')}>{([['today', t('meufit.training.tabs.today')], ['history', t('meufit.training.tabs.history')], ['progress', t('meufit.training.tabs.progress')], ['library', t('meufit.training.tabs.library')]] as [Tab, string][]).map(([value, label]) => <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={clsx('flex min-h-[40px] items-center justify-center rounded-full font-sans text-counter transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', tab === value ? 'bg-surface-container-lowest text-on-surface' : 'text-on-surface-variant hover:text-on-surface active:text-on-surface')}>{label}</button>)}</div>
+      <div className="grid grid-cols-4 border-b border-outline-variant/30" role="tablist" aria-label={t('meufit.training.tabs.aria')}>{([['today', t('meufit.training.tabs.today')], ['history', t('meufit.training.tabs.history')], ['progress', t('meufit.training.tabs.progress')], ['library', t('meufit.training.tabs.library')]] as [Tab, string][]).map(([value, label]) => <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={clsx('relative flex min-h-[44px] items-center justify-center font-sans text-label transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', tab === value ? 'text-on-surface' : 'text-on-surface-variant hover:text-on-surface active:text-on-surface')}>{label}{tab === value ? <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-primary" aria-hidden /> : null}</button>)}</div>
       {tab === 'history' ? <AppleHealthCard appleHealth={appleHealth} compact /> : null}
       {tab === 'today' && <Today items={todayItems} active={activeItem ?? null} />}
       {tab === 'history' && <HistoryList imported={allImported} onOpenDay={(value) => setDetailDate(value)} onOpenActivity={setDetailActivity} onRecord={() => setRecordOpen(true)} />}
@@ -167,11 +152,12 @@ function Today({ items, active }: { items: ScheduledWorkout[]; active: Scheduled
   const types = Array.from(new Set(workouts.map((item) => item.surface)));
   const sessionFor = (item: ScheduledWorkout) => (item.workoutId ? byWorkoutId.get(item.workoutId) ?? null : null);
   const isDone = (item: ScheduledWorkout) => Boolean(sessionFor(item)) || item.status === 'completed';
+  // One Voice Rule: só o primeiro treino pendente (na ordem da tela) ganha o CTA primário.
+  const firstPendingId = types.flatMap((surface) => workouts.filter((item) => item.surface === surface)).find((item) => !isDone(item))?.id ?? null;
 
   return (
     <section className="mt-6">
       <h2 className="font-sans text-title-lg text-on-surface">{t('meufit.training.today.heading')}</h2>
-      <p className="mt-1 font-sans text-body-sm text-on-surface-variant">{t('meufit.training.today.subtitle')}</p>
       {types.length ? (
         <div className="mt-6 space-y-9">
           {types.map((surface) => {
@@ -181,13 +167,13 @@ function Today({ items, active }: { items: ScheduledWorkout[]; active: Scheduled
               <div key={surface}>
                 {/* Cabeçalho da categoria: nomeia o grupo (ex.: Força) e mostra o
                     progresso do dia. Sem botão de "entrar" — os treinos vêm logo abaixo. */}
-                <div className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant" aria-hidden>{surfaceIcon[surface]}</span>
+                <div className="flex items-center gap-2.5">
+                  <span className="shrink-0 text-on-surface-variant" aria-hidden>{surfaceIcon[surface]}</span>
                   <h3 className="min-w-0 flex-1 font-sans text-title text-on-surface">{t(surfaceTranslationKey[surface])}</h3>
                   <span className="shrink-0 font-sans text-counter tabular-nums text-on-surface-variant">{t('meufit.training.today.doneOf', { done: doneCount, total: surfaceWorkouts.length })}</span>
                 </div>
                 <div className="mt-4 space-y-3">
-                  {surfaceWorkouts.map((item) => <TodayWorkoutCard key={item.id} item={item} session={sessionFor(item)} isActive={active?.id === item.id} studentWorkout={item.assignmentId ? byAssignment.get(item.assignmentId) : undefined} />)}
+                  {surfaceWorkouts.map((item) => <TodayWorkoutCard key={item.id} item={item} session={sessionFor(item)} isActive={active?.id === item.id} isPrimary={item.id === firstPendingId} studentWorkout={item.assignmentId ? byAssignment.get(item.assignmentId) : undefined} />)}
                 </div>
               </div>
             );
@@ -210,7 +196,7 @@ function Today({ items, active }: { items: ScheduledWorkout[]; active: Scheduled
  *   e "Refazer". Exercícios ficam recolhidos por padrão (toque para ver).
  * Acabamento premium por contenção: profundidade tonal, lime como única cor de ação.
  */
-function TodayWorkoutCard({ item, session, isActive, studentWorkout }: { item: ScheduledWorkout; session: TodayWorkoutSession | null; isActive: boolean; studentWorkout?: StudentWorkout }) {
+function TodayWorkoutCard({ item, session, isActive, isPrimary, studentWorkout }: { item: ScheduledWorkout; session: TodayWorkoutSession | null; isActive: boolean; isPrimary: boolean; studentWorkout?: StudentWorkout }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { templates, startSession, startGuided, activeSession } = useTraining();
@@ -242,9 +228,9 @@ function TodayWorkoutCard({ item, session, isActive, studentWorkout }: { item: S
     : '';
 
   return (
-    <article className={clsx('overflow-hidden rounded-3xl border bg-surface-container transition-colors', running && !done ? 'border-primary/40 bg-primary/[0.05]' : 'border-outline-variant/40')}>
+    <article className={clsx('overflow-hidden rounded-2xl border bg-surface-container transition-colors', running && !done ? 'border-primary/40 bg-primary/[0.05]' : 'border-outline-variant/40')}>
       <div className="flex items-start gap-3 p-4">
-        <span className={clsx('mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full', done ? 'bg-primary/15 text-primary' : 'bg-surface-container-high text-on-surface-variant')} aria-hidden>
+        <span className={clsx('mt-0.5 shrink-0', done ? 'text-primary' : 'text-on-surface-variant')} aria-hidden>
           {done ? <Check size={18} /> : surfaceIcon[item.surface]}
         </span>
         <div className="min-w-0 flex-1">
@@ -271,7 +257,7 @@ function TodayWorkoutCard({ item, session, isActive, studentWorkout }: { item: S
             onClick={() => setExpanded((value) => !value)}
             aria-expanded={expanded}
             aria-label={t(expanded ? 'meufit.training.hideExercises' : 'meufit.training.showExercises')}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant transition-colors duration-150 hover:text-on-surface active:bg-surface-container-highest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-on-surface-variant transition-colors duration-150 hover:text-on-surface active:text-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <ChevronDown size={18} className={clsx('transition-transform duration-200', expanded ? 'rotate-180' : 'rotate-0')} aria-hidden />
           </button>
@@ -282,14 +268,14 @@ function TodayWorkoutCard({ item, session, isActive, studentWorkout }: { item: S
 
       {done ? (
         <div className="p-3 pt-1">
-          <button type="button" onClick={open} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-surface-container-high font-sans text-label text-on-surface transition-colors duration-150 hover:bg-surface-container-highest active:bg-surface-container-highest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+          <button type="button" onClick={open} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-surface-container-high font-sans text-label text-on-surface transition-colors duration-150 hover:bg-surface-container-highest active:bg-surface-container-highest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
             <RotateCcw size={17} aria-hidden />
             {t('meufit.training.today.redo')}
           </button>
         </div>
       ) : canStart ? (
         <div className="p-3 pt-1">
-          <button type="button" onClick={open} className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-primary font-sans text-label text-on-primary transition-opacity duration-150 hover:opacity-90 active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container">
+          <button type="button" onClick={open} className={clsx('flex min-h-12 w-full items-center justify-center gap-2 rounded-xl font-sans text-label focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', isPrimary || running ? 'bg-primary text-on-primary transition-opacity duration-150 hover:opacity-90 active:opacity-80 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container' : 'bg-surface-container-high text-on-surface transition-colors duration-150 hover:bg-surface-container-highest active:bg-surface-container-highest')}>
             <Play size={18} fill="currentColor" aria-hidden />
             {t(running ? 'meufit.training.today.continue' : 'meufit.training.today.start')}
           </button>
@@ -404,11 +390,8 @@ function DayDetailContent({ date, healthDays, scheduled, showScheduled = true, o
         <button key={activity.id} type="button" onClick={() => onOpenActivity?.(activity)} className="flex w-full items-center gap-3 rounded-xl border border-outline-variant/40 bg-surface p-3 text-left transition-colors duration-150 hover:bg-surface-container-high active:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
           <TrainingBadge surface={activity.surface} status="imported" />
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="font-sans text-label text-on-surface">{activity.title}</p>
-              <ActivitySourceBadge activity={activity} />
-            </div>
-            <p className="mt-0.5 break-words font-sans text-body-sm text-on-surface-variant">{formatActivityMeta(activity)}</p>
+            <p className="font-sans text-label text-on-surface">{activity.title}</p>
+            <p className="mt-0.5 break-words font-sans text-body-sm text-on-surface-variant">{`${formatActivityMeta(activity)} · ${activitySourceLabel(activity)}`}</p>
           </div>
           <ChevronRight size={18} className="shrink-0 text-on-surface-variant" aria-hidden />
         </button>
@@ -675,9 +658,9 @@ function ProtocolCard({ protocol, onStart }: { protocol: LibraryProtocol; onStar
   ].filter(Boolean).join(' · ');
 
   return (
-    <article className="overflow-hidden rounded-3xl border border-outline-variant/40 bg-surface-container">
+    <article className="overflow-hidden rounded-2xl border border-outline-variant/40 bg-surface-container">
       <button type="button" onClick={() => setOpen((value) => !value)} aria-expanded={open} className="flex w-full items-center gap-3 p-4 text-left transition-colors duration-150 hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary" aria-hidden><Layers size={18} /></span>
+        <span className="shrink-0 text-primary" aria-hidden><Layers size={18} /></span>
         <div className="min-w-0 flex-1">
           <h4 className="font-sans text-label leading-snug text-on-surface">{protocol.name}</h4>
           <p className="mt-0.5 font-sans text-body-sm tabular-nums text-on-surface-variant">{subtitle}</p>
@@ -697,8 +680,8 @@ function ProtocolCard({ protocol, onStart }: { protocol: LibraryProtocol; onStar
 function LibraryWorkoutRow({ workout, onStart, asCard = false }: { workout: LibraryWorkout; onStart: () => void; asCard?: boolean }) {
   const { t } = useTranslation();
   return (
-    <div className={clsx('flex items-center gap-3', asCard ? 'rounded-3xl border border-outline-variant/40 bg-surface-container p-4' : 'border-b border-outline-variant/15 px-4 py-3 last:border-b-0')}>
-      {asCard ? <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant" aria-hidden>{surfaceIcon[workout.trainingType]}</span> : null}
+    <div className={clsx('flex items-center gap-3', asCard ? 'rounded-2xl border border-outline-variant/40 bg-surface-container p-4' : 'border-b border-outline-variant/15 px-4 py-3 last:border-b-0')}>
+      {asCard ? <span className="shrink-0 text-on-surface-variant" aria-hidden>{surfaceIcon[workout.trainingType]}</span> : null}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <p className="min-w-0 font-sans text-label leading-snug text-on-surface">{workout.title}</p>
@@ -707,7 +690,7 @@ function LibraryWorkoutRow({ workout, onStart, asCard = false }: { workout: Libr
         <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{workout.exerciseCount ? t(workout.exerciseCount === 1 ? 'meufit.training.library.exerciseCount' : 'meufit.training.library.exerciseCountPlural', { count: workout.exerciseCount }) : t('meufit.training.library.noExercises')}</p>
       </div>
       {workout.exerciseCount ? (
-        <button type="button" onClick={onStart} className="flex min-h-10 shrink-0 items-center gap-1.5 rounded-full bg-primary px-3.5 font-sans text-counter text-on-primary transition-opacity duration-150 hover:opacity-90 active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-container">
+        <button type="button" onClick={onStart} className="flex min-h-10 shrink-0 items-center gap-1.5 font-sans text-label text-primary transition-opacity duration-150 hover:opacity-80 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
           <Play size={15} fill="currentColor" aria-hidden />
           {t('meufit.training.library.doNow')}
         </button>
@@ -825,11 +808,8 @@ function HistoryList({ imported, onOpenDay, onOpenActivity, onRecord }: { import
   return (
     <section className="mt-6">
       <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h2 className="font-sans text-title-lg text-on-surface">{t('meufit.training.tabs.history')}</h2>
-          <p className="mt-1 font-sans text-body-sm text-on-surface-variant">{t('meufit.training.history.subtitle')}</p>
-        </div>
-        <button type="button" onClick={onRecord} className="flex min-h-10 shrink-0 items-center gap-2 rounded-full bg-primary px-4 font-sans text-counter text-on-primary transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background" aria-label={t('meufit.training.history.record')}>
+        <h2 className="min-w-0 font-sans text-title-lg text-on-surface">{t('meufit.training.tabs.history')}</h2>
+        <button type="button" onClick={onRecord} className="flex min-h-10 shrink-0 items-center gap-1.5 font-sans text-label text-primary transition-opacity hover:opacity-80 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label={t('meufit.training.history.record')}>
           <Plus size={16} aria-hidden />
           {t('meufit.training.history.record')}
         </button>
@@ -866,11 +846,8 @@ function HistoryRow({ title, meta, status, surface, activity, onOpenActivity }: 
     <>
       <TrainingBadge surface={surface} status={status} />
       <span className="min-w-0 flex-1">
-        <span className="flex flex-wrap items-center gap-2">
-          <span className="min-w-0 break-words font-sans text-label leading-snug text-on-surface">{title}</span>
-          {activity ? <ActivitySourceBadge activity={activity} /> : null}
-        </span>
-        <span className="mt-0.5 block break-words font-sans text-body-sm leading-snug text-on-surface-variant">{meta}</span>
+        <span className="min-w-0 break-words font-sans text-label leading-snug text-on-surface">{title}</span>
+        <span className="mt-0.5 block break-words font-sans text-body-sm leading-snug text-on-surface-variant">{activity ? `${meta} · ${activitySourceLabel(activity)}` : meta}</span>
       </span>
       {activity ? <ChevronRight size={18} className="mt-0.5 shrink-0 text-on-surface-variant" aria-hidden /> : null}
     </>
@@ -939,10 +916,10 @@ function TrainingBadge({ surface, status }: { surface: TrainingSurface; status: 
   return (
     <span
       className={clsx(
-        'flex h-10 w-10 shrink-0 items-center justify-center rounded-full border',
-        completed && 'border-primary/35 bg-primary/10 text-primary',
-        missed && 'border-error/35 bg-error/10 text-error',
-        !completed && !missed && 'border-outline-variant/40 bg-surface-container-high text-on-surface-variant',
+        'mt-0.5 shrink-0',
+        completed && 'text-primary',
+        missed && 'text-error',
+        !completed && !missed && 'text-on-surface-variant',
       )}
       aria-hidden
     >
