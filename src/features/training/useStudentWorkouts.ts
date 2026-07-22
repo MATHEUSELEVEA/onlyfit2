@@ -156,7 +156,7 @@ export function useStudentWorkouts() {
     queryFn: async (): Promise<StudentWorkout[]> => {
       const { data, error } = await supabase
         .from('student_workout_assignments')
-        .select('id,days_of_week,week_number,starts_at,ends_at,protocol_starts_at,cycle_id,source_type,source_id,workout:workouts(id,title,student_display_name,category,workout_exercises(id,exercise_name,student_display_name,muscle_group,sets,reps,notes,tempo_notes,pro_video_url,position,exercise:exercise_library(video_url,thumb_url,instructions_ptbr)),workout_prescriptions(modality,prescription))')
+        .select('id,days_of_week,week_number,starts_at,ends_at,protocol_starts_at,cycle_id,source_type,source_id,workout:workouts(id,title,student_display_name,category,workout_exercises(id,exercise_name,student_display_name,muscle_group,sets,reps,notes,tempo_notes,pro_video_url,position,exercise:exercise_library!workout_exercises_exercise_id_fkey(video_url,thumb_url,instructions_ptbr)),workout_prescriptions(modality,prescription))')
         .eq('student_user_id', userId as string)
         .eq('status', 'active')
         .order('created_at', { ascending: false });
