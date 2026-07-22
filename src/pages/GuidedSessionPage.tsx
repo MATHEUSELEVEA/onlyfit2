@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Check, ChevronRight, Gauge, Repeat, SkipForward, Timer, Waves, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronRight, Dot, Gauge, Repeat, SkipForward, Timer, Waves, X, Zap } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -187,6 +187,15 @@ export function GuidedSessionPage() {
   const isRest = phase.type === 'rest';
   const endurance = ENDURANCE.includes(guided.surface);
   const swim = guided.surface === 'swimming';
+  const hiit = guided.surface === 'hiit' || guided.surface === 'functional';
+  // Movimentos da rodada atual (irmãos dentro do bloco repeat) para o checklist HIIT.
+  // Cálculo simples pós-guards (não é hook) — evita chamada condicional de hook.
+  const roundMovements = ((): GuidedSingleStep[] => {
+    for (const step of guided.plan.steps) {
+      if (step.kind === 'repeat' && step.steps.some((inner) => inner.id === phase.step.id)) return step.steps;
+    }
+    return [phase.step];
+  })();
   const countdown = isTimed && remaining <= 3 && remaining > 0;
   const isLast = phaseIndex + 1 >= phases.length;
   const pace = phase.step.target?.paceSecPerKm;
@@ -253,6 +262,35 @@ export function GuidedSessionPage() {
           </>
         )}
         <p className="mt-4 max-w-[22rem] font-sans text-body text-on-surface-variant">{phase.step.note?.trim() ? phase.step.note : t(cueKey(phase.step, isRest))}</p>
+      </main>
+      ) : hiit ? (
+      <main className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center">
+        <span className="inline-flex items-center gap-1.5 font-sans text-label uppercase tracking-[0.14em] text-primary">
+          <Zap size={13} aria-hidden />
+          {isRest ? t('meufit.training.guided.rest') : phase.repeatLabel ? t('meufit.training.guided.roundLabel', { label: phase.repeatLabel }) : t(ROLE_KEY[phase.step.role])}
+        </span>
+        {phase.step.label && !isRest ? <h1 className="mt-2 text-balance font-sans text-title-lg text-on-surface">{phase.step.label}</h1> : null}
+        <p className={clsx('mt-4 font-sans tabular-nums', countdown ? 'text-primary' : 'text-on-surface')} style={{ fontSize: 'clamp(3.25rem, 20vw, 5.5rem)', lineHeight: 1 }}>
+          {phase.bound.by === 'reps' ? `${phase.bound.reps}` : isTimed ? formatClock(remaining) : formatClock(phaseElapsed)}
+        </p>
+        <p className="mt-1 font-sans text-body-sm text-on-surface-variant">{phase.bound.by === 'reps' ? t('meufit.training.guided.repsLabel') : isRest ? t('meufit.training.guided.swimRest') : boundLabel(phase.bound, t)}</p>
+        {!isRest ? <span className={clsx('mt-5 inline-flex items-center rounded-full px-4 py-2 font-sans text-label', strongEffort(effort) ? 'bg-primary text-on-primary' : 'bg-surface-container-high text-on-surface')}>{t(EFFORT_KEY[effort])}</span> : null}
+        {roundMovements.length > 1 ? (
+          <ul className="mt-6 w-full max-w-xs space-y-1.5">
+            {roundMovements.map((mv) => {
+              const current = mv.id === phase.step.id && !isRest;
+              return (
+                <li key={mv.id} className={clsx('flex items-center gap-2 rounded-xl px-3 py-2 font-sans text-body-sm', current ? 'bg-primary/12 text-on-surface' : 'text-on-surface-variant')}>
+                  <Dot size={18} className={clsx('shrink-0', current ? 'text-primary' : 'text-on-surface-variant')} aria-hidden />
+                  <span className="min-w-0 flex-1 truncate text-left">{mv.label || t(ROLE_KEY[mv.role])}</span>
+                  <span className="shrink-0 tabular-nums text-on-surface-variant">{mv.bound.by === 'reps' ? t('meufit.training.guided.byReps', { n: mv.bound.reps }) : mv.bound.by === 'time' ? formatClock(mv.bound.seconds) : ''}</span>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="mt-4 max-w-[22rem] font-sans text-body text-on-surface-variant">{phase.step.note?.trim() ? phase.step.note : t(cueKey(phase.step, isRest))}</p>
+        )}
       </main>
       ) : (
       <main className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center">
