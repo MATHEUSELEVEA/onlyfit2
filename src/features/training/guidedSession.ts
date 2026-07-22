@@ -109,6 +109,30 @@ export function parsePaceToSecPerKm(raw: string | null | undefined): number | nu
   return Number(clock[1]) * 60 + Number(clock[2]);
 }
 
+/** "Borboleta" / "costas" / "crawl" / "4x50 fly" → estilo de nado; null se não citado. */
+export function parseSwimStroke(raw: string | null | undefined): SwimStroke | null {
+  if (!raw) return null;
+  const value = deaccent(raw);
+  if (/\b(borboleta|fly|butterfly)\b/.test(value)) return 'fly';
+  if (/\b(costas|back(stroke)?)\b/.test(value)) return 'back';
+  if (/\b(peito|breast(stroke)?)\b/.test(value)) return 'breast';
+  if (/\b(medley|combinado)\b/.test(value)) return 'medley';
+  if (/\b(escolha|choice)\b/.test(value)) return 'choice';
+  if (/\b(crawl|livre|free(style)?)\b/.test(value)) return 'free';
+  return null;
+}
+
+/** "AMRAP 12 min" / "EMOM" / "Tabata" / "For time" → formato do treino; null se não citado. */
+export function parseGuidedFormat(raw: string | null | undefined): GuidedFormat | null {
+  if (!raw) return null;
+  const value = deaccent(raw);
+  if (/\bamrap\b/.test(value)) return 'amrap';
+  if (/\bemom\b/.test(value)) return 'emom';
+  if (/\btabata\b/.test(value)) return 'tabata';
+  if (/\bfor ?time\b/.test(value)) return 'forTime';
+  return null;
+}
+
 /** "6x" / "6 x" / "6" → número de repetições (>=1). */
 export function parseRepeatTimes(raw: string | null | undefined): number | null {
   if (!raw) return null;
@@ -162,6 +186,7 @@ function stepFromBlock(block: PrescriptionBlock): GuidedSingleStep {
   if (pace) target.paceSecPerKm = pace;
   const rest = boundFromText(null, block.recoveryDuration, block.recoveryDuration);
   const roles: StepRole[] = ['warmup', 'activation', 'main', 'cooldown', 'recovery'];
+  const stroke = parseSwimStroke(block.name) ?? parseSwimStroke(block.task);
   return {
     kind: 'single',
     id: block.id || stepId('block'),
@@ -170,6 +195,7 @@ function stepFromBlock(block: PrescriptionBlock): GuidedSingleStep {
     bound: boundFromText(block.distance, block.duration, block.repetitions),
     target,
     rest: rest.by === 'open' ? undefined : rest,
+    ...(stroke ? { sport: { stroke } } : {}),
     note: block.technique || undefined,
   };
 }
@@ -211,6 +237,35 @@ function readStructuredSteps(prescription: WorkoutPrescription | null): GuidedSt
 }
 
 /**
+ * Defaults por esporte a partir dos campos específicos da prescrição:
+ * natação herda o estilo do treino nos passos sem estilo próprio; HIIT/funcional
+ * ganha o formato (AMRAP/EMOM/…). Não sobrescreve o que o passo já define.
+ */
+function applySportSpecifics(workout: GuidedWorkout, prescription: WorkoutPrescription | null): GuidedWorkout {
+  const specifics = prescription?.specifics ?? {};
+
+  if (workout.sport === 'swimming') {
+    const defaultStroke = parseSwimStroke(specifics.stroke);
+    if (defaultStroke) {
+      const withStroke = (step: GuidedSingleStep): GuidedSingleStep =>
+        step.sport?.stroke ? step : { ...step, sport: { ...step.sport, stroke: defaultStroke } };
+      return {
+        ...workout,
+        steps: workout.steps.map((step) => (step.kind === 'repeat' ? { ...step, steps: step.steps.map(withStroke) } : withStroke(step))),
+      };
+    }
+    return workout;
+  }
+
+  if (workout.sport === 'hiit' || workout.sport === 'functional') {
+    const format = workout.format ?? parseGuidedFormat(specifics.format);
+    return format ? { ...workout, format } : workout;
+  }
+
+  return workout;
+}
+
+/**
  * Constrói o treino executável de um StudentWorkout.
  * `null` = é musculação (segue no Player de força atual, intacto).
  * Precedência: passos estruturados → blocos da prescrição → exercícios → fallback.
@@ -220,12 +275,12 @@ export function toGuidedWorkout(workout: StudentWorkout): GuidedWorkout | null {
 
   const structured = readStructuredSteps(workout.prescription);
   if (structured) {
-    return { schemaVersion: 1, sport: workout.trainingType, steps: structured };
+    return applySportSpecifics({ schemaVersion: 1, sport: workout.trainingType, steps: structured }, workout.prescription);
   }
 
   if (workout.prescription && workout.prescription.blocks.length > 0) {
     const steps = fromBlocks(workout.prescription);
-    if (steps.length > 0) return { schemaVersion: 1, sport: workout.trainingType, steps };
+    if (steps.length > 0) return applySportSpecifics({ schemaVersion: 1, sport: workout.trainingType, steps }, workout.prescription);
   }
 
   if (workout.exercises.length > 0) {
