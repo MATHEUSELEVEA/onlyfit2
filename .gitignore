@@ -10,3 +10,4 @@ __pycache__/
 # iOS
 ios-native/
 .swiftpm/
+xcuserdata/

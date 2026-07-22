@@ -68,7 +68,7 @@ function formatActivityDateTime(value?: string) {
 }
 
 function formatActivitySource(activity: ImportedActivity) {
-  const source = sourceLabel(activity.source);
+  const source = activitySourceInfo(activity).label;
   const device = typeof activity.sourcePayload?.device_name === 'string' ? activity.sourcePayload.device_name : null;
   return device ? `${source} · ${device}` : source;
 }
@@ -85,11 +85,43 @@ function heatClass(day: HealthDay | undefined, selected: boolean): string {
   return 'bg-primary/85 text-on-primary';
 }
 
-function WatchOriginChip() {
+function sourceText(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+function activitySourceInfo(activity: ImportedActivity): { label: string; tone: 'apple' | 'nike' | 'strava' | 'garmin' | 'manual' | 'default' } {
+  const payload = activity.sourcePayload ?? {};
+  const raw = [
+    sourceText(payload.source_name),
+    sourceText(payload.bundle_identifier),
+    sourceText(payload.device_name),
+    sourceText(activity.provider),
+    sourceText(activity.source),
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  if (/nike|nrc|run club/.test(raw)) return { label: 'Nike Run', tone: 'nike' };
+  if (/strava/.test(raw)) return { label: 'Strava', tone: 'strava' };
+  if (/garmin/.test(raw)) return { label: 'Garmin', tone: 'garmin' };
+  if (/coros/.test(raw)) return { label: 'COROS', tone: 'default' };
+  if (/fitbit/.test(raw)) return { label: 'Fitbit', tone: 'default' };
+  if (activity.source === 'manual') return { label: 'Manual', tone: 'manual' };
+  if (activity.importedFromWatch || /watch/.test(raw)) return { label: 'Apple Watch', tone: 'apple' };
+  if (/apple|health|healthkit|saúde|saude/.test(raw)) return { label: 'Apple Saúde', tone: 'apple' };
+  return { label: sourceLabel(activity.source), tone: 'default' };
+}
+function ActivitySourceBadge({ activity }: { activity: ImportedActivity }) {
+  const info = activitySourceInfo(activity);
   return (
-    <span className="inline-flex min-h-6 shrink-0 items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2 font-sans text-counter text-primary">
-      <Watch size={12} aria-hidden />
-      Watch
+    <span
+      className={clsx(
+        'inline-flex min-h-6 shrink-0 items-center rounded-full border px-2 font-sans text-counter',
+        info.tone === 'apple' && 'border-primary/25 bg-primary/10 text-primary',
+        info.tone === 'nike' && 'border-on-surface/20 bg-on-surface text-surface',
+        info.tone === 'strava' && 'border-tertiary/30 bg-tertiary/10 text-tertiary',
+        info.tone === 'garmin' && 'border-secondary/30 bg-secondary/10 text-secondary',
+        (info.tone === 'manual' || info.tone === 'default') && 'border-outline-variant/45 bg-surface-container-high text-on-surface-variant',
+      )}
+    >
+      {info.label}
     </span>
   );
 }
@@ -114,7 +146,7 @@ function TrainingContent() {
     <PageTopBar title={t('meufit.training.pageTitle')} backFallback="/meu-fit" />
     <main className="mx-auto w-full max-w-[720px] px-5 pb-6 pt-5">
       <div className="grid grid-cols-4 gap-1 rounded-full bg-surface-container p-1" role="tablist" aria-label={t('meufit.training.tabs.aria')}>{([['today', t('meufit.training.tabs.today')], ['history', t('meufit.training.tabs.history')], ['progress', t('meufit.training.tabs.progress')], ['library', t('meufit.training.tabs.library')]] as [Tab, string][]).map(([value, label]) => <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={clsx('flex min-h-[40px] items-center justify-center rounded-full font-sans text-counter transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', tab === value ? 'bg-surface-container-lowest text-on-surface' : 'text-on-surface-variant hover:text-on-surface active:text-on-surface')}>{label}</button>)}</div>
-      {tab !== 'today' ? <AppleHealthCard appleHealth={appleHealth} compact /> : null}
+      {tab === 'history' ? <AppleHealthCard appleHealth={appleHealth} compact /> : null}
       {tab === 'today' && <Today items={todayItems} active={activeItem ?? null} />}
       {tab === 'history' && <HistoryList imported={allImported} onOpenDay={(value) => setDetailDate(value)} onOpenActivity={setDetailActivity} onRecord={() => setRecordOpen(true)} />}
       {tab === 'progress' && <Progress appleHealth={appleHealth} healthDays={healthDays} scheduled={scheduled} selectedDate={selectedDate} onSelect={(value) => { setSelectedDate(value); setDetailDate(value); }} />}
@@ -374,7 +406,7 @@ function DayDetailContent({ date, healthDays, scheduled, showScheduled = true, o
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <p className="font-sans text-label text-on-surface">{activity.title}</p>
-              {activity.importedFromWatch ? <WatchOriginChip /> : null}
+              <ActivitySourceBadge activity={activity} />
             </div>
             <p className="mt-0.5 break-words font-sans text-body-sm text-on-surface-variant">{formatActivityMeta(activity)}</p>
           </div>
@@ -828,7 +860,7 @@ function HistoryList({ imported, onOpenDay, onOpenActivity, onRecord }: { import
   );
 }
 
-function HistoryRow({ title, meta, status, surface, importedFromWatch, activity, onOpenActivity }: HistoryEntry & { onOpenActivity: (activity: ImportedActivity) => void }) {
+function HistoryRow({ title, meta, status, surface, activity, onOpenActivity }: HistoryEntry & { onOpenActivity: (activity: ImportedActivity) => void }) {
   const { t } = useTranslation();
   const content = (
     <>
@@ -836,7 +868,7 @@ function HistoryRow({ title, meta, status, surface, importedFromWatch, activity,
       <span className="min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-2">
           <span className="min-w-0 break-words font-sans text-label leading-snug text-on-surface">{title}</span>
-          {importedFromWatch ? <WatchOriginChip /> : null}
+          {activity ? <ActivitySourceBadge activity={activity} /> : null}
         </span>
         <span className="mt-0.5 block break-words font-sans text-body-sm leading-snug text-on-surface-variant">{meta}</span>
       </span>

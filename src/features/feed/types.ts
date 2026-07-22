@@ -20,6 +20,7 @@ export interface FeedMedia {
   kind: FeedMediaKind;
   url: string;
   thumbnailUrl: string | null;
+  framing?: import('@/features/mediaFraming').MediaFraming | null;
   // HLS já normalizado pelo Cloudflare Stream (orientação em pé). Quando
   // presente, o player prefere isto ao `url` cru do R2. Só vídeos.
   hlsUrl?: string | null;

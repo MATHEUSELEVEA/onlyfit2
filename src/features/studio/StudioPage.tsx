@@ -3,16 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, X } from 'lucide-react';
 import { CameraStep } from './camera/CameraStep';
 import { clsx } from 'clsx';
-import { createDraftMedia, inferMediaKind, type CaptureMode, type DraftMedia, type MediaKind, type PostLocation } from './media';
+import { createDraftMedia, inferMediaKind, type CaptureMode, type DraftMedia, type MediaFraming, type MediaKind, type PostLocation } from './media';
 import { enqueuePublish } from './publishQueue';
 import type { PostVisibility } from './useCreatePost';
 import { usePublishStory } from '@/features/stories/usePublishStory';
 import { useMyProfile } from '@/features/profile/useMyProfile';
-import type { Area } from 'react-easy-crop';
 import { FramingStep } from './steps/FramingStep';
 import { CoverPicker } from './steps/CoverPicker';
 import { DetailsStep } from './steps/DetailsStep';
-import { cropImageToBlob } from './imageCrop';
 import type { CaptionTrack } from '@/lib/captions';
 
 type Step = 'camera' | 'frame' | 'cover' | 'details';
@@ -132,6 +130,10 @@ export function StudioPage() {
     setMedia((prev) => prev.map((item) => (item.id === id ? { ...item, posterBlob } : item)));
   };
 
+  const setFraming = (id: string, framing: MediaFraming) => {
+    setMedia((prev) => prev.map((item) => (item.id === id ? { ...item, framing } : item)));
+  };
+
   const toggleSport = (key: string) => {
     setSports((prev) => (prev.includes(key) ? prev.filter((s) => s !== key) : [...prev, key]));
   };
@@ -160,23 +162,8 @@ export function StudioPage() {
     else navigate(-1);
   };
 
-  // Aplica o recorte 9:16 escolhido nas fotos (WYSIWYG) e avança: capa quando a
-  // capa é vídeo, senão detalhes.
-  const applyFramingAndContinue = async (areasById: Record<string, Area>) => {
-    const next = await Promise.all(
-      media.map(async (item) => {
-        const area = areasById[item.id];
-        if (item.kind !== 'image' || !area) return item;
-        const blob = await cropImageToBlob(item.previewUrl, area);
-        if (!blob) return item;
-        URL.revokeObjectURL(item.previewUrl);
-        const baseName = item.file.name.replace(/\.[^.]+$/, '') || 'foto';
-        const file = new File([blob], `${baseName}.jpg`, { type: 'image/jpeg' });
-        return { ...item, file, previewUrl: URL.createObjectURL(file) };
-      }),
-    );
-    setMedia(next);
-    setStep(next[0]?.kind === 'video' ? 'cover' : 'details');
+  const continueFromReview = () => {
+    setStep(media[0]?.kind === 'video' ? 'cover' : 'details');
   };
 
   if (step === 'camera') {
@@ -236,7 +223,8 @@ export function StudioPage() {
             media={media}
             onRemove={removeMedia}
             onAddMore={() => setStep('camera')}
-            onNext={applyFramingAndContinue}
+            onFramingChange={setFraming}
+            onNext={continueFromReview}
           />
         ) : (
           <DetailsStep

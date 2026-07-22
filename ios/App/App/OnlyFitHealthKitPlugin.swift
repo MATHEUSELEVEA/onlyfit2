@@ -21,6 +21,7 @@ public class OnlyFitHealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
     private let healthStore = HKHealthStore()
     private let isoFormatter = ISO8601DateFormatter()
     private let calendar = Calendar(identifier: .gregorian)
+    private let totalSwimmingStrokeCountMetadataKey = "HKMetadataKeyTotalSwimmingStrokeCount"
     private var observerQueries: [String: HKObserverQuery] = [:]
 
     @objc public func isAvailable(_ call: CAPPluginCall) {
@@ -453,7 +454,7 @@ public class OnlyFitHealthKitPlugin: CAPPlugin, CAPBridgedPlugin {
         if let cadenceSpm = cadenceSpm, cadenceSpm > 0 {
             extraPayload["cadence_spm"] = cadenceSpm
         }
-        if let strokes = (workout.metadata?[HKMetadataKeyTotalSwimmingStrokeCount] as? HKQuantity)?.doubleValue(for: .count()), strokes > 0 {
+        if let strokes = (workout.metadata?[totalSwimmingStrokeCountMetadataKey] as? HKQuantity)?.doubleValue(for: .count()), strokes > 0 {
             extraPayload["swim_stroke_count"] = Int(strokes.rounded())
         }
         if let poolLength = (workout.metadata?[HKMetadataKeyLapLength] as? HKQuantity)?.doubleValue(for: .meter()), poolLength > 0 {

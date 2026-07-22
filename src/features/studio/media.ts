@@ -7,6 +7,8 @@
 
 export type MediaKind = 'image' | 'video';
 
+export type { MediaFraming } from '@/features/mediaFraming';
+
 // Localização opcional de um post (busca via places-search / OpenStreetMap).
 export interface PostLocation {
   name: string;
@@ -32,6 +34,7 @@ export interface DraftMedia {
   // captureVideoPoster (que abre o arquivo gravado e pode travar em .mov/HEVC
   // que a WebView não decodifica) e sobe este blob direto.
   posterBlob?: Blob | null;
+  framing?: import('@/features/mediaFraming').MediaFraming | null;
 }
 
 const IMAGE_EXTENSIONS = new Set(['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif', 'heic', 'heif']);

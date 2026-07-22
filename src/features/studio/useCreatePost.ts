@@ -4,6 +4,7 @@ import { contentTypeForMedia, fileExtension, type DraftMedia, type PostLocation 
 import type { CaptionTrack } from '@/lib/captions';
 import type { MyProfile } from '@/features/profile/useMyProfile';
 import type { FeedPost } from '@/features/feed/types';
+import { DEFAULT_MEDIA_FRAMING, sanitizeMediaFraming, type MediaFraming } from '@/features/mediaFraming';
 
 export type PostVisibility = 'public' | 'paid_members';
 
@@ -20,6 +21,11 @@ interface UploadedMedia {
   kind: 'image' | 'video';
   url: string;
   thumbnailUrl: string | null;
+}
+
+function framingForDraft(draft: DraftMedia): MediaFraming | null {
+  if (draft.kind !== 'image') return null;
+  return sanitizeMediaFraming(draft.framing) ?? DEFAULT_MEDIA_FRAMING;
 }
 
 type SupabasePostError = {
@@ -142,8 +148,12 @@ export async function runCreatePost(
       kind: media.kind,
       url: media.url,
       thumbnail_url: media.thumbnailUrl,
+      metadata: {
+        ...(framingForDraft(input.media[position]) ? { framing: framingForDraft(input.media[position]) } : {}),
+      },
     }))
     : [];
+  const mediaFraming = input.media.map(framingForDraft);
 
   // O RPC grava `posts` e `post_media` na mesma transação, preservando as
   // políticas RLS existentes e evitando post órfão quando uma mídia falha.
@@ -159,6 +169,7 @@ export async function runCreatePost(
       thumbnail_url: cover.kind === 'video' ? cover.thumbnailUrl : cover.url,
       metadata: {
         media_kind: isCarousel ? 'carousel' : cover.kind,
+        media_framing: mediaFraming,
         ...(input.location ? { location: { name: input.location.name, secondary: input.location.secondary ?? null, lat: input.location.lat ?? null, lon: input.location.lon ?? null } } : {}),
         ...(input.captions && input.captions.cues.length > 0 ? { captions: input.captions } : {}),
       },
@@ -197,6 +208,7 @@ export function buildOptimisticPost(input: CreatePostInput, profile: MyProfile, 
       kind: draft.kind,
       url: draft.previewUrl,
       thumbnailUrl: draft.kind === 'video' ? draft.previewUrl : null,
+      framing: framingForDraft(draft),
       captions: i === 0 && draft.kind === 'video' ? input.captions ?? null : null,
     })),
     likeCount: 0,
