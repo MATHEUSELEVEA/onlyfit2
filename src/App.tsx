@@ -1,6 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { queryClient } from './lib/queryClient';
 import { ThemeProvider } from './theme/ThemeProvider';
@@ -49,6 +49,14 @@ import { LoginPage } from './pages/LoginPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { AuthConfirmPage } from './pages/AuthConfirmPage';
 import { registerCapacitorAppBridge } from './lib/capacitorAppBridge';
+
+// A rota /creator/:username é a mesma para todos os perfis; sem `key` o React
+// reaproveita a instância ao trocar de perfil e o estado (aba, folhas, dado
+// inicial) vaza de um perfil para o outro. Remontar por username isola cada um.
+function CreatorProfileRoute() {
+  const { username } = useParams();
+  return <CreatorProfilePage key={username} />;
+}
 
 function AuthenticatedApp() {
   const { session, loading } = useAuth();
@@ -114,7 +122,7 @@ function AuthenticatedApp() {
           <Route path="/negocios/novo" element={<CreateBusinessPage />} />
           <Route path="/negocios/:businessId" element={<BusinessWorkspacePage />} />
           <Route path="/negocios/:businessId/ofertas/:offeringId" element={<OfferingManagementPage />} />
-          <Route path="/creator/:username" element={<CreatorProfilePage />} />
+          <Route path="/creator/:username" element={<CreatorProfileRoute />} />
           <Route path="*" element={<Navigate to="/feed" replace />} />
         </Route>
       ) : (

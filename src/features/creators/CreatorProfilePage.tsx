@@ -112,7 +112,12 @@ export function CreatorProfilePage() {
   const { username = '' } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const seed = (location.state as { author?: FeedAuthor } | null)?.author;
+  // Dado inicial vindo da navegação (ex.: card do feed) só é confiável se for o
+  // MESMO perfil da URL. Como a rota /creator/:username reaproveita a instância
+  // entre perfis, um state antigo (voltar/avançar no histórico) mostraria o nome
+  // de outra pessoa por um instante enquanto o fetch carrega. Descartamos aqui.
+  const seedAuthor = (location.state as { author?: FeedAuthor } | null)?.author;
+  const seed = seedAuthor && seedAuthor.username === username ? seedAuthor : undefined;
   const [tab, setTab] = useState<TabKey>('free');
   const [subscribeNotice, setSubscribeNotice] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
