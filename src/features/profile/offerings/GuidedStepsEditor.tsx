@@ -56,6 +56,7 @@ interface EditorRow {
   pace: string; // "mm:ss" /km
   stroke: SwimStroke | ''; // natação
   cadence: string; // rpm (ciclismo)
+  power: string; // watts (ciclismo)
   rest: string; // segundos
   repeat: string; // vezes
 }
@@ -88,6 +89,7 @@ function stepToRow(step: GuidedStep): EditorRow {
     pace: paceToStr(single.target?.paceSecPerKm),
     stroke: single.sport?.stroke ?? '',
     cadence: single.target?.cadence ? String(single.target.cadence) : '',
+    power: single.target?.power ? String(single.target.power) : '',
     rest: single.rest?.by === 'time' ? String(single.rest.seconds) : '',
     repeat: String(times),
   };
@@ -104,6 +106,7 @@ function rowToStep(row: EditorRow): GuidedStep {
         : { by: 'open' as const };
   const paceSecPerKm = parsePace(row.pace);
   const cadence = Math.round(num(row.cadence));
+  const power = Math.round(num(row.power));
   const restSec = Math.round(num(row.rest));
   const single: GuidedSingleStep = {
     kind: 'single',
@@ -111,7 +114,7 @@ function rowToStep(row: EditorRow): GuidedStep {
     role: row.role,
     label: row.label.trim() || undefined,
     bound,
-    target: { effort: row.effort, ...(paceSecPerKm ? { paceSecPerKm } : {}), ...(cadence > 0 ? { cadence } : {}) },
+    target: { effort: row.effort, ...(paceSecPerKm ? { paceSecPerKm } : {}), ...(cadence > 0 ? { cadence } : {}), ...(power > 0 ? { power } : {}) },
     ...(row.stroke ? { sport: { stroke: row.stroke } } : {}),
     ...(restSec > 0 ? { rest: { by: 'time' as const, seconds: restSec } } : {}),
   };
@@ -135,6 +138,7 @@ const newRow = (role: StepRole, sport: WorkoutTrainingType): EditorRow => ({
   pace: '',
   stroke: '',
   cadence: '',
+  power: '',
   rest: '',
   repeat: '1',
 });
@@ -235,7 +239,10 @@ export function GuidedStepsEditor({ sport, steps, onChange }: { sport: WorkoutTr
                   </select>
                 </label>
               ) : sport === 'cycling' ? (
-                <label className="block min-w-0 font-sans text-body-sm text-on-surface-variant"><span className="block truncate">{t('offer.workout.steps.cadence')}</span><input value={row.cadence} inputMode="numeric" placeholder="90" onChange={(event) => update(row.id, { cadence: event.target.value })} className={clsx(inputCls, 'mt-1')} /></label>
+                <>
+                  <label className="block min-w-0 font-sans text-body-sm text-on-surface-variant"><span className="block truncate">{t('offer.workout.steps.cadence')}</span><input value={row.cadence} inputMode="numeric" placeholder="90" onChange={(event) => update(row.id, { cadence: event.target.value })} className={clsx(inputCls, 'mt-1')} /></label>
+                  <label className="block min-w-0 font-sans text-body-sm text-on-surface-variant"><span className="block truncate">{t('offer.workout.steps.power')}</span><input value={row.power} inputMode="numeric" placeholder="200" onChange={(event) => update(row.id, { power: event.target.value })} className={clsx(inputCls, 'mt-1')} /></label>
+                </>
               ) : null}
               <label className="block min-w-0 font-sans text-body-sm text-on-surface-variant"><span className="block truncate">{t('offer.workout.steps.rest')}</span><input value={row.rest} inputMode="numeric" onChange={(event) => update(row.id, { rest: event.target.value })} className={clsx(inputCls, 'mt-1')} /></label>
               <label className="block min-w-0 font-sans text-body-sm text-on-surface-variant"><span className="block truncate">{t('offer.workout.steps.repeat')}</span><input value={row.repeat} inputMode="numeric" onChange={(event) => update(row.id, { repeat: event.target.value })} className={clsx(inputCls, 'mt-1')} /></label>

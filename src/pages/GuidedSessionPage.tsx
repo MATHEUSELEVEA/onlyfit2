@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, Check, ChevronRight, Dot, Repeat, SkipForward, Timer, X, Zap } from 'lucide-react';
+import { ArrowLeft, Check, ChevronRight, Dot, Repeat, SkipForward, Timer, Volume2, VolumeX, X, Zap } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useNavigate } from 'react-router-dom';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { useTraining } from '@/features/training/TrainingProvider';
 import { useLogWorkoutSession, type GuidedSessionSummary } from '@/features/training/useWorkoutSessions';
 import { buildSessionSummary, type ReviewBy, type ReviewStep } from '@/features/training/sessionSummary';
+import { cueFinish, cuePhaseChange, cueTick, unlockCues } from '@/features/training/playerCues';
 import { flattenSteps, type Effort, type FlatStep, type GuidedFormat, type GuidedSingleStep, type StepBound, type StepRole, type SwimStroke } from '@/features/training/guidedSession';
 import type { WorkoutTrainingType } from '@/features/training/useStudentWorkouts';
 import { useTranslation, type TranslationKey } from '@/i18n/I18nProvider';
@@ -127,6 +128,8 @@ export function GuidedSessionPage() {
   const [viewMode, setViewMode] = useState<'guided' | 'list'>('guided');
   const [review, setReview] = useState<ReviewModel | null>(null);
   const [exitOpen, setExitOpen] = useState(false);
+  // Cues sonoros (beep 3-2-1 e troca de fase, padrão NRC/timers HIIT). Persistido.
+  const [sound, setSound] = useState(() => localStorage.getItem('onlyfit.playerSound') !== 'off');
   // Modo Lista: tempo (segundos desde o início) carimbado ao marcar cada linha.
   const [checkedAt, setCheckedAt] = useState<Record<number, number>>({});
 
@@ -137,6 +140,16 @@ export function GuidedSessionPage() {
   const viewModeRef = useRef(viewMode);
   const workPhasesRef = useRef(workPhases);
   const checkedAtRef = useRef(checkedAt);
+  const soundRef = useRef(sound);
+  const toggleSound = () => {
+    unlockCues();
+    setSound((current) => {
+      const next = !current;
+      soundRef.current = next;
+      localStorage.setItem('onlyfit.playerSound', next ? 'on' : 'off');
+      return next;
+    });
+  };
 
   const toggleCheck = useCallback((rowIndex: number) => {
     if (!guided) return;
@@ -173,8 +186,11 @@ export function GuidedSessionPage() {
       const realized = by === 'time' ? realizedSec : meta;
       return { label: wp.step.label ?? '', role: wp.step.role, by, meta, realized, realizedSec };
     });
+    if (soundRef.current) cueFinish();
     setReview({ startedAt: guided.startedAt, sport: guided.plan.sport, steps });
   }, [guided]);
+
+  const calmSport = guided?.surface === 'yoga' || guided?.surface === 'pilates';
 
   const advance = useCallback(() => {
     const index = phaseIndexRef.current;
@@ -190,9 +206,12 @@ export function GuidedSessionPage() {
       openReview();
       return;
     }
+    if (soundRef.current) {
+      if (calmSport) cueTick(true); else cuePhaseChange();
+    }
     setPhaseIndex(next);
     setPhaseStartedAt(Date.now());
-  }, [openReview]);
+  }, [openReview, calmSport]);
 
   useEffect(() => {
     phasesRef.current = phases;
@@ -211,13 +230,16 @@ export function GuidedSessionPage() {
         const current = phasesRef.current[phaseIndexRef.current];
         if (current && current.bound.by === 'time') {
           const elapsed = Math.floor((Date.now() - phaseStartedAtRef.current) / 1000);
-          if (elapsed >= current.bound.seconds) { advance(); return; }
+          const remainingSec = current.bound.seconds - elapsed;
+          if (remainingSec <= 0) { advance(); return; }
+          // Contagem 3-2-1 audível (padrão dos timers de intervalo).
+          if (soundRef.current && remainingSec <= 3) cueTick(calmSport);
         }
       }
       setNow(Date.now());
     }, 1000);
     return () => window.clearInterval(id);
-  }, [review, advance]);
+  }, [review, advance, calmSport]);
 
   if (review) {
     return (
@@ -296,6 +318,9 @@ export function GuidedSessionPage() {
           <p className="truncate font-sans text-label text-on-surface">{guided.title}</p>
           <p className="mt-0.5 font-sans text-counter tabular-nums text-on-surface-variant">{formatClock(totalElapsed)}</p>
         </div>
+        <button type="button" onClick={toggleSound} aria-pressed={sound} aria-label={t(sound ? 'meufit.training.guided.soundOn' : 'meufit.training.guided.soundOff')} className="flex h-11 w-11 items-center justify-center rounded-full text-on-surface-variant active:bg-surface-container-high">
+          {sound ? <Volume2 size={19} aria-hidden /> : <VolumeX size={19} aria-hidden />}
+        </button>
         <span className="flex h-11 w-11 items-center justify-center font-sans text-counter tabular-nums text-on-surface-variant">{phase.workIndex + 1}/{totalWorkSteps}</span>
       </header>
 
@@ -401,10 +426,19 @@ export function GuidedSessionPage() {
 
         {phase.step.label && !isRest ? <h1 className="mt-2 text-balance font-sans text-title-lg text-on-surface">{phase.step.label}</h1> : null}
 
+        {/* Ciclismo com potência-alvo: o W lidera o palco (padrão TrainerRoad). */}
+        {guided.surface === 'cycling' && phase.step.target?.power && !isRest ? (
+          <p className="mt-4 font-sans text-title-lg tabular-nums text-primary">{phase.step.target.power} W</p>
+        ) : null}
+
         <p className={clsx('mt-5 font-sans tabular-nums transition-colors', countdown ? 'text-primary' : 'text-on-surface')} style={{ fontSize: 'clamp(3.25rem, 20vw, 5.5rem)', lineHeight: 1 }}>
           {isTimed ? formatClock(remaining) : phase.bound.by === 'reps' ? `${phase.bound.reps}` : phase.bound.by === 'distance' ? formatDistance(phase.bound.meters) : formatClock(phaseElapsed)}
         </p>
-        <p className="mt-1 font-sans text-body-sm text-on-surface-variant">{isTimed ? t('meufit.training.guided.byTime') : boundLabel(phase.bound, t)}</p>
+        <p className="mt-1 font-sans text-body-sm tabular-nums text-on-surface-variant">
+          {isTimed ? t('meufit.training.guided.byTime') : boundLabel(phase.bound, t)}
+          {/* Split alvo (corrida/caminhada): distância × pace = tempo esperado do trecho. */}
+          {phase.bound.by === 'distance' && pace && !isRest ? ` · ${t('meufit.training.guided.targetSplit', { time: formatClock(Math.round((phase.bound.meters / 1000) * pace)) })}` : ''}
+        </p>
 
         {/* Alvo: esforço + (opcional) pace/cadência */}
         {!isRest ? (
@@ -442,7 +476,7 @@ export function GuidedSessionPage() {
       <footer className="shrink-0 px-4 pb-safe-bottom pt-2">
         <button
           type="button"
-          onClick={viewMode === 'list' ? openReview : advance}
+          onClick={() => { unlockCues(); (viewMode === 'list' ? openReview : advance)(); }}
           className="flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-primary font-sans text-label text-on-primary transition-opacity duration-150 hover:opacity-90 active:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           {viewMode === 'list' ? <><Check size={18} aria-hidden />{t('meufit.training.guided.finish')}</> : <>{primaryIcon}{primaryLabel}</>}
