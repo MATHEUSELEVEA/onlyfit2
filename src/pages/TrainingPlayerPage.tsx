@@ -319,6 +319,7 @@ export function TrainingPlayerPage() {
         title={exercise.name}
         description={exercise.demoLabel}
         videoUrl={exercise.videoUrl}
+        instructions={exercise.instructions}
       />
       <SubstituteSheet open={sheet === 'substitute'} onClose={() => setSheet(null)} />
     </div>
@@ -587,12 +588,14 @@ function VideoSheet({
   title,
   description,
   videoUrl,
+  instructions,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   description: string;
   videoUrl?: string | null;
+  instructions?: string | null;
 }) {
   return (
     <BottomSheet open={open} onClose={onClose} title="Demonstração" description={title}>
@@ -612,7 +615,14 @@ function VideoSheet({
             <p className="mt-1 font-sans text-body-sm text-on-surface-variant">Quando o profissional adicionar o vídeo deste exercício, ele aparecerá aqui.</p>
           </div>
         )}
-        <p className="mt-4 font-sans text-body text-on-surface-variant">{description}</p>
+        {instructions ? (
+          <div className="mt-4">
+            <p className="font-sans text-counter font-semibold uppercase tracking-[0.12em] text-on-surface-variant">Como executar</p>
+            <p className="mt-1.5 whitespace-pre-line font-sans text-body leading-relaxed text-on-surface">{instructions}</p>
+          </div>
+        ) : (
+          <p className="mt-4 font-sans text-body text-on-surface-variant">{description}</p>
+        )}
       </div>
     </BottomSheet>
   );

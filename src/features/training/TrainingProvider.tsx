@@ -20,6 +20,8 @@ export interface WorkoutExercise {
   demoLabel: string;
   /** URL publicada pelo profissional/biblioteca. Sem URL não fingimos vídeo. */
   videoUrl?: string | null;
+  /** Como executar (da biblioteca de exercícios). */
+  instructions?: string | null;
 }
 export interface WorkoutTemplate { id: string; title: string; focus: string; durationMin: number; exercises: WorkoutExercise[]; }
 export interface ScheduledWorkout { id: string; date: string; templateId?: string; workoutId?: string | null; assignmentId?: string; title: string; focus: string; durationMin: number; status: TrainingStatus; surface: TrainingSurface; summary?: string; canStart?: boolean; }
@@ -111,6 +113,7 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
         technique: exercise.notes || exercise.tempoNotes || '',
         demoLabel: name,
         videoUrl: exercise.videoUrl,
+        instructions: exercise.instructions,
       };
     });
     const muscles = [...new Set(exercises.map((exercise) => exercise.muscle).filter((muscle) => muscle !== 'Exercício'))];
