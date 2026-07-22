@@ -24,6 +24,7 @@ Mapa de toda a documentação do OnlyFit v2. Comece pelo topo.
 | [`CODING-STANDARDS.md`](./CODING-STANDARDS.md) | Código limpo e simples: TS, React, nomes, o que não fazer. |
 | [`DESIGN-SYSTEM.md`](./DESIGN-SYSTEM.md) | Tokens, multi-tema (base Azul), tipografia, componentes. |
 | [`MESSAGING-AND-CACHE.md`](./MESSAGING-AND-CACHE.md) | React Query: query keys, cache, mutations, invalidação. |
+| [`TREINO-EXECUTAVEL.md`](./TREINO-EXECUTAVEL.md) | Treino executável por esporte: modelo do passo, player guiado, builder, check + relatório. |
 
 ## Dados e integração
 
