@@ -18,7 +18,7 @@ function digitsOnly(value: string): string {
 }
 
 function groupCardNumber(value: string): string {
-  return digitsOnly(value).slice(0, 19).replace(/(.{4})/g, '$1 ').trim();
+  return digitsOnly(value).slice(0, 16).replace(/(.{4})/g, '$1 ').trim();
 }
 
 export function AddCardSheet({ open, onClose }: AddCardSheetProps) {
@@ -128,10 +128,10 @@ export function AddCardSheet({ open, onClose }: AddCardSheetProps) {
         <TextField
           label={t('payments.card.form.number')}
           value={groupCardNumber(number)}
-          onChange={(event) => setNumber(digitsOnly(event.target.value))}
+          onChange={(event) => setNumber(digitsOnly(event.target.value).slice(0, 16))}
           inputMode="numeric"
           autoComplete="cc-number"
-          maxLength={23}
+          maxLength={19}
           placeholder="0000 0000 0000 0000"
         />
         <div className="grid grid-cols-3 gap-3">

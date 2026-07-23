@@ -83,6 +83,8 @@ export function mapAddCardError(code: string | undefined): string {
   switch (code) {
     case 'payment_platform_not_configured':
       return 'O pagamento ainda não está ativo na plataforma. Tente novamente mais tarde.';
+    case 'payment_card_tokenization_not_enabled':
+      return 'O cadastro de cartão ainda não está habilitado no Asaas da OnlyFit.';
     case 'invalid_card_number':
       return 'Número do cartão inválido.';
     case 'invalid_expiry':
@@ -103,7 +105,7 @@ export function mapAddCardError(code: string | undefined): string {
     case 'card_limit_reached':
       return 'Você atingiu o limite de cartões cadastrados.';
     case 'asaas_error':
-      return 'O cartão foi recusado pela operadora. Confira os dados.';
+      return 'Não foi possível validar o cartão no processador de pagamentos.';
     default:
       return 'Não foi possível cadastrar o cartão. Tente novamente.';
   }
