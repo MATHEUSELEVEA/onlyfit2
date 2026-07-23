@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Ban, CreditCard, Loader2, Plus, ReceiptText, Star, Trash2, Undo2 } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -19,9 +19,16 @@ export function PaymentsPage() {
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const tab: PaymentsTab = searchParams.get('aba') === 'pagamentos' ? 'pagamentos' : 'cartoes';
+  const shouldOpenAddCard = searchParams.get('adicionarCartao') === '1';
 
   const setTab = (next: PaymentsTab) =>
     setSearchParams(next === 'pagamentos' ? { aba: 'pagamentos' } : {}, { replace: true });
+
+  function clearAddCardIntent() {
+    const next = new URLSearchParams(searchParams);
+    next.delete('adicionarCartao');
+    setSearchParams(next, { replace: true });
+  }
 
   const tabs: ReadonlyArray<{ key: PaymentsTab; label: string }> = [
     { key: 'cartoes', label: t('payments.tab.cards') },
@@ -69,17 +76,33 @@ export function PaymentsPage() {
         </header>
 
         <main className="px-4 pt-4">
-          {tab === 'cartoes' ? <CardsTab /> : <HistoryTab />}
+          {tab === 'cartoes' ? (
+            <CardsTab openAddCard={shouldOpenAddCard} onOpenAddCardHandled={clearAddCardIntent} />
+          ) : (
+            <HistoryTab />
+          )}
         </main>
       </div>
     </div>
   );
 }
 
-function CardsTab() {
+function CardsTab({
+  openAddCard,
+  onOpenAddCardHandled,
+}: {
+  openAddCard: boolean;
+  onOpenAddCardHandled: () => void;
+}) {
   const { t } = useTranslation();
   const { data: cards = [], isLoading, isError } = usePaymentCards();
   const [sheetOpen, setSheetOpen] = useState(false);
+
+  useEffect(() => {
+    if (!openAddCard) return;
+    setSheetOpen(true);
+    onOpenAddCardHandled();
+  }, [openAddCard, onOpenAddCardHandled]);
 
   return (
     <section className="space-y-4">

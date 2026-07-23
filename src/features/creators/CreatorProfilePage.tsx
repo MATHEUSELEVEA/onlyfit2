@@ -180,7 +180,7 @@ export function CreatorProfilePage() {
           const code = error instanceof OfferingCheckoutError ? error.code : '';
           if (code === 'card_required' || code === 'payment_customer_required') {
             setSubscribeNotice('Cadastre um cartão principal para concluir a assinatura.');
-            navigate('/perfil/pagamentos');
+            navigate('/perfil/pagamentos?adicionarCartao=1');
             return;
           }
           if (code === 'invalid_professional') {
