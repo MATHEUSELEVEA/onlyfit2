@@ -23,11 +23,10 @@ export function usePaymentTransactions() {
     queryKey: ['payment-transactions', userId] as const,
     enabled: Boolean(userId),
     queryFn: async (): Promise<PaymentTransaction[]> => {
-      const { data, error } = await supabase
-        .from('payment_transactions')
-        .select('id,offering_id,subscription_id,billing_type,gross_value,net_value,status,settlement_status,created_at,credit_date')
-        .eq('profile_id', userId!)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.rpc('list_my_payment_transactions', {
+        p_limit: 100,
+        p_offset: 0,
+      });
       if (error) throw error;
       return (data ?? []) as PaymentTransaction[];
     },
