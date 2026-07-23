@@ -38,12 +38,14 @@ import type { FeedAuthor } from '@/features/feed/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreatorFollowState, useToggleCreatorFollow } from './useCreatorFollow';
 import { useCreatorSubscription } from './useCreatorSubscription';
+import { OfferingCheckoutError, useOfferingCheckout } from '@/features/payments/useOfferingCheckout';
 import {
   useCreatorChallenges,
   useCreatorCommunities,
   useCreatorContent,
   useCreatorFollowers,
   useCreatorInfo,
+  useCreatorPremiumOffering,
   useCreatorProducts,
   type CreatorInfo,
 } from './useCreatorHub';
@@ -120,7 +122,7 @@ export function CreatorProfilePage() {
   const seedAuthor = (location.state as { author?: FeedAuthor } | null)?.author;
   const seed = seedAuthor && seedAuthor.username === username ? seedAuthor : undefined;
   const [tab, setTab] = useState<TabKey>('free');
-  const [subscribeNotice, setSubscribeNotice] = useState(false);
+  const [subscribeNotice, setSubscribeNotice] = useState<string | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [blockConfirmOpen, setBlockConfirmOpen] = useState(false);
@@ -147,19 +149,51 @@ export function CreatorProfilePage() {
 
   const { data: following = false } = useCreatorFollowState(creatorId);
   const { data: subscribed = false } = useCreatorSubscription(creatorId);
+  const { data: premiumOffering = null } = useCreatorPremiumOffering(creatorId);
   const { data: isBlocked = false, isLoading: isBlockStateLoading } = useUserBlockState(creatorId);
   const { data: hasBlockedTarget = false } = useOwnUserBlockState(creatorId);
   const toggleFollow = useToggleCreatorFollow(creatorId);
+  const checkout = useOfferingCheckout();
   const blockMutation = useBlockUser(creatorId);
   const unblockMutation = useUnblockUser(creatorId);
 
   function handleSubscribeClick() {
-    if (subscribed) return;
-    // Checkout de assinatura roda no servidor (regra 7); aqui só sinalizamos.
-    setSubscribeNotice(true);
+    if (subscribed || checkout.isPending) return;
+    if (isOwnProfile) {
+      setSubscribeNotice('Você não pode assinar o próprio perfil.');
+      return;
+    }
+    if (!premiumOffering) {
+      setSubscribeNotice('Este criador ainda não publicou uma assinatura premium.');
+      return;
+    }
+    setSubscribeNotice(null);
+    checkout.mutate(
+      { offeringId: premiumOffering.id, billingType: premiumOffering.billingType },
+      {
+        onSuccess: () => {
+          setSubscribeNotice('Assinatura criada. A confirmação do pagamento aparecerá em Pagamentos.');
+          void queryClient.invalidateQueries({ queryKey: ['creator-subscription', creatorId, session?.user.id] });
+          void queryClient.invalidateQueries({ queryKey: ['payment-transactions', session?.user.id] });
+        },
+        onError: (error) => {
+          const code = error instanceof OfferingCheckoutError ? error.code : '';
+          if (code === 'card_required' || code === 'payment_customer_required') {
+            setSubscribeNotice('Cadastre um cartão principal para concluir a assinatura.');
+            navigate('/perfil/pagamentos');
+            return;
+          }
+          if (code === 'invalid_professional') {
+            setSubscribeNotice('Você não pode assinar o próprio perfil.');
+            return;
+          }
+          setSubscribeNotice('Não foi possível iniciar a assinatura. Tente novamente.');
+        },
+      },
+    );
   }
 
-  const subPrice = creator.subscriptionPrice;
+  const subPrice = premiumOffering?.price ?? creator.subscriptionPrice;
   const shareUrl = publicAppUrl(`/creator/${encodeURIComponent(creator.username)}`);
   const shareText = `Veja o perfil de ${creator.displayName ?? `@${creator.username}`} no OnlyFit`;
   const canShowProfileContent = !isBlockStateLoading && !isBlocked;
@@ -289,14 +323,19 @@ export function CreatorProfilePage() {
             type="button"
             onClick={handleSubscribeClick}
             aria-pressed={subscribed}
+            disabled={checkout.isPending || isOwnProfile}
             className={clsx(
-              'inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full font-sans text-label transition-all active:scale-[0.98]',
+              'inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-full font-sans text-label transition-all active:scale-[0.98] disabled:opacity-60',
               subscribed
                 ? 'border border-outline-variant/60 bg-surface-container-low text-on-surface'
                 : 'bg-primary text-on-primary shadow-sm',
             )}
           >
-            {subscribed ? (
+            {checkout.isPending ? (
+              <>
+                <Loader2 size={15} className="animate-spin" aria-hidden /> Assinando
+              </>
+            ) : subscribed ? (
               <>
                 <Check size={15} strokeWidth={3} aria-hidden /> Assinado
               </>
@@ -334,9 +373,9 @@ export function CreatorProfilePage() {
           </button>
         </div>
 
-        {subscribeNotice && !subscribed && (
+        {subscribeNotice && (
           <p className="mt-3 font-sans text-body-sm text-on-surface-variant">
-            Assinaturas dentro do app chegam em breve.
+            {subscribeNotice}
           </p>
         )}
           </>

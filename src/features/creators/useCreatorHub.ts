@@ -21,6 +21,15 @@ export interface CreatorInfo {
   socialLinks: SocialLinks;
 }
 
+export interface CreatorPremiumOffering {
+  id: string;
+  name: string;
+  price: number;
+  currency: string;
+  billingType: 'recurring';
+  billingInterval: 'month' | '2month' | 'quarter' | 'semester' | 'year' | null;
+}
+
 interface CreatorProfileRow {
   bio: string | null;
   sports: string[] | null;
@@ -66,6 +75,35 @@ export function useCreatorInfo(username: string | undefined) {
         followerCount: cp?.follower_count ?? 0,
         subscriberCount: cp?.subscriber_count ?? 0,
         socialLinks: normalizeSocialLinks((data as { social_links?: unknown }).social_links),
+      };
+    },
+  });
+}
+
+export function useCreatorPremiumOffering(creatorId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['creator-premium-offering', creatorId],
+    enabled: Boolean(creatorId),
+    queryFn: async (): Promise<CreatorPremiumOffering | null> => {
+      const { data, error } = await supabase
+        .from('business_offerings')
+        .select('id,name,price,currency,billing_type,billing_interval,status')
+        .eq('owner_profile_id', creatorId!)
+        .eq('offering_type', 'premium_content')
+        .eq('status', 'active')
+        .eq('billing_type', 'recurring')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data || data.billing_type !== 'recurring' || data.price == null) return null;
+      return {
+        id: data.id,
+        name: data.name ?? 'Assinatura premium',
+        price: Number(data.price),
+        currency: data.currency ?? 'BRL',
+        billingType: 'recurring',
+        billingInterval: data.billing_interval,
       };
     },
   });
