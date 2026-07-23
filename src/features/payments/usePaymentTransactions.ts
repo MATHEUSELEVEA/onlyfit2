@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 export type PaymentTransaction = {
   id: string;
   offering_id: string;
+  subscription_id: string | null;
   billing_type: 'one_time' | 'recurring';
   gross_value: number;
   net_value: number | null;
@@ -24,7 +25,7 @@ export function usePaymentTransactions() {
     queryFn: async (): Promise<PaymentTransaction[]> => {
       const { data, error } = await supabase
         .from('payment_transactions')
-        .select('id,offering_id,billing_type,gross_value,net_value,status,settlement_status,created_at,credit_date')
+        .select('id,offering_id,subscription_id,billing_type,gross_value,net_value,status,settlement_status,created_at,credit_date')
         .eq('profile_id', userId!)
         .order('created_at', { ascending: false });
       if (error) throw error;

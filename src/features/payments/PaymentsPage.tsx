@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CreditCard, Loader2, Plus, ReceiptText, Star, Trash2 } from 'lucide-react';
+import { ArrowLeft, Ban, CreditCard, Loader2, Plus, ReceiptText, Star, Trash2, Undo2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useTranslation } from '@/i18n/I18nProvider';
 import { AddCardSheet } from './AddCardSheet';
@@ -11,6 +11,7 @@ import {
   type PaymentCard,
 } from './usePaymentCards';
 import { usePaymentTransactions, type PaymentTransaction } from './usePaymentTransactions';
+import { useCancelSubscription, useRefundTransaction, isWithinRefundWindow } from './usePaymentActions';
 
 type PaymentsTab = 'cartoes' | 'pagamentos';
 
@@ -215,6 +216,10 @@ function HistoryTab() {
 
 function PaymentRow({ transaction }: { transaction: PaymentTransaction }) {
   const { t } = useTranslation();
+  const cancelSubscription = useCancelSubscription();
+  const refundTransaction = useRefundTransaction();
+  const [error, setError] = useState<string | null>(null);
+
   const statusKey = transaction.settlement_status || transaction.status;
   const labels: Record<string, string> = {
     pending: t('payments.history.status.pending'),
@@ -224,6 +229,35 @@ function PaymentRow({ transaction }: { transaction: PaymentTransaction }) {
     chargeback: t('payments.history.status.chargeback'),
     failed: t('payments.history.status.failed'),
   };
+
+  const finalized = ['refunded', 'chargeback', 'failed', 'canceled'].includes(transaction.status);
+  const canCancel =
+    transaction.billing_type === 'recurring' && Boolean(transaction.subscription_id) && !finalized;
+  const canRefund =
+    transaction.billing_type === 'one_time' &&
+    ['confirmed', 'settled'].includes(statusKey) &&
+    isWithinRefundWindow(transaction.created_at);
+  const busy = cancelSubscription.isPending || refundTransaction.isPending;
+
+  function handleCancel() {
+    setError(null);
+    if (!transaction.subscription_id) return;
+    if (!window.confirm(t('payments.history.cancelConfirm'))) return;
+    cancelSubscription.mutate(transaction.subscription_id, {
+      onError: (mutationError) =>
+        setError(mutationError instanceof Error ? mutationError.message : t('payments.history.actionError')),
+    });
+  }
+
+  function handleRefund() {
+    setError(null);
+    if (!window.confirm(t('payments.history.refundConfirm'))) return;
+    refundTransaction.mutate(transaction.id, {
+      onError: (mutationError) =>
+        setError(mutationError instanceof Error ? mutationError.message : t('payments.history.actionError')),
+    });
+  }
+
   return (
     <article className="rounded-2xl border border-outline-variant/40 bg-surface p-4 shadow-sm">
       <div className="flex items-start gap-3">
@@ -237,6 +271,39 @@ function PaymentRow({ transaction }: { transaction: PaymentTransaction }) {
           <span className="font-sans text-counter text-on-surface-variant">{labels[statusKey] ?? statusKey}</span>
         </div>
       </div>
+
+      {(canCancel || canRefund) && (
+        <div className="mt-3 flex gap-2">
+          {canCancel && (
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={busy}
+              className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-surface-container px-3 font-sans text-label text-on-surface transition-colors active:bg-surface-container-high disabled:opacity-60"
+            >
+              {cancelSubscription.isPending ? <Loader2 size={15} className="animate-spin" aria-hidden /> : <Ban size={15} aria-hidden />}
+              {t('payments.history.cancelSubscription')}
+            </button>
+          )}
+          {canRefund && (
+            <button
+              type="button"
+              onClick={handleRefund}
+              disabled={busy}
+              className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-surface-container px-3 font-sans text-label text-on-surface transition-colors active:bg-surface-container-high disabled:opacity-60"
+            >
+              {refundTransaction.isPending ? <Loader2 size={15} className="animate-spin" aria-hidden /> : <Undo2 size={15} aria-hidden />}
+              {t('payments.history.requestRefund')}
+            </button>
+          )}
+        </div>
+      )}
+
+      {error && (
+        <p role="alert" className="mt-2 font-sans text-body-sm text-error">
+          {error}
+        </p>
+      )}
     </article>
   );
 }
