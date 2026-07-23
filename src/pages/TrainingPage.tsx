@@ -205,6 +205,9 @@ function TodayWorkoutCard({ item, session, isActive, isPrimary, studentWorkout }
   // Esportes não-musculação executam pelo player guiado (deriva os passos do treino).
   const guidedPlan = useMemo(() => (studentWorkout && item.surface !== 'strength' ? toGuidedWorkout(studentWorkout) : null), [studentWorkout, item.surface]);
   const exerciseCount = guidedPlan ? flattenSteps(guidedPlan.steps).length : template?.exercises.length ?? 0;
+  // Exercícios para a prévia expansível — mesma fonte da Biblioteca
+  // (playerTemplate do treino prescrito), com fallback ao template local.
+  const previewExercises = studentWorkout ? playerTemplate(studentWorkout).exercises : template?.exercises ?? [];
   const displayMinutes = guidedPlan ? Math.round(estimateDurationSeconds(guidedPlan.steps) / 60) : item.durationMin;
   const running = isActive || activeSession?.scheduledId === item.id || item.status === 'active';
   const done = Boolean(session) || item.status === 'completed';
@@ -230,7 +233,7 @@ function TodayWorkoutCard({ item, session, isActive, isPrimary, studentWorkout }
   return (
     <article className={clsx('overflow-hidden rounded-2xl border bg-surface-container transition-colors', running && !done ? 'border-primary/40 bg-primary/[0.05]' : 'border-outline-variant/40')}>
       <div className="flex items-start gap-3 p-4">
-        {!guidedPlan && exerciseCount ? (
+        {previewExercises.length ? (
           <button
             type="button"
             onClick={() => setExpanded((value) => !value)}
@@ -264,7 +267,7 @@ function TodayWorkoutCard({ item, session, isActive, isPrimary, studentWorkout }
         </div>
       </div>
 
-      {expanded && !guidedPlan ? <WorkoutExercisePreview exercises={template?.exercises ?? []} emptyLabel={t('meufit.training.today.noExercises')} /> : null}
+      {expanded && previewExercises.length ? <WorkoutExercisePreview exercises={previewExercises} emptyLabel={t('meufit.training.today.noExercises')} /> : null}
 
       {done ? (
         <div className="p-3 pt-1">
