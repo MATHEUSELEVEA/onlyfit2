@@ -11,6 +11,7 @@ import { formatCep } from '@/lib/masks';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { TextField, TextAreaField, SelectField } from '@/components/ui/TextField';
 import { IconChip, SectionEyebrow, SettingCard } from './components/SettingsPrimitives';
+import { SOCIAL_PLATFORMS, type SocialLinks } from '@/lib/socialLinks';
 import { useMyProfile, type MyProfile } from './useMyProfile';
 import { useUpdateProfile } from './useUpdateProfile';
 import {
@@ -82,6 +83,7 @@ function PersonalDataForm({ profile, sensitive }: { profile: MyProfile; sensitiv
   const [countryCode, setCountryCode] = useState(profile.countryCode ?? 'BR');
   const [language, setLanguage] = useState<LanguageCode>(normalizeLanguageCode(profile.language));
   const [phone, setPhone] = useState(sensitive.phone ?? '');
+  const [socialLinks, setSocialLinks] = useState<SocialLinks>(profile.socialLinks);
   const [cpf, setCpfValue] = useState('');
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
@@ -111,6 +113,7 @@ function PersonalDataForm({ profile, sensitive }: { profile: MyProfile; sensitiv
           country_code: countryCode || null,
           language,
           phone: phone.trim() || null,
+          social_links: socialLinks,
         },
       });
 
@@ -186,6 +189,27 @@ function PersonalDataForm({ profile, sensitive }: { profile: MyProfile; sensitiv
             inputMode="tel"
             maxLength={20}
           />
+        </SettingCard>
+      </section>
+
+      <section className="space-y-3">
+        <SectionEyebrow>{t('editProfile.section.social')}</SectionEyebrow>
+        <SettingCard>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {SOCIAL_PLATFORMS.map((platform) => (
+              <TextField
+                key={platform.key}
+                label={platform.label}
+                value={socialLinks[platform.key] ?? ''}
+                onChange={(event) => setSocialLinks((current) => ({ ...current, [platform.key]: event.target.value }))}
+                placeholder={t(`editProfile.social.placeholder.${platform.key}`)}
+                inputMode={platform.key === 'whatsapp' ? 'tel' : 'url'}
+                autoCapitalize="none"
+                autoCorrect="off"
+                maxLength={160}
+              />
+            ))}
+          </div>
         </SettingCard>
       </section>
 

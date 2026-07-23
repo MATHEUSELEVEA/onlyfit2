@@ -31,6 +31,7 @@ import { BottomSheet } from '@/components/ui/BottomSheet';
 import { ProfileHero } from '@/components/ui/ProfileHero';
 import { ShareSheet } from '@/components/ui/ShareSheet';
 import { PriceBadge } from '@/components/ui/PriceBadge';
+import { SocialLinksRow } from '@/components/ui/SocialLinksRow';
 import { supabase } from '@/lib/supabase';
 import { useTranslation, type TranslationKey } from '@/i18n/I18nProvider';
 import type { FeedAuthor } from '@/features/feed/types';
@@ -138,6 +139,7 @@ export function CreatorProfilePage() {
     subscriptionPrice: 0,
     followerCount: 0,
     subscriberCount: 0,
+    socialLinks: {},
   };
   const creatorId = creator.id || null;
   const isOwnProfile = Boolean(creatorId && session?.user.id && creatorId === session.user.id);
@@ -226,6 +228,7 @@ export function CreatorProfilePage() {
           )}
         </h1>
         {creator.displayName && <CopyHandle username={creator.username} className="mt-0.5" />}
+        <SocialLinksRow links={creator.socialLinks} className="mt-3" />
 
         {creator.sports.length > 0 && (
           <span className="mt-3 inline-flex rounded-full bg-primary/10 px-3 py-1 font-sans text-eyebrow uppercase text-primary">

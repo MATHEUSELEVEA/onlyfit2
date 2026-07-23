@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { normalizeSocialLinks, type SocialLinks } from '@/lib/socialLinks';
 
 // Dados do perfil público e das abas do hub do criador. Tudo somente leitura:
 // o front nunca escreve em produto/pagamento (regra 7 do CLAUDE.md). As
@@ -17,6 +18,7 @@ export interface CreatorInfo {
   subscriptionPrice: number;
   followerCount: number;
   subscriberCount: number;
+  socialLinks: SocialLinks;
 }
 
 interface CreatorProfileRow {
@@ -43,7 +45,7 @@ export function useCreatorInfo(username: string | undefined) {
       const { data, error } = await supabase
         .from('profiles')
         .select(
-          `id, username, full_name, avatar_url,
+          `id, username, full_name, avatar_url, social_links,
            creator_profiles ( bio, sports, subscription_price, follower_count, subscriber_count, verified )`,
         )
         .eq('username', username!)
@@ -63,6 +65,7 @@ export function useCreatorInfo(username: string | undefined) {
         subscriptionPrice: cp?.subscription_price ?? 0,
         followerCount: cp?.follower_count ?? 0,
         subscriberCount: cp?.subscriber_count ?? 0,
+        socialLinks: normalizeSocialLinks((data as { social_links?: unknown }).social_links),
       };
     },
   });

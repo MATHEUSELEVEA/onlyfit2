@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { normalizeSocialLinks, type SocialLinks } from '@/lib/socialLinks';
 
 // Fonte única do perfil do próprio usuário. A identidade Membro × Profissional
 // é decidida por `is_professional`: false = membro, true = profissional.
@@ -21,6 +22,7 @@ export interface MyProfile {
   isProfessional: boolean;
   isAmbassador: boolean;
   affinitySports: string[];
+  socialLinks: SocialLinks;
 }
 
 export function myProfileQueryKey(userId: string | undefined) {
@@ -45,7 +47,7 @@ export function useMyProfile() {
       const { data, error } = await supabase
         .from('profiles')
         .select(
-          `id, username, full_name, avatar_url, bio, country_code, language, is_creator, is_professional, is_ambassador,
+          `id, username, full_name, avatar_url, bio, country_code, language, is_creator, is_professional, is_ambassador, social_links,
            creator_profiles ( sports )`,
         )
         .eq('id', userId!)
@@ -67,6 +69,7 @@ export function useMyProfile() {
         isProfessional: Boolean((data as { is_professional?: boolean | null }).is_professional),
         isAmbassador: Boolean((data as { is_ambassador?: boolean | null }).is_ambassador),
         affinitySports: cp?.sports ?? [],
+        socialLinks: normalizeSocialLinks((data as { social_links?: unknown }).social_links),
       };
     },
   });

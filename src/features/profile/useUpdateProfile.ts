@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { supabase } from '@/lib/supabase';
+import { cleanSocialLinksForSave } from '@/lib/socialLinks';
 import { myProfileQueryKey, type MyProfile } from './useMyProfile';
 
 // Espelha o padrão do onlyfit-desktop (src/hooks/queries/useProfile.ts):
@@ -19,6 +20,7 @@ const profileUpdateSchema = z
     phone: z.string().max(20).optional().nullable(),
     language: z.string().max(10).optional().nullable(),
     country_code: z.string().max(5).optional().nullable(),
+    social_links: z.record(z.string(), z.string()).optional(),
   })
   .strict();
 
@@ -30,6 +32,10 @@ export function useUpdateProfile() {
   return useMutation({
     mutationFn: async ({ userId, updates }: { userId: string; updates: ProfileUpdateInput }) => {
       const validated = profileUpdateSchema.parse(updates);
+      const payload = {
+        ...validated,
+        ...(validated.social_links ? { social_links: cleanSocialLinksForSave(validated.social_links) } : {}),
+      };
 
       // O RETURNING (`.select`) só pode conter colunas que o papel
       // `authenticated` tem permissão de LER. Em produção o SELECT de `phone`
@@ -40,9 +46,9 @@ export function useUpdateProfile() {
       // update de `phone` continua acontecendo; apenas não o pedimos de volta.
       const { data, error } = await supabase
         .from('profiles')
-        .update(validated)
+        .update(payload)
         .eq('id', userId)
-        .select('id, full_name, username, bio, language, country_code')
+        .select('id, full_name, username, bio, language, country_code, social_links')
         .maybeSingle();
 
       if (error) {
@@ -77,6 +83,7 @@ export function useUpdateProfile() {
               bio: data.bio,
               countryCode: data.country_code,
               language: data.language,
+              socialLinks: cleanSocialLinksForSave((data as { social_links?: Record<string, string> }).social_links ?? {}),
             }
           : current,
       );

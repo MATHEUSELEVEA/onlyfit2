@@ -18,6 +18,7 @@ import { useTranslation } from '@/i18n/I18nProvider';
 import { CopyHandle } from '@/components/ui/CopyHandle';
 import { ProfileHero } from '@/components/ui/ProfileHero';
 import { ShareSheet } from '@/components/ui/ShareSheet';
+import { SocialLinksRow } from '@/components/ui/SocialLinksRow';
 import { AvatarEditor } from './AvatarEditor';
 import { myProfileQueryKey, useMyProfile, type MyProfile } from './useMyProfile';
 import { MyPostsTab } from './MyPostsTab';
@@ -139,6 +140,7 @@ export function ProfilePage() {
               {displayName}
             </h1>
             {profile?.username && <CopyHandle username={profile.username} className="mt-0.5" />}
+            {profile?.socialLinks && <SocialLinksRow links={profile.socialLinks} className="mt-3" />}
             <span className="mt-2 inline-flex items-center rounded-full bg-secondary-container px-3 py-1 font-sans text-eyebrow uppercase text-on-secondary-container">
               {isProfessional ? t('profile.professional') : t('profile.member')}
             </span>

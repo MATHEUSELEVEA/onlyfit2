@@ -444,7 +444,7 @@ function OfficialStoresRail({
       <div className="grid grid-cols-2 gap-3">
         {loading
           ? Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="min-h-[132px] min-w-0 animate-pulse rounded-2xl bg-surface-container" aria-hidden />
+            <div key={index} className="aspect-square min-w-0 animate-pulse rounded-2xl bg-surface-container" aria-hidden />
             ))
           : stores.map((store) => {
               const active = activeStoreKey ? officialStoreKeys(store).includes(activeStoreKey) : false;
@@ -456,18 +456,16 @@ function OfficialStoresRail({
                   aria-pressed={active}
                   onClick={() => onSelect(store)}
                   className={clsx(
-                    'flex min-h-[132px] min-w-0 flex-col overflow-hidden rounded-2xl border p-2.5 text-center transition-colors duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                    'flex min-w-0 flex-col overflow-hidden rounded-2xl border p-2.5 text-center transition-colors duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                     active ? 'border-primary bg-primary/[0.06]' : 'border-outline-variant/25 bg-surface-container',
                   )}
                 >
-                  {/* Painel do logo: área larga e baixa para marcas horizontais,
-                      preservando proporção e centragem. */}
-                  <div className="relative flex h-[78px] items-center justify-center rounded-xl bg-white px-3 py-2 ring-1 ring-black/[0.04]">
+                  <div className="relative flex aspect-square w-full items-center justify-center rounded-xl bg-white p-4 ring-1 ring-black/[0.04]">
                     {(markUrl || store.logoUrl) ? (
                       <img
                         src={markUrl || store.logoUrl || undefined}
                         alt={store.name}
-                        className="h-full max-h-full w-full object-contain object-center"
+                        className="max-h-full max-w-full object-contain object-center"
                         loading="lazy"
                       />
                     ) : (
@@ -478,7 +476,7 @@ function OfficialStoresRail({
                       <BadgeCheck size={12} aria-hidden />
                     </span>
                   </div>
-                  <div className="mt-2 min-w-0 px-0.5">
+                  <div className="mt-2 min-w-0 px-0.5 pb-0.5">
                     <p className="truncate font-sans text-label text-on-surface">{store.name}</p>
                     <p className="mt-0.5 truncate font-sans text-counter text-on-surface-variant">{store.category || t('market.sponsorBrand')}</p>
                   </div>
