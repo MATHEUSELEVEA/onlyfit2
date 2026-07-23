@@ -42,13 +42,6 @@ export function cropFrameToView(
   });
 }
 
-// A proporção do preview em tela (retrato do aparelho); fallback 9:16.
-export function viewportAspect(): number {
-  return window.innerWidth > 0 && window.innerHeight > 0
-    ? window.innerWidth / window.innerHeight
-    : 9 / 16;
-}
-
 // Decodifica base64 (com ou sem prefixo data:) numa <img> pronta para desenhar.
 export function decodeBase64Image(base64: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {

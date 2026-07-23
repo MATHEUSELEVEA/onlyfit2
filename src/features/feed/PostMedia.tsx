@@ -51,10 +51,20 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
 
   const applyFit = useCallback((mediaAspect?: number) => {
     if (mediaAspect) aspectRef.current = mediaAspect;
+    const aspect = aspectRef.current;
+    if (!aspect) return;
+    // Imagem: regra DETERMINÍSTICA, só pela proporção da própria imagem (não da
+    // tela) — mesmo resultado em app e web. Toda mídia nova já entra 9:16
+    // (câmera recorta, galeria é assada no upload), então retrato/quadrado
+    // preenche; só paisagem real (posts antigos) aparece sobre fundo desfocado.
+    if (media.kind === 'image') {
+      setFit(aspect <= 1.02 ? 'cover' : 'contain');
+      return;
+    }
     const stage = stageRef.current;
-    if (!stage || !aspectRef.current) return;
-    setFit(fitFor(aspectRef.current, stage));
-  }, []);
+    if (!stage) return;
+    setFit(fitFor(aspect, stage));
+  }, [media.kind]);
 
   // Rotação de tela ou redimensionamento da janela mudam a proporção do palco,
   // então o enquadramento é recalculado.

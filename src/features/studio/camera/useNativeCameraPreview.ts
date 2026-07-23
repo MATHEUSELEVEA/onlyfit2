@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { CameraPreview, type CameraPreviewOptions } from '@capacitor-community/camera-preview';
 import { Capacitor } from '@capacitor/core';
 import type { CameraError, CameraFacing } from './useCameraStream';
-import { cropFrameToView, decodeBase64Image, viewportAspect } from './frameCrop';
+import { cropFrameToView, decodeBase64Image } from './frameCrop';
+import { FEED_ASPECT_RATIO } from '@/features/mediaFraming';
 
 export type FlashMode = 'off' | 'on' | 'torch';
 
@@ -111,7 +112,8 @@ export function useNativeCameraPreview({ enabled, facing, withAudio, ultraWide }
     try {
       const { value } = await CameraPreview.capture({ quality: 92 });
       const image = await decodeBase64Image(value);
-      const blob = await cropFrameToView(image, image.naturalWidth, image.naturalHeight, viewportAspect(), mirror);
+      // 9:16 fixo (padrão do feed), não a proporção da tela do aparelho.
+      const blob = await cropFrameToView(image, image.naturalWidth, image.naturalHeight, FEED_ASPECT_RATIO, mirror);
       return blob ? new File([blob], `photo_${Date.now()}.jpg`, { type: 'image/jpeg' }) : null;
     } catch {
       return null;

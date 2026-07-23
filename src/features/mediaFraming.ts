@@ -1,5 +1,11 @@
 import type { CSSProperties } from 'react';
 
+// Formato único do feed: 9:16 (retrato, estilo Reels). Toda imagem que entra no
+// feed é padronizada nesse aspecto — câmera recorta nele e a galeria é assada
+// nele no upload —, então o feed exibe tudo uniforme, sem bordas e igual em app
+// e web. Largura/altura.
+export const FEED_ASPECT_RATIO = 9 / 16;
+
 export type MediaFramingFit = 'contain' | 'cover';
 
 export interface MediaFraming {

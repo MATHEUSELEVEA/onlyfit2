@@ -6,7 +6,8 @@ import { useCameraStream, type CameraFacing } from './useCameraStream';
 import { useNativeCameraPreview } from './useNativeCameraPreview';
 import { isNativeCamera } from './nativeCamera';
 import { findUltraWideCameraId } from './lens';
-import { cropFrameToView, viewportAspect } from './frameCrop';
+import { cropFrameToView } from './frameCrop';
+import { FEED_ASPECT_RATIO } from '@/features/mediaFraming';
 import { useVideoCapture } from './useVideoCapture';
 import { createDraftMediaFromCapture, type CaptureMode, type DraftMedia } from '../media';
 
@@ -37,9 +38,8 @@ const SCREEN_FLASH_MS = 160;
  * como no preview.
  */
 function capturePhotoBlob(video: HTMLVideoElement, mirror: boolean): Promise<Blob | null> {
-  const viewAspect =
-    video.clientWidth > 0 && video.clientHeight > 0 ? video.clientWidth / video.clientHeight : viewportAspect();
-  return cropFrameToView(video, video.videoWidth, video.videoHeight, viewAspect, mirror);
+  // Recorta sempre no 9:16 do feed, independentemente do aparelho — padrão único.
+  return cropFrameToView(video, video.videoWidth, video.videoHeight, FEED_ASPECT_RATIO, mirror);
 }
 
 function formatElapsed(elapsedMs: number): string {
