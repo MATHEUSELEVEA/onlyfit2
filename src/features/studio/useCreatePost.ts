@@ -4,8 +4,7 @@ import { contentTypeForMedia, fileExtension, type DraftMedia, type PostLocation 
 import type { CaptionTrack } from '@/lib/captions';
 import type { MyProfile } from '@/features/profile/useMyProfile';
 import type { FeedPost } from '@/features/feed/types';
-import { sanitizeMediaFraming, type MediaFraming } from '@/features/mediaFraming';
-import { bakeImageDraftToFeed } from './bakeMedia';
+import { DEFAULT_MEDIA_FRAMING, sanitizeMediaFraming, type MediaFraming } from '@/features/mediaFraming';
 
 export type PostVisibility = 'public' | 'paid_members';
 
@@ -26,10 +25,7 @@ interface UploadedMedia {
 
 function framingForDraft(draft: DraftMedia): MediaFraming | null {
   if (draft.kind !== 'image') return null;
-  // null quando não há enquadramento manual: a imagem já foi assada no 9:16
-  // (bakeImageDraftToFeed) e o feed a exibe uniforme pelo aspecto — nada de
-  // gravar um framing `contain` que traria as bordas de volta.
-  return sanitizeMediaFraming(draft.framing);
+  return sanitizeMediaFraming(draft.framing) ?? DEFAULT_MEDIA_FRAMING;
 }
 
 type SupabasePostError = {
@@ -133,12 +129,7 @@ export async function runCreatePost(
   if (!userId) throw new Error('Sua sessão expirou. Entre novamente.');
   if (input.media.length === 0) throw new Error('Escolha ao menos uma mídia.');
 
-  // Padroniza toda imagem no 9:16 do feed antes de subir (câmera já sai 9:16;
-  // galeria é assada aqui). Vídeos passam intactos. O `input` local (usado no
-  // post otimista) continua com os originais — só o que sobe é normalizado.
-  const media = await Promise.all(input.media.map(bakeImageDraftToFeed));
-
-  const progressByIndex = new Array(media.length).fill(0);
+  const progressByIndex = new Array(input.media.length).fill(0);
   const reportProgress = (index: number, fraction: number) => {
     progressByIndex[index] = fraction;
     const total = progressByIndex.reduce((sum, value) => sum + value, 0) / progressByIndex.length;
@@ -146,23 +137,23 @@ export async function runCreatePost(
   };
 
   const uploaded = await Promise.all(
-    media.map((draft, index) => uploadDraft(draft, index, (fraction) => reportProgress(index, fraction))),
+    input.media.map((draft, index) => uploadDraft(draft, index, (fraction) => reportProgress(index, fraction))),
   );
   const cover = uploaded[0];
   const isCarousel = uploaded.length > 1;
 
   const rows = isCarousel
-    ? uploaded.map((item, position) => ({
+    ? uploaded.map((media, position) => ({
       position,
-      kind: item.kind,
-      url: item.url,
-      thumbnail_url: item.thumbnailUrl,
+      kind: media.kind,
+      url: media.url,
+      thumbnail_url: media.thumbnailUrl,
       metadata: {
-        ...(framingForDraft(media[position]) ? { framing: framingForDraft(media[position]) } : {}),
+        ...(framingForDraft(input.media[position]) ? { framing: framingForDraft(input.media[position]) } : {}),
       },
     }))
     : [];
-  const mediaFraming = media.map(framingForDraft);
+  const mediaFraming = input.media.map(framingForDraft);
 
   // O RPC grava `posts` e `post_media` na mesma transação, preservando as
   // políticas RLS existentes e evitando post órfão quando uma mídia falha.

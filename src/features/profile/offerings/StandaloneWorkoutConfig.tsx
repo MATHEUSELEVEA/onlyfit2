@@ -39,8 +39,6 @@ import {
   useWorkoutOfferingTemplate,
   type ExerciseLibraryItem,
 } from './useOfferingContent';
-import { GuidedStepsEditor } from './GuidedStepsEditor';
-import type { GuidedStep } from '@/features/training/guidedSession';
 
 type StrengthExerciseDraft = StrengthExercisePrescription & {
   localId: string;
@@ -159,12 +157,8 @@ export function StandaloneWorkoutConfig({ offering }: OfferingConfigProps) {
 
   const isReady = useMemo(() => {
     if (!trainingType || !prescription || title.trim().length < 3 || !prescription.session.objective.trim()) return false;
-    // Musculação: exige exercícios + tarefas dos blocos. Demais: exige ao menos 1 passo guiado.
-    if (trainingType === 'strength') {
-      if (prescription.blocks.some((block) => !block.task.trim())) return false;
-      return exercises.length > 0;
-    }
-    return (prescription.steps?.length ?? 0) > 0;
+    if (prescription.blocks.some((block) => !block.task.trim())) return false;
+    return trainingType === 'strength' ? exercises.length > 0 : true;
   }, [exercises.length, prescription, title, trainingType]);
 
   function chooseType(type: WorkoutTrainingType) {
@@ -182,10 +176,6 @@ export function StandaloneWorkoutConfig({ offering }: OfferingConfigProps) {
 
   function updateSpecific(key: string, value: string) {
     setPrescription((current) => current ? { ...current, specifics: { ...current.specifics, [key]: value } } : current);
-  }
-
-  function updateSteps(steps: GuidedStep[]) {
-    setPrescription((current) => current ? { ...current, steps } : current);
   }
 
   function updateBlock(id: string, patch: Partial<PrescriptionBlock>) {
@@ -229,6 +219,7 @@ export function StandaloneWorkoutConfig({ offering }: OfferingConfigProps) {
     setFeedback(null);
     const withStrengthDetails: WorkoutPrescription = {
       ...prescription,
+      steps: undefined,
       strengthExercises: trainingType === 'strength' ? exercises.map((exercise) => ({
         exerciseId: exercise.exerciseId,
         load: exercise.load,
@@ -349,9 +340,6 @@ export function StandaloneWorkoutConfig({ offering }: OfferingConfigProps) {
             />
           )}
 
-          {trainingType !== 'strength' ? (
-            <GuidedStepsEditor sport={trainingType} steps={prescription.steps ?? []} onChange={updateSteps} />
-          ) : (
           <section className="border-t border-outline-variant/25 pt-6" aria-labelledby="workout-blocks-heading">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -366,7 +354,6 @@ export function StandaloneWorkoutConfig({ offering }: OfferingConfigProps) {
               ))}
             </div>
           </section>
-          )}
 
           <section className="grid gap-3 border-t border-outline-variant/25 pt-6 sm:grid-cols-2">
             <TextAreaField label={t('offer.workout.field.monitoring')} value={prescription.session.monitoring} placeholder={t('offer.workout.placeholder.monitoring')} rows={2} onChange={(event) => updateSession('monitoring', event.target.value)} />

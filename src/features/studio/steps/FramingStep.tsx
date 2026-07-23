@@ -1,5 +1,5 @@
 import { useRef, useState, type PointerEvent } from 'react';
-import { Minus, Play, Plus, RefreshCcw, X } from 'lucide-react';
+import { Maximize2, Minus, Play, Plus, RefreshCcw, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { DEFAULT_MEDIA_FRAMING, mediaFramingStyle, updateMediaFraming } from '@/features/mediaFraming';
 import type { DraftMedia, MediaFraming } from '../media';
@@ -12,10 +12,9 @@ interface FramingStepProps {
   onNext: () => void;
 }
 
-// Passo de revisão do wizard. A moldura é 9:16 (o formato único do feed): a foto
-// aparece já enquadrada nesse aspecto, preenchendo. O usuário só reposiciona/dá
-// zoom dentro da moldura; no upload a imagem é assada nesse 9:16
-// (bakeImageDraftToFeed), então o que se vê aqui é o que sai no feed.
+// Passo de revisão do wizard. A imagem original segue intacta até o upload; o
+// usuário escolhe apenas o enquadramento visual (fit, zoom e posição), que o
+// feed reaplica por metadata para preservar exatamente o preview combinado.
 export function FramingStep({ media, onRemove, onAddMore, onFramingChange, onNext }: FramingStepProps) {
   const [selected, setSelected] = useState(0);
   const dragRef = useRef<{ pointerId: number; startX: number; startY: number; startOffsetX: number; startOffsetY: number } | null>(null);
@@ -48,8 +47,7 @@ export function FramingStep({ media, onRemove, onAddMore, onFramingChange, onNex
   const index = Math.min(selected, media.length - 1);
   const current = media[index];
   const id = current.id;
-  // Imagem preenche a moldura 9:16 por padrão (o feed é sempre preenchido).
-  const framing = current.framing ?? (current.kind === 'image' ? { ...DEFAULT_MEDIA_FRAMING, fit: 'cover' as const } : DEFAULT_MEDIA_FRAMING);
+  const framing = current.framing ?? DEFAULT_MEDIA_FRAMING;
   const canTune = current.kind === 'image';
 
   const setCurrentFraming = (patch: Partial<MediaFraming>) => {
@@ -136,14 +134,13 @@ export function FramingStep({ media, onRemove, onAddMore, onFramingChange, onNex
 
   return (
     <div className="flex h-full flex-col bg-background">
-      <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-black">
-        <div
-          className={clsx('relative aspect-[9/16] max-h-full w-full overflow-hidden bg-surface-container-lowest touch-none', canTune && 'cursor-grab active:cursor-grabbing')}
-          onPointerDown={startGesture}
-          onPointerMove={moveGesture}
-          onPointerUp={endGesture}
-          onPointerCancel={endGesture}
-        >
+      <div
+        className={clsx('relative min-h-0 flex-1 overflow-hidden bg-surface-container-lowest touch-none', canTune && 'cursor-grab active:cursor-grabbing')}
+        onPointerDown={startGesture}
+        onPointerMove={moveGesture}
+        onPointerUp={endGesture}
+        onPointerCancel={endGesture}
+      >
         {current.kind === 'image' ? (
           <>
             <img src={current.previewUrl} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-30 blur-2xl" aria-hidden />
@@ -201,7 +198,20 @@ export function FramingStep({ media, onRemove, onAddMore, onFramingChange, onNex
             </button>
             <button
               type="button"
-              onClick={() => onFramingChange(id, { ...DEFAULT_MEDIA_FRAMING, fit: 'cover' })}
+              onClick={() => setCurrentFraming({ fit: framing.fit === 'contain' ? 'cover' : 'contain', zoom: 1, offsetX: 0, offsetY: 0 })}
+              aria-label={framing.fit === 'contain' ? 'Preencher tela' : 'Mostrar imagem inteira'}
+              aria-pressed={framing.fit === 'cover'}
+              className={clsx(
+                'flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-full px-3 font-sans text-counter transition-colors',
+                framing.fit === 'cover' ? 'bg-primary text-on-primary' : 'active:bg-surface-container-high',
+              )}
+            >
+              <Maximize2 size={16} aria-hidden />
+              <span>{framing.fit === 'contain' ? 'Original' : 'Preencher'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onFramingChange(id, DEFAULT_MEDIA_FRAMING)}
               aria-label="Redefinir enquadramento"
               className="flex h-10 w-10 items-center justify-center rounded-full transition-colors active:bg-surface-container-high"
             >
@@ -209,7 +219,6 @@ export function FramingStep({ media, onRemove, onAddMore, onFramingChange, onNex
             </button>
           </div>
         )}
-        </div>
       </div>
 
       <div className="no-scrollbar flex items-center gap-2 overflow-x-auto px-4 py-3">

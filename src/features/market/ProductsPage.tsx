@@ -430,7 +430,7 @@ function OfficialStoresRail({
   if (!loading && stores.length === 0) return null;
 
   return (
-    <section className="mx-4 mt-4 rounded-[28px] border border-outline-variant/20 bg-surface-container-lowest p-4" aria-labelledby="official-stores-title">
+    <section className="mx-4 mt-4 rounded-2xl border border-outline-variant/20 bg-surface-container-lowest p-4" aria-labelledby="official-stores-title">
       <div className="mb-3.5 flex items-center gap-2.5">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary" aria-hidden>
           <BadgeCheck size={16} />
@@ -444,7 +444,7 @@ function OfficialStoresRail({
       <div className="grid grid-cols-2 gap-3">
         {loading
           ? Array.from({ length: 4 }).map((_, index) => (
-              <div key={index} className="aspect-square min-w-0 animate-pulse rounded-3xl bg-surface-container" aria-hidden />
+              <div key={index} className="min-h-[132px] min-w-0 animate-pulse rounded-2xl bg-surface-container" aria-hidden />
             ))
           : stores.map((store) => {
               const active = activeStoreKey ? officialStoreKeys(store).includes(activeStoreKey) : false;
@@ -456,18 +456,18 @@ function OfficialStoresRail({
                   aria-pressed={active}
                   onClick={() => onSelect(store)}
                   className={clsx(
-                    'flex aspect-square min-w-0 flex-col overflow-hidden rounded-3xl border p-3 text-center transition-colors duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                    'flex min-h-[132px] min-w-0 flex-col overflow-hidden rounded-2xl border p-2.5 text-center transition-colors duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                     active ? 'border-primary bg-primary/[0.06]' : 'border-outline-variant/25 bg-surface-container',
                   )}
                 >
-                  {/* Painel do logo: branco sempre (marcas são desenhadas p/ fundo claro),
-                      emoldurado e centralizado. Ocupa o corpo do quadrado. */}
-                  <div className="relative flex min-h-0 flex-1 items-center justify-center rounded-2xl bg-white ring-1 ring-black/[0.04]">
+                  {/* Painel do logo: área larga e baixa para marcas horizontais,
+                      preservando proporção e centragem. */}
+                  <div className="relative flex h-[78px] items-center justify-center rounded-xl bg-white px-3 py-2 ring-1 ring-black/[0.04]">
                     {(markUrl || store.logoUrl) ? (
                       <img
                         src={markUrl || store.logoUrl || undefined}
                         alt={store.name}
-                        className="max-h-[42%] w-[58%] object-contain"
+                        className="h-full max-h-full w-full object-contain object-center"
                         loading="lazy"
                       />
                     ) : (
@@ -478,11 +478,9 @@ function OfficialStoresRail({
                       <BadgeCheck size={12} aria-hidden />
                     </span>
                   </div>
-                  <div className="mt-2.5 min-w-0 px-0.5">
+                  <div className="mt-2 min-w-0 px-0.5">
                     <p className="truncate font-sans text-label text-on-surface">{store.name}</p>
-                    <p className="mt-0.5 truncate font-sans text-body-sm text-on-surface-variant">
-                      {store.category || store.tagline || t('market.sponsorBrand')}
-                    </p>
+                    <p className="mt-0.5 truncate font-sans text-counter text-on-surface-variant">{store.category || t('market.sponsorBrand')}</p>
                   </div>
                 </button>
               );

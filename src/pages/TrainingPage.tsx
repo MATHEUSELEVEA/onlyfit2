@@ -9,7 +9,8 @@ import { type ActivitySource, type ImportedActivity, type ScheduledWorkout, type
 import { useStudentWorkouts, type StudentWorkout } from '@/features/training/useStudentWorkouts';
 import { useTodayWorkoutSessions, type TodayWorkoutSession } from '@/features/training/useWorkoutSessions';
 import { useTrainingLibrary, type LibraryProtocol, type LibraryWorkout } from '@/features/training/useTrainingLibrary';
-import { estimateDurationSeconds, flattenSteps, toGuidedWorkout } from '@/features/training/guidedSession';
+import { toGuidedWorkout } from '@/features/training/guidedSession';
+import { workoutDurationMin, workoutTemplate } from '@/features/training/executableWorkout';
 import { useAppleHealth } from '@/features/wearables/useAppleHealth';
 import { buildHealthDays, formatSleep, type HealthDay } from '@/features/wearables/healthDays';
 import { activityMetaLine, activityMetrics, activitySportDetails, paceMinPerKm, PACE_SURFACES } from '@/features/wearables/sportActivityMetrics';
@@ -202,13 +203,11 @@ function TodayWorkoutCard({ item, session, isActive, isPrimary, studentWorkout }
   const { templates, startSession, startGuided, activeSession } = useTraining();
   const [expanded, setExpanded] = useState(false);
   const template = templates.find((entry) => entry.id === item.templateId);
-  // Esportes não-musculação executam pelo player guiado (deriva os passos do treino).
   const guidedPlan = useMemo(() => (studentWorkout && item.surface !== 'strength' ? toGuidedWorkout(studentWorkout) : null), [studentWorkout, item.surface]);
-  const exerciseCount = guidedPlan ? flattenSteps(guidedPlan.steps).length : template?.exercises.length ?? 0;
-  // Exercícios para a prévia expansível — mesma fonte da Biblioteca
-  // (playerTemplate do treino prescrito), com fallback ao template local.
-  const previewExercises = studentWorkout ? playerTemplate(studentWorkout).exercises : template?.exercises ?? [];
-  const displayMinutes = guidedPlan ? Math.round(estimateDurationSeconds(guidedPlan.steps) / 60) : item.durationMin;
+  const executableTemplate = studentWorkout ? workoutTemplate(studentWorkout) : template;
+  const exerciseCount = executableTemplate?.exercises.length ?? 0;
+  const previewExercises = executableTemplate?.exercises ?? [];
+  const displayMinutes = studentWorkout ? workoutDurationMin(studentWorkout) : item.durationMin;
   const running = isActive || activeSession?.scheduledId === item.id || item.status === 'active';
   const done = Boolean(session) || item.status === 'completed';
   const canStart = guidedPlan ? true : item.canStart !== false && exerciseCount > 0;
@@ -256,9 +255,7 @@ function TodayWorkoutCard({ item, session, isActive, isPrimary, studentWorkout }
                   displayMinutes ? t('meufit.training.today.minutes', { minutes: displayMinutes }) : null,
                   exerciseCount
                     ? t(
-                        guidedPlan
-                          ? (exerciseCount === 1 ? 'meufit.training.guided.stepCount' : 'meufit.training.guided.stepCountPlural')
-                          : (exerciseCount === 1 ? 'meufit.training.library.exerciseCount' : 'meufit.training.library.exerciseCountPlural'),
+                        exerciseCount === 1 ? 'meufit.training.library.exerciseCount' : 'meufit.training.library.exerciseCountPlural',
                         { count: exerciseCount },
                       )
                     : null,
@@ -539,33 +536,6 @@ function Progress({ appleHealth, healthDays, scheduled, selectedDate, onSelect }
   );
 }
 
-function playerTemplate(workout: StudentWorkout): WorkoutTemplate {
-  const exercises = workout.exercises.map((exercise, index) => {
-    const name = exercise.studentDisplayName || exercise.exerciseName || `Exercício ${index + 1}`;
-    return {
-      id: exercise.id,
-      name,
-      muscle: exercise.muscleGroup || 'Exercício',
-      sets: exercise.sets,
-      targetReps: exercise.reps,
-      lastWeight: 0,
-      lastReps: Number(exercise.reps.match(/\d+/)?.[0] ?? 10),
-      technique: exercise.notes || exercise.tempoNotes || 'Siga as orientações do seu profissional.',
-      demoLabel: name,
-      videoUrl: exercise.videoUrl,
-    };
-  });
-  const muscleGroups = [...new Set(exercises.map((exercise) => exercise.muscle).filter((muscle) => muscle !== 'Exercício'))];
-  const setCount = exercises.reduce((total, exercise) => total + exercise.sets, 0);
-  return {
-    id: `library-${workout.workoutId ?? workout.assignmentId}`,
-    title: workout.title,
-    focus: muscleGroups.slice(0, 3).join(' · ') || 'Treino prescrito',
-    durationMin: Math.max(20, Math.round(setCount * 2.5)),
-    exercises,
-  };
-}
-
 /**
  * Biblioteca: nível 1 = TIPO de treino; nível 2 = QUEM PASSOU (profissional ou
  * Market). Protocolo vigente vira card-acordeão (treinos deduplicados por nome —
@@ -580,9 +550,17 @@ function Library() {
   const { startWorkoutNow, startGuided } = useTraining();
   const byAssignment = useMemo(() => new Map(workouts.map((workout) => [workout.assignmentId, workout])), [workouts]);
   // Exercícios do treino (mesmo mapeamento do Player) para a prévia expansível.
-  const exercisesFor = (assignmentId: string) => {
-    const workout = byAssignment.get(assignmentId);
-    return workout ? playerTemplate(workout).exercises : undefined;
+  const exercisesFor = (item: LibraryWorkout) => {
+    const direct = byAssignment.get(item.assignmentId);
+    const candidates = workouts.filter((workout) =>
+      workout.assignmentId === item.assignmentId ||
+      (item.workoutId && workout.workoutId === item.workoutId) ||
+      (workout.trainingType === item.trainingType && workout.title.trim().toLowerCase() === item.title.trim().toLowerCase()),
+    );
+    const best = candidates
+      .map((workout) => ({ workout, exercises: workoutTemplate(workout).exercises }))
+      .sort((a, b) => b.exercises.length - a.exercises.length)[0];
+    return best?.exercises ?? (direct ? workoutTemplate(direct).exercises : undefined);
   };
 
   const start = (assignmentId: string) => {
@@ -595,7 +573,7 @@ function Library() {
       navigate('/meu-fit/treino/player/guiado');
       return;
     }
-    const template = playerTemplate(workout);
+    const template = workoutTemplate(workout);
     if (startWorkoutNow(template, workout.trainingType)) navigate('/meu-fit/treino/player');
   };
 
@@ -636,7 +614,7 @@ function Library() {
                 </div>
                 <div className="space-y-3">
                   {author.protocols.map((protocol) => <ProtocolCard key={protocol.cycleId} protocol={protocol} onStart={start} exercisesFor={exercisesFor} />)}
-                  {author.workouts.map((workout) => <LibraryWorkoutRow key={workout.assignmentId} workout={workout} exercises={exercisesFor(workout.assignmentId)} onStart={() => start(workout.assignmentId)} asCard />)}
+                  {author.workouts.map((workout) => <LibraryWorkoutRow key={workout.assignmentId} workout={workout} exercises={exercisesFor(workout)} onStart={() => start(workout.assignmentId)} asCard />)}
                 </div>
               </div>
             ))}
@@ -657,7 +635,7 @@ function MarketBadge() {
   );
 }
 
-function ProtocolCard({ protocol, onStart, exercisesFor }: { protocol: LibraryProtocol; onStart: (assignmentId: string) => void; exercisesFor: (assignmentId: string) => WorkoutTemplate['exercises'] | undefined }) {
+function ProtocolCard({ protocol, onStart, exercisesFor }: { protocol: LibraryProtocol; onStart: (assignmentId: string) => void; exercisesFor: (workout: LibraryWorkout) => WorkoutTemplate['exercises'] | undefined }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const subtitle = [
@@ -677,7 +655,7 @@ function ProtocolCard({ protocol, onStart, exercisesFor }: { protocol: LibraryPr
       </button>
       {open ? (
         <div className="border-t border-outline-variant/20 bg-surface-container-lowest">
-          {protocol.workouts.map((workout) => <LibraryWorkoutRow key={workout.assignmentId} workout={workout} exercises={exercisesFor(workout.assignmentId)} onStart={() => onStart(workout.assignmentId)} />)}
+          {protocol.workouts.map((workout) => <LibraryWorkoutRow key={workout.assignmentId} workout={workout} exercises={exercisesFor(workout)} onStart={() => onStart(workout.assignmentId)} />)}
         </div>
       ) : null}
     </article>
@@ -690,6 +668,7 @@ function LibraryWorkoutRow({ workout, exercises, onStart, asCard = false }: { wo
   const [expanded, setExpanded] = useState(false);
   // Setinha discreta à esquerda revela os exercícios sem abrir o treino.
   const canExpand = (exercises?.length ?? 0) > 0;
+  const executableCount = exercises?.length ?? workout.exerciseCount;
   return (
     <div className={clsx(asCard ? 'overflow-hidden rounded-2xl border border-outline-variant/40 bg-surface-container' : 'border-b border-outline-variant/15 last:border-b-0')}>
       <div className={clsx('flex items-center gap-3', asCard ? 'p-4' : 'px-4 py-3')}>
@@ -711,9 +690,9 @@ function LibraryWorkoutRow({ workout, exercises, onStart, asCard = false }: { wo
             <p className="min-w-0 font-sans text-label leading-snug text-on-surface">{workout.title}</p>
             {workout.isMarket && asCard ? <MarketBadge /> : null}
           </div>
-          <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{workout.exerciseCount ? t(workout.exerciseCount === 1 ? 'meufit.training.library.exerciseCount' : 'meufit.training.library.exerciseCountPlural', { count: workout.exerciseCount }) : t('meufit.training.library.noExercises')}</p>
+          <p className="mt-0.5 font-sans text-body-sm text-on-surface-variant">{executableCount ? t(executableCount === 1 ? 'meufit.training.library.exerciseCount' : 'meufit.training.library.exerciseCountPlural', { count: executableCount }) : t('meufit.training.library.noExercises')}</p>
         </div>
-        {workout.exerciseCount ? (
+        {executableCount ? (
           <button type="button" onClick={onStart} className="flex min-h-10 shrink-0 items-center gap-1.5 font-sans text-label text-primary transition-opacity duration-150 hover:opacity-80 active:opacity-70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
             <Play size={15} fill="currentColor" aria-hidden />
             {t('meufit.training.library.doNow')}

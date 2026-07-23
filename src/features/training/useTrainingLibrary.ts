@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { todayKey } from '@/lib/localDate';
 import { useStudentWorkouts, type WorkoutTrainingType } from './useStudentWorkouts';
+import { workoutExerciseCount } from './executableWorkout';
 
 /**
  * Biblioteca de treinos, estruturada em 2 níveis: TIPO de treino → QUEM PASSOU
@@ -139,7 +140,7 @@ export function useTrainingLibrary() {
         workoutId: w.workoutId,
         title: w.title,
         trainingType: w.trainingType,
-        exerciseCount: w.exerciseCount,
+        exerciseCount: workoutExerciseCount(w),
         isMarket,
       };
 

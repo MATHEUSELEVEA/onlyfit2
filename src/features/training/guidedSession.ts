@@ -278,15 +278,10 @@ function applySportSpecifics(workout: GuidedWorkout, prescription: WorkoutPrescr
 /**
  * Constrói o treino executável de um StudentWorkout.
  * `null` = é musculação (segue no Player de força atual, intacto).
- * Precedência: passos estruturados → blocos da prescrição → exercícios → fallback.
+ * Precedência: blocos canônicos → exercícios → passos legados → fallback.
  */
 export function toGuidedWorkout(workout: StudentWorkout): GuidedWorkout | null {
   if (workout.trainingType === 'strength') return null;
-
-  const structured = readStructuredSteps(workout.prescription);
-  if (structured) {
-    return applySportSpecifics({ schemaVersion: 1, sport: workout.trainingType, steps: structured }, workout.prescription);
-  }
 
   if (workout.prescription && workout.prescription.blocks.length > 0) {
     const steps = fromBlocks(workout.prescription);
@@ -295,6 +290,11 @@ export function toGuidedWorkout(workout: StudentWorkout): GuidedWorkout | null {
 
   if (workout.exercises.length > 0) {
     return { schemaVersion: 1, sport: workout.trainingType, steps: fromExercises(workout.exercises) };
+  }
+
+  const structured = readStructuredSteps(workout.prescription);
+  if (structured) {
+    return applySportSpecifics({ schemaVersion: 1, sport: workout.trainingType, steps: structured }, workout.prescription);
   }
 
   return {

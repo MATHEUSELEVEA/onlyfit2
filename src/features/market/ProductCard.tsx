@@ -9,7 +9,7 @@ interface ProductCardProps {
   product: MarketProduct;
   /** Card em destaque: ocupa 2 colunas, com imagem grande e texto sobreposto. */
   featured?: boolean;
-  /** Vitrine de Meus produtos: esconde preço e mostra "Adquirido". */
+  /** Vitrine de Meus produtos: esconde preço/CTA textual e reduz ruído. */
   owned?: boolean;
   isOfficialStore?: boolean;
 }
@@ -73,6 +73,41 @@ export function ProductCard({ product, featured = false, owned = false, isOffici
     return (
       <Link to={to} className={className}>
         {inner}
+      </Link>
+    );
+  }
+
+  // Variante padrão: imagem em cima, corpo com tipo, título, descrição e rodapé.
+  if (owned) {
+    return (
+      <Link
+        to={to}
+        className="group flex flex-col overflow-hidden rounded-2xl border border-outline-variant/25 bg-surface-container-lowest transition-colors active:bg-surface-container"
+        aria-label={product.name}
+      >
+        <div className="relative aspect-[4/3] w-full overflow-hidden bg-surface-container-high">
+          {image ? (
+            <img
+              src={image}
+              alt={product.name}
+              loading="lazy"
+              className="h-full w-full object-cover transition-transform duration-500 group-active:scale-105"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-surface-container-high to-surface-container text-on-surface-variant">
+              <Icon size={30} aria-hidden />
+            </div>
+          )}
+          <span className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-inverse-surface/75 text-inverse-on-surface backdrop-blur-sm">
+            <ChevronRight size={17} aria-hidden />
+          </span>
+        </div>
+        <div className="min-w-0 p-3">
+          <p className="line-clamp-2 font-sans text-body font-semibold text-on-surface">{product.name}</p>
+          <p className="mt-1 truncate font-sans text-counter text-on-surface-variant">
+            {[meta.label, product.storeName].filter(Boolean).join(' · ')}
+          </p>
+        </div>
       </Link>
     );
   }

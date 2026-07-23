@@ -45,7 +45,7 @@ describe('parsers', () => {
   });
 });
 
-describe('toGuidedWorkout — caminho estruturado (seed Corrida de Rua 5K)', () => {
+describe('toGuidedWorkout — caminho legado estruturado', () => {
   const w = workout({
     trainingType: 'running',
     prescription: {
@@ -60,7 +60,7 @@ describe('toGuidedWorkout — caminho estruturado (seed Corrida de Rua 5K)', () 
     } as unknown as StudentWorkout['prescription'],
   });
 
-  it('usa os passos estruturados e expande o repeat em 8 passos de trabalho', () => {
+  it('usa os passos estruturados quando não há blocos canônicos', () => {
     const g = toGuidedWorkout(w);
     expect(g).not.toBeNull();
     expect(g!.steps).toHaveLength(3);
@@ -72,6 +72,26 @@ describe('toGuidedWorkout — caminho estruturado (seed Corrida de Rua 5K)', () 
     expect(tiro.target?.effort).toBe('hard');
     expect(tiro.target?.paceSecPerKm).toBe(300);
     expect(tiro.rest).toEqual({ by: 'time', seconds: 120 });
+  });
+});
+
+describe('toGuidedWorkout — blocos canônicos têm precedência', () => {
+  it('não deixa steps legados sobreporem a prescrição por blocos', () => {
+    const g = toGuidedWorkout(workout({
+      trainingType: 'running',
+      prescription: {
+        schemaVersion: 1, modality: 'running',
+        session: { sessionType: '', objective: 'Treino por blocos', periodizationPhase: '', estimatedDuration: '', totalVolume: '', intensityModel: '', environment: '', equipment: '', monitoring: '', postWorkoutRecovery: '', interruptionCriteria: '' },
+        specifics: {},
+        blocks: [{ id: 'b1', role: 'main', name: 'Bloco principal', task: 'Corrida contínua', series: '', repetitions: '', distance: '', duration: '20 min', intensityType: '', intensityTarget: 'moderado', intensityRange: '', recoveryDuration: '', recoveryType: '', recoveryIntensity: '', technique: '', equipment: '', progressionCriteria: '', interruptionCriteria: '' }],
+        steps: [{ kind: 'single', id: 'legacy', role: 'main', bound: { by: 'time', seconds: 60 }, target: { effort: 'max' } }],
+      } as unknown as StudentWorkout['prescription'],
+    }));
+    expect(g!.steps).toHaveLength(1);
+    const [step] = g!.steps as GuidedSingleStep[];
+    expect(step.id).toBe('b1');
+    expect(step.bound).toEqual({ by: 'time', seconds: 1200 });
+    expect(step.target?.effort).toBe('moderate');
   });
 });
 
@@ -177,12 +197,14 @@ describe('toGuidedWorkout — específicos por esporte', () => {
 });
 
 describe('defaults por esporte no editor', () => {
-  it('natação começa por distância; hiit por rodadas de reps', async () => {
+  it('todo esporte nasce com blocos canônicos e sem steps paralelos', async () => {
     const { createWorkoutPrescription } = await import('@/features/profile/offerings/workoutPrescription');
     const swim = createWorkoutPrescription('swimming');
-    expect(swim.steps![0].kind === 'single' && swim.steps![0].bound.by).toBe('distance');
+    expect(swim.blocks.map((block) => block.role)).toEqual(['warmup', 'main', 'cooldown']);
+    expect(swim.steps).toBeUndefined();
     const hiit = createWorkoutPrescription('hiit');
-    expect(hiit.steps![1].kind).toBe('repeat');
+    expect(hiit.blocks.map((block) => block.role)).toEqual(['warmup', 'main', 'cooldown']);
+    expect(hiit.steps).toBeUndefined();
   });
 });
 

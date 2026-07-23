@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { localDateKey } from '@/lib/localDate';
 import { DAY_CODES, useStudentWorkouts } from './useStudentWorkouts';
 import type { GuidedWorkout } from './guidedSession';
+import { workoutExerciseCount, workoutTemplate } from './executableWorkout';
 
 export type TrainingStatus = 'planned' | 'active' | 'partial' | 'completed' | 'missed' | 'imported' | 'rest';
 export type TrainingSurface = 'strength' | 'running' | 'cycling' | 'walking' | 'swimming' | 'functional' | 'hiit' | 'yoga' | 'pilates' | 'other';
@@ -99,32 +100,7 @@ function createSession(scheduledId: string, template: WorkoutTemplate): WorkoutS
 
 export function TrainingProvider({ children }: { children: ReactNode }) {
   const { workouts } = useStudentWorkouts();
-  const realTemplates = useMemo<WorkoutTemplate[]>(() => workouts.map((workout) => {
-    const exercises = workout.exercises.map((exercise, index) => {
-      const name = exercise.studentDisplayName || exercise.exerciseName || `Exercício ${index + 1}`;
-      return {
-        id: exercise.id,
-        name,
-        muscle: exercise.muscleGroup || 'Exercício',
-        sets: exercise.sets,
-        targetReps: exercise.reps,
-        lastWeight: 0,
-        lastReps: Number(exercise.reps.match(/\d+/)?.[0] ?? 10),
-        technique: exercise.notes || exercise.tempoNotes || '',
-        demoLabel: name,
-        videoUrl: exercise.videoUrl,
-        instructions: exercise.instructions,
-      };
-    });
-    const muscles = [...new Set(exercises.map((exercise) => exercise.muscle).filter((muscle) => muscle !== 'Exercício'))];
-    return {
-      id: `library-${workout.workoutId ?? workout.assignmentId}`,
-      title: workout.title,
-      focus: muscles.slice(0, 3).join(' · ') || workout.prescription?.session.objective || '',
-      durationMin: Math.max(0, Math.round(exercises.reduce((total, exercise) => total + exercise.sets, 0) * 2.5)),
-      exercises,
-    };
-  }), [workouts]);
+  const realTemplates = useMemo<WorkoutTemplate[]>(() => workouts.map(workoutTemplate), [workouts]);
   const realScheduled = useMemo<ScheduledWorkout[]>(() => {
     const current = new Date();
     const todayCode = DAY_CODES[current.getDay()];
@@ -154,9 +130,7 @@ export function TrainingProvider({ children }: { children: ReactNode }) {
         durationMin: template?.durationMin || 0,
         status: 'planned',
         surface: workout.trainingType,
-        // Musculação exige exercícios; demais esportes sempre iniciam (player guiado
-        // deriva os passos da prescrição/exercícios ou cai num passo aberto).
-        canStart: workout.trainingType === 'strength' ? Boolean(template?.exercises.length) : true,
+        canStart: workoutExerciseCount(workout) > 0,
       });
     }
     return [...byWorkout.values()];

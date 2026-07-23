@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Dumbbell,
+  Info,
   ListChecks,
   Minus,
   Pencil,
@@ -21,7 +22,7 @@ import { useTraining, type ExerciseSetLog } from '@/features/training/TrainingPr
 import { useLogWorkoutSession } from '@/features/training/useWorkoutSessions';
 import { RestTimerBanner } from '@/features/training/components/RestTimerBanner';
 
-type Sheet = 'exit' | 'list' | 'effort' | 'note' | 'video' | 'substitute' | null;
+type Sheet = 'exit' | 'list' | 'effort' | 'note' | 'info' | 'substitute' | null;
 type Summary = { title: string; duration: string; sets: number; totalSets: number; volume: number; prs: number };
 
 const formatTime = (seconds: number) =>
@@ -184,19 +185,20 @@ export function TrainingPlayerPage() {
       <RestTimerBanner seconds={rest} onSkip={() => setRest(0)} />
 
       <main className="min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-5">
-        <section className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
+        <ExerciseVideo videoUrl={exercise.videoUrl} title={exercise.name} />
+
+        <section className="mt-5 flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
             <p className="font-sans text-counter text-primary">{exercise.muscle}</p>
             <h1 className="mt-1 text-balance font-sans text-display text-on-surface">{exercise.name}</h1>
-            <p className="mt-2 font-sans text-body-sm text-on-surface-variant">{exercise.technique}</p>
           </div>
           <button
             type="button"
-            onClick={() => setSheet('video')}
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-outline-variant/40 bg-surface-container text-primary active:scale-[0.98]"
-            aria-label="Ver demonstração"
+            onClick={() => setSheet('info')}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-outline-variant/40 bg-surface-container text-primary active:bg-surface-container-high"
+            aria-label="Ver instruções"
           >
-            <Play size={22} fill="currentColor" />
+            <Info size={20} />
           </button>
         </section>
 
@@ -313,16 +315,41 @@ export function TrainingPlayerPage() {
         onClose={() => setSheet(null)}
         onChange={training.updateSessionNote}
       />
-      <VideoSheet
-        open={sheet === 'video'}
+      <ExerciseInfoSheet
+        open={sheet === 'info'}
         onClose={() => setSheet(null)}
         title={exercise.name}
-        description={exercise.demoLabel}
-        videoUrl={exercise.videoUrl}
+        technique={exercise.technique}
         instructions={exercise.instructions}
       />
       <SubstituteSheet open={sheet === 'substitute'} onClose={() => setSheet(null)} />
     </div>
+  );
+}
+
+function ExerciseVideo({ videoUrl, title }: { videoUrl?: string | null; title: string }) {
+  return (
+    <section className="overflow-hidden rounded-2xl border border-outline-variant/35 bg-surface-container-high">
+      {videoUrl ? (
+        <video
+          key={videoUrl}
+          src={videoUrl}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          aria-label={`Demonstração de ${title}`}
+          className="aspect-video w-full object-contain"
+        />
+      ) : (
+        <div className="flex aspect-video flex-col items-center justify-center px-5 text-center">
+          <Play size={24} className="text-on-surface-variant" aria-hidden />
+          <p className="mt-3 font-sans text-label text-on-surface">Demonstração ainda não publicada</p>
+          <p className="mt-1 max-w-[18rem] font-sans text-body-sm text-on-surface-variant">Quando o profissional adicionar o vídeo deste exercício, ele aparecerá aqui.</p>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -582,47 +609,32 @@ function NoteSheet({
   );
 }
 
-function VideoSheet({
+function ExerciseInfoSheet({
   open,
   onClose,
   title,
-  description,
-  videoUrl,
+  technique,
   instructions,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
-  description: string;
-  videoUrl?: string | null;
+  technique: string;
   instructions?: string | null;
 }) {
   return (
-    <BottomSheet open={open} onClose={onClose} title="Demonstração" description={title}>
-      <div className="px-5 pb-6">
-        {videoUrl ? (
-          <video
-            src={videoUrl}
-            controls
-            playsInline
-            preload="metadata"
-            className="aspect-video w-full rounded-2xl bg-black object-contain"
-          />
-        ) : (
-          <div className="flex aspect-video flex-col items-center justify-center rounded-2xl border border-outline-variant/40 bg-surface-container px-5 text-center">
-            <Play size={24} className="text-on-surface-variant" aria-hidden />
-            <p className="mt-3 font-sans text-label text-on-surface">Demonstração ainda não publicada</p>
-            <p className="mt-1 font-sans text-body-sm text-on-surface-variant">Quando o profissional adicionar o vídeo deste exercício, ele aparecerá aqui.</p>
-          </div>
-        )}
+    <BottomSheet open={open} onClose={onClose} title="Instruções" description={title}>
+      <div className="space-y-5 px-5 pb-6">
+        <div>
+          <p className="font-sans text-counter font-semibold uppercase tracking-[0.12em] text-on-surface-variant">Orientação</p>
+          <p className="mt-1.5 whitespace-pre-line font-sans text-body leading-relaxed text-on-surface">{technique}</p>
+        </div>
         {instructions ? (
-          <div className="mt-4">
+          <div>
             <p className="font-sans text-counter font-semibold uppercase tracking-[0.12em] text-on-surface-variant">Como executar</p>
             <p className="mt-1.5 whitespace-pre-line font-sans text-body leading-relaxed text-on-surface">{instructions}</p>
           </div>
-        ) : (
-          <p className="mt-4 font-sans text-body text-on-surface-variant">{description}</p>
-        )}
+        ) : null}
       </div>
     </BottomSheet>
   );

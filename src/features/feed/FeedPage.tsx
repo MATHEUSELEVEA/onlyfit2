@@ -9,6 +9,7 @@ import { mergeFeedEntries } from '@/features/stories/feedMerge';
 import { StoryCard } from '@/features/stories/StoryCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePublishJobs } from '@/features/studio/publishQueue';
+import { HOME_RETAP_EVENT } from '@/lib/navigationEvents';
 
 // Arrasto (px) além do qual soltar dispara o refresh.
 const PULL_THRESHOLD = 56;
@@ -60,7 +61,7 @@ export function FeedPage() {
   // Story não tem tela própria: entra misturado no mesmo scroll dos posts, na
   // mesma ordenação por data — a única diferença visual é o card ter o
   // relógio de tempo restante em vez do trilho de ações (ver StoryCard).
-  const { data: storyItems } = useActiveStoryItems();
+  const { data: storyItems, refetch: refetchStories } = useActiveStoryItems();
   const entries = useMemo(() => mergeFeedEntries(visiblePosts, storyItems ?? []), [visiblePosts, storyItems]);
 
   // Pull-to-refresh: distância atual do arrasto (0 = solto).
@@ -116,6 +117,16 @@ export function FeedPage() {
     pullStartY.current = null;
     setPull(0);
   };
+
+  useEffect(() => {
+    const retapHome = () => {
+      scrollerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+      void refetch();
+      void refetchStories();
+    };
+    window.addEventListener(HOME_RETAP_EVENT, retapHome);
+    return () => window.removeEventListener(HOME_RETAP_EVENT, retapHome);
+  }, [refetch, refetchStories]);
 
   const pulling = pull > 0;
 

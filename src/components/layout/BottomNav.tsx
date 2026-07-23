@@ -1,6 +1,7 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { Home, Compass, ShoppingBag, Activity, CircleUserRound } from 'lucide-react';
 import { clsx } from 'clsx';
+import { HOME_RETAP_EVENT } from '@/lib/navigationEvents';
 
 const items = [
   { to: '/feed', label: 'Início', icon: Home },
@@ -17,6 +18,8 @@ interface BottomNavProps {
 }
 
 export function BottomNav({ immersive = false }: BottomNavProps) {
+  const { pathname } = useLocation();
+
   return (
     <nav
       className={clsx(
@@ -31,6 +34,11 @@ export function BottomNav({ immersive = false }: BottomNavProps) {
         <NavLink
           key={to}
           to={to}
+          onClick={() => {
+            if (to === '/feed' && pathname === '/feed') {
+              window.dispatchEvent(new Event(HOME_RETAP_EVENT));
+            }
+          }}
           className={({ isActive }) =>
             clsx(
               'flex min-h-[52px] flex-1 flex-col items-center justify-center transition-colors',
