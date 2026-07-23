@@ -58,7 +58,7 @@ index 6ec075a..742f8d9 100644
  
                      if captureSession.canAddInput(self.rearCameraInput!) { captureSession.addInput(self.rearCameraInput!) }
 diff --git a/node_modules/@capacitor-community/camera-preview/ios/Sources/CameraPreviewPlugin/CameraPreviewPlugin.swift b/node_modules/@capacitor-community/camera-preview/ios/Sources/CameraPreviewPlugin/CameraPreviewPlugin.swift
-index aa18ca7..b9bdb53 100644
+index aa18ca7..bb65ad1 100644
 --- a/node_modules/@capacitor-community/camera-preview/ios/Sources/CameraPreviewPlugin/CameraPreviewPlugin.swift
 +++ b/node_modules/@capacitor-community/camera-preview/ios/Sources/CameraPreviewPlugin/CameraPreviewPlugin.swift
 @@ -78,6 +78,8 @@ public class CameraPreview: CAPPlugin, CAPBridgedPlugin {
@@ -70,3 +70,30 @@ index aa18ca7..b9bdb53 100644
  
          if call.getInt("width") != nil {
              self.width = CGFloat(call.getInt("width")!)
+@@ -159,6 +161,13 @@ public class CameraPreview: CAPPlugin, CAPBridgedPlugin {
+ 
+     @objc func stop(_ call: CAPPluginCall) {
+         DispatchQueue.main.async {
++            // Patch OnlyFit: restaura a opacidade do webview SEMPRE — mesmo se a
++            // câmera já estava parada. Antes, o restore ficava só no ramo
++            // "isRunning" e o outro rejeitava sem restaurar, deixando o webview
++            // transparente pra sempre → tela cinza/travada depois de sair da
++            // câmera (ex.: ao publicar, que sempre passa pela câmera).
++            self.webView?.isOpaque = true
++
+             if self.cameraController.captureSession?.isRunning ?? false {
+                 self.cameraController.captureSession?.stopRunning()
+ 
+@@ -171,11 +180,8 @@ public class CameraPreview: CAPPlugin, CAPBridgedPlugin {
+                     previewView.removeFromSuperview()
+                     self.previewView = nil
+                 }
+-                self.webView?.isOpaque = true
+-                call.resolve()
+-            } else {
+-                call.reject("camera already stopped")
+             }
++            call.resolve()
+         }
+     }
+     // Get user's cache directory path
