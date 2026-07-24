@@ -4,6 +4,7 @@ import { PageTopBar } from '@/components/layout/PageTopBar';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { useTranslation } from '@/i18n/I18nProvider';
 import { useStudentDietPlan, type StudentDietMeal } from '@/features/diet/useStudentDietPlan';
+import { MyFitSectionNav } from '@/features/meufit/MyFitSectionNav';
 
 const round = (value: number): number => Math.round(value);
 
@@ -33,6 +34,7 @@ export function DietPage() {
     <div className="flex h-full flex-col overflow-y-auto bg-background pb-6">
       <PageTopBar title={t('meufit.diet.title')} backFallback="/meu-fit" />
       <main className="mx-auto w-full max-w-[720px] px-5 py-5">
+        <MyFitSectionNav />
         {isLoading ? (
           <div className="flex min-h-64 items-center justify-center"><Loader2 size={28} className="animate-spin text-primary" aria-label={t('common.loading')} /></div>
         ) : isError ? (
@@ -61,8 +63,8 @@ export function DietPage() {
               <section className="mt-6">
                 <p className="font-sans text-counter text-primary">{t('diet.nextMeal')}{upcoming.targetTime ? ` · ${upcoming.targetTime}` : ''}</p>
                 <button type="button" onClick={() => setSelected(upcoming)} className="mt-2 w-full rounded-2xl bg-surface-container p-5 text-left transition-transform active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                  <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="font-sans text-title-lg text-on-surface">{upcoming.title}</h2><p className="mt-1 line-clamp-2 font-sans text-body-sm text-on-surface-variant">{upcoming.items.map((item) => item.name).join(' · ')}</p></div><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary"><UtensilsCrossed size={18} aria-hidden /></span></div>
-                  <div className="mt-5 flex items-center justify-between gap-3"><span className="font-sans text-label text-on-surface">{round(upcoming.items.reduce((sum, item) => sum + item.kcal, 0))} kcal</span><span className="flex items-center gap-1 font-sans text-label text-primary">{t('diet.viewMeal')}<ChevronRight size={17} aria-hidden /></span></div>
+                  <div className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 className="font-sans text-title-lg text-on-surface">{upcoming.title}</h2><p className="mt-1 line-clamp-2 font-sans text-body-sm text-on-surface-variant">{upcoming.items.map((item) => item.name).join(' · ')}</p></div><ChevronRight size={20} className="mt-1 shrink-0 text-primary" aria-hidden /></div>
+                  <div className="mt-5 flex items-center justify-between gap-3"><span className="font-sans text-label text-on-surface">{round(upcoming.items.reduce((sum, item) => sum + item.kcal, 0))} kcal</span><span className="font-sans text-body-sm text-on-surface-variant">{upcoming.items.length} {upcoming.items.length === 1 ? t('diet.item') : t('diet.items')}</span></div>
                 </button>
               </section>
             )}

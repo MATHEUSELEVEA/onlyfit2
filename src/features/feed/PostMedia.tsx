@@ -44,10 +44,15 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
   const hlsRef = useRef<import('hls.js').default | null>(null);
   const activeRef = useRef(active);
   const mutedRef = useRef(muted);
+  const triedRawFallbackRef = useRef(false);
   useEffect(() => {
     activeRef.current = active;
     mutedRef.current = muted;
   });
+
+  useEffect(() => {
+    triedRawFallbackRef.current = false;
+  }, [media.url, media.hlsUrl]);
 
   const applyFit = useCallback((mediaAspect?: number) => {
     if (mediaAspect) aspectRef.current = mediaAspect;
@@ -109,6 +114,17 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
         void video.play().catch(() => {});
       });
     };
+    const fallbackToRaw = () => {
+      if (triedRawFallbackRef.current || !raw || video.src === raw) return;
+      triedRawFallbackRef.current = true;
+      hlsRef.current?.destroy();
+      hlsRef.current = null;
+      setVideoError(false);
+      setBuffering(true);
+      video.src = raw;
+      video.load();
+      play();
+    };
     if (!hlsUrl || video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = hlsUrl ?? raw;
       return;
@@ -121,6 +137,9 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
           const hls = new Hls({ enableWorker: true });
           hlsRef.current = hls;
           hls.on(Hls.Events.MANIFEST_PARSED, play);
+          hls.on(Hls.Events.ERROR, (_event, data) => {
+            if (data.fatal) fallbackToRaw();
+          });
           hls.loadSource(hlsUrl);
           hls.attachMedia(video);
         } else {
@@ -199,6 +218,16 @@ function MediaSlide({ media, active, alt }: { media: FeedMedia; active: boolean;
           onPlaying={() => setBuffering(false)}
           onWaiting={() => setBuffering(true)}
           onError={() => {
+            if (media.hlsUrl && !triedRawFallbackRef.current) {
+              const video = videoRef.current;
+              if (video) {
+                triedRawFallbackRef.current = true;
+                video.src = media.url;
+                video.load();
+                if (active) void video.play().catch(() => {});
+                return;
+              }
+            }
             setBuffering(false);
             setVideoError(true);
           }}

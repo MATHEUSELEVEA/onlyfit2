@@ -50,6 +50,7 @@ import { LoginPage } from './pages/LoginPage';
 import { ResetPasswordPage } from './pages/ResetPasswordPage';
 import { AuthConfirmPage } from './pages/AuthConfirmPage';
 import { registerCapacitorAppBridge } from './lib/capacitorAppBridge';
+import { registerIosEdgeSwipeBack } from './lib/iosEdgeSwipeBack';
 
 // A rota /creator/:username é a mesma para todos os perfis; sem `key` o React
 // reaproveita a instância ao trocar de perfil e o estado (aba, folhas, dado
@@ -138,6 +139,7 @@ function NativeAppBridge() {
   const navigate = useNavigate();
 
   useEffect(() => registerCapacitorAppBridge(navigate), [navigate]);
+  useEffect(() => registerIosEdgeSwipeBack(navigate), [navigate]);
 
   return null;
 }

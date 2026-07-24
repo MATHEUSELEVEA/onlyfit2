@@ -205,7 +205,7 @@ async function fetchFeedPage(userId: string, sports: string[], offset: number): 
   return { posts: rows.map((row) => toFeedPost(row, likedPostIds, mediaByPost)), idCount: ids.length };
 }
 
-async function fetchFeedPostById(userId: string, postId: string): Promise<FeedPost | null> {
+export async function fetchFeedPostById(userId: string, postId: string): Promise<FeedPost | null> {
   const { data, error } = await supabase
     .from('posts')
     .select(POST_SELECT)
@@ -284,6 +284,32 @@ export function updatePostCaches(
   queryClient.setQueriesData<FeedPost | null>({ queryKey: ['feed-post'] }, (post) =>
     post && post.id === postId ? update(post) : post,
   );
+}
+
+export function prependPostToFeedCaches(queryClient: QueryClient, post: FeedPost) {
+  queryClient.setQueriesData<InfiniteData<FeedPage>>({ queryKey: ['feed'] }, (cache) => {
+    if (!cache || cache.pages.length === 0) return cache;
+    let alreadyPresent = false;
+    const pages = cache.pages.map((page, index) => {
+      if (page.posts.some((item) => item.id === post.id)) alreadyPresent = true;
+      if (index !== 0) return page;
+      return {
+        ...page,
+        posts: page.posts.filter((item) => item.id !== post.id),
+      };
+    });
+    if (alreadyPresent) return { ...cache, pages };
+    return {
+      ...cache,
+      pages: [
+        {
+          ...pages[0],
+          posts: [post, ...pages[0].posts],
+        },
+        ...pages.slice(1),
+      ],
+    };
+  });
 }
 
 // Post específico aberto a partir do Explorar — entra fixado no topo do

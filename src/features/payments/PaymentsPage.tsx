@@ -100,8 +100,11 @@ function CardsTab({
 
   useEffect(() => {
     if (!openAddCard) return;
-    setSheetOpen(true);
-    onOpenAddCardHandled();
+    const timeout = window.setTimeout(() => {
+      setSheetOpen(true);
+      onOpenAddCardHandled();
+    }, 0);
+    return () => window.clearTimeout(timeout);
   }, [openAddCard, onOpenAddCardHandled]);
 
   return (

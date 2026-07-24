@@ -368,7 +368,28 @@ function MetricStepper({
   min: number;
   onChange: (value: number) => void;
 }) {
-  const setValue = (next: number) => onChange(Math.max(min, next));
+  const [draft, setDraft] = useState(() => String(value).replace('.', ','));
+  const setValue = (next: number) => {
+    const safe = Math.max(min, next);
+    setDraft(String(safe).replace('.', ','));
+    onChange(safe);
+  };
+
+  function commit(raw: string) {
+    const normalized = raw.replace(',', '.').trim();
+    if (!normalized) {
+      setDraft('');
+      return;
+    }
+    const parsed = Number(normalized);
+    if (!Number.isFinite(parsed)) {
+      setDraft(String(value).replace('.', ','));
+      return;
+    }
+    const next = Math.max(min, parsed);
+    onChange(next);
+    setDraft(String(next).replace('.', ','));
+  }
 
   return (
     <div className="rounded-2xl border border-outline-variant/35 bg-surface-container px-3 py-4 text-center">
@@ -376,15 +397,16 @@ function MetricStepper({
       <label className="mt-2 flex items-baseline justify-center gap-1">
         <span className="sr-only">{label}</span>
         <input
-          type="number"
+          type="text"
           inputMode="decimal"
-          min={min}
-          step={step}
-          value={value}
+          value={draft}
           onChange={(event) => {
-            const next = Number(event.target.value);
-            if (Number.isFinite(next)) setValue(next);
+            const next = event.target.value.replace(/[^\d,.]/g, '');
+            setDraft(next);
+            const parsed = Number(next.replace(',', '.'));
+            if (next.trim() && Number.isFinite(parsed)) setValue(parsed);
           }}
+          onBlur={() => commit(draft)}
           className="w-24 bg-transparent text-center font-sans text-display text-on-surface outline-none ring-1 ring-transparent focus:rounded-lg focus:ring-primary"
         />
         {suffix ? <span className="align-middle font-sans text-label text-on-surface-variant">{suffix}</span> : null}
@@ -641,20 +663,36 @@ function ExerciseInfoSheet({
 }
 
 function SubstituteSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [selected, setSelected] = useState<string | null>(null);
   return (
-    <BottomSheet open={open} onClose={onClose} title="Substituir exercício" description="Nesta fase o app mostra o ponto de entrada. A regra final vem do profissional.">
-      <div className="space-y-2 px-5 pb-6">
+    <BottomSheet open={open} onClose={onClose} title="Substituir exercício" description="Escolha o motivo para registrar a intenção de troca.">
+      <div className="space-y-3 px-5 pb-6">
         {['Mesmo grupo muscular', 'Sem equipamento livre', 'Dor ou limitação'].map((reason) => (
           <button
             key={reason}
             type="button"
-            onClick={onClose}
-            className="flex min-h-13 w-full items-center justify-between rounded-xl border border-outline-variant/35 bg-surface-container px-4 text-left font-sans text-label text-on-surface"
+            onClick={() => setSelected(reason)}
+            aria-pressed={selected === reason}
+            className={clsx(
+              'flex min-h-16 w-full items-center justify-between rounded-2xl border px-4 text-left font-sans text-label',
+              selected === reason
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-outline-variant/35 bg-surface-container text-on-surface',
+            )}
           >
             {reason}
-            <ChevronRight size={18} className="text-on-surface-variant" />
+            {selected === reason ? <Check size={18} aria-hidden /> : <ChevronRight size={18} className="text-on-surface-variant" />}
           </button>
         ))}
+        {selected ? (
+          <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
+            <p className="font-sans text-label text-on-surface">Solicitação registrada para esta sessão.</p>
+            <p className="mt-1 font-sans text-body-sm text-on-surface-variant">A substituição automática será liberada quando houver uma alternativa validada pelo profissional.</p>
+          </div>
+        ) : null}
+        <button type="button" onClick={onClose} className="min-h-12 w-full rounded-xl bg-primary font-sans text-label text-on-primary">
+          Fechar
+        </button>
       </div>
     </BottomSheet>
   );
