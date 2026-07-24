@@ -178,7 +178,7 @@ export function MyPostsTab({ username }: { username: string | null }) {
         {(organizing ? orderedPosts : posts).map((post, index, visiblePosts) => (
           <div key={post.id} className="relative aspect-square overflow-hidden rounded-lg bg-surface-container">
             <Link
-              to={`/video/${encodeURIComponent(post.id)}`}
+              to={`/video/${encodeURIComponent(post.id)}${username ? `?profile=${encodeURIComponent(username)}` : ''}`}
               aria-label={post.caption || t('profile.myPosts.viewPost')}
               aria-disabled={organizing}
               tabIndex={organizing ? -1 : undefined}

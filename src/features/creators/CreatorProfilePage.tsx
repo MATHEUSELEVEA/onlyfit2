@@ -411,6 +411,7 @@ export function CreatorProfilePage() {
         <TabPanel
           tab={tab}
           creatorId={creatorId}
+          creatorUsername={creator.username}
           subscribed={subscribed}
           onSubscribe={handleSubscribeClick}
           onReportPost={(postId) => setReportTarget({ type: 'post', id: postId })}
@@ -734,23 +735,26 @@ function useUnblockUser(targetId: string | null) {
 function TabPanel({
   tab,
   creatorId,
+  creatorUsername,
   subscribed,
   onSubscribe,
   onReportPost,
 }: {
   tab: TabKey;
   creatorId: string | null;
+  creatorUsername: string;
   subscribed: boolean;
   onSubscribe: () => void;
   onReportPost: (postId: string) => void;
 }) {
   switch (tab) {
     case 'free':
-      return <ContentGrid creatorId={creatorId} premium={false} onReportPost={onReportPost} />;
+      return <ContentGrid creatorId={creatorId} creatorUsername={creatorUsername} premium={false} onReportPost={onReportPost} />;
     case 'exclusive':
       return (
         <ContentGrid
           creatorId={creatorId}
+          creatorUsername={creatorUsername}
           premium
           locked={!subscribed}
           onSubscribe={onSubscribe}
@@ -770,12 +774,14 @@ function TabPanel({
 
 function ContentGrid({
   creatorId,
+  creatorUsername,
   premium,
   locked = false,
   onSubscribe,
   onReportPost,
 }: {
   creatorId: string | null;
+  creatorUsername: string;
   premium: boolean;
   locked?: boolean;
   onSubscribe?: () => void;
@@ -822,7 +828,7 @@ function ContentGrid({
       {items.map((p) => (
         <div key={p.id} className="relative">
           <Link
-            to={`/video/${encodeURIComponent(p.id)}`}
+            to={`/video/${encodeURIComponent(p.id)}?profile=${encodeURIComponent(creatorUsername)}`}
             className="relative block aspect-square overflow-hidden rounded-lg bg-surface-container"
           >
             <Thumb url={p.thumbnailUrl} label={p.title ?? 'Conteúdo'} icon={Play} />

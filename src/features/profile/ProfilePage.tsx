@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   Camera,
+  Bell,
   HeartPulse,
   LayoutGrid,
   Menu,
@@ -24,6 +25,7 @@ import { myProfileQueryKey, useMyProfile, type MyProfile } from './useMyProfile'
 import { MyPostsTab } from './MyPostsTab';
 import { useUnreadCount } from '@/features/messages/useUnreadCount';
 import { useRealtimeMessages } from '@/features/messages/useRealtimeMessages';
+import { useRealtimeNotifications, useUnreadNotificationsCount } from '@/features/notifications/useNotifications';
 
 type TabKey = 'feed' | 'health';
 
@@ -41,7 +43,9 @@ export function ProfilePage() {
   const { data: profile } = useMyProfile();
   // Mantém a bolinha vermelha do botão Mensagens viva mesmo parado no Perfil.
   useRealtimeMessages();
+  useRealtimeNotifications();
   const { data: unreadCount = 0 } = useUnreadCount();
+  const { data: unreadNotifications = 0 } = useUnreadNotificationsCount();
 
   const metadata = session?.user.user_metadata;
   const displayName = profile?.fullName ?? metadata?.full_name ?? metadata?.name ?? 'Meu perfil';
@@ -89,6 +93,18 @@ export function ProfilePage() {
                   className="flex h-11 w-11 items-center justify-center text-white drop-shadow-[0_1px_5px_rgba(0,0,0,0.85)] transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
                 >
                   <Menu size={22} aria-hidden />
+                </Link>
+                <Link
+                  to="/perfil/atualizacoes"
+                  aria-label="Atualizações"
+                  className="relative flex h-11 w-11 items-center justify-center text-white drop-shadow-[0_1px_5px_rgba(0,0,0,0.85)] transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+                >
+                  <Bell size={21} aria-hidden />
+                  {unreadNotifications > 0 && (
+                    <span className="absolute right-0.5 top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 font-sans text-counter leading-none text-on-primary ring-2 ring-background">
+                      {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                    </span>
+                  )}
                 </Link>
                 <Link
                   to="/mensagens"
