@@ -186,38 +186,60 @@ export function MyFitAiPage() {
       const contextSections = data?.context_summary?.sections ?? [];
 
       if (nextConversationId) {
+        const timestamp = new Date().toISOString();
+        const optimisticConversation: Conversation = {
+          id: nextConversationId,
+          title: text.slice(0, 64),
+          status: 'active',
+          created_at: timestamp,
+          updated_at: timestamp,
+          last_message_at: timestamp,
+        };
+        const optimisticMessages: HistoryMessageRow[] = [
+          ...(newConversation ? [] : historyData?.messages ?? []),
+          {
+            id: userMessage.id,
+            role: 'user',
+            content: userMessage.content,
+            context_sections: contextSections,
+            source_references: [],
+            safety_flags: {},
+            created_at: userMessage.createdAt ?? timestamp,
+          },
+          {
+            id: data?.message_id ?? assistantMessage.id,
+            role: 'assistant',
+            content: assistantMessage.content,
+            context_sections: contextSections,
+            source_references: assistantMessage.references ?? [],
+            safety_flags: { medical_disclaimer: true, mutable_tools: false },
+            created_at: assistantMessage.createdAt ?? timestamp,
+          },
+        ];
+        const updateHistoryCache = (current?: MyFitAiHistoryResponse): MyFitAiHistoryResponse => {
+          const baseConversations = current?.conversations ?? conversations;
+          const nextConversations = baseConversations.some((conversation) => conversation.id === nextConversationId)
+            ? baseConversations.map((conversation) =>
+                conversation.id === nextConversationId
+                  ? { ...conversation, updated_at: timestamp, last_message_at: timestamp }
+                  : conversation,
+              )
+            : [optimisticConversation, ...baseConversations];
+          return {
+            conversations: nextConversations,
+            selected_conversation_id: nextConversationId,
+            messages: optimisticMessages,
+          };
+        };
+
         const cacheKey = historyKey(nextConversationId);
-        queryClient.setQueryData<MyFitAiHistoryResponse>(cacheKey, (current) => ({
-          conversations: current?.conversations ?? conversations,
-          selected_conversation_id: nextConversationId,
-          messages: [
-            ...(newConversation ? [] : current?.messages ?? historyData?.messages ?? []),
-            {
-              id: userMessage.id,
-              role: 'user',
-              content: userMessage.content,
-              context_sections: contextSections,
-              source_references: [],
-              safety_flags: {},
-              created_at: userMessage.createdAt ?? new Date().toISOString(),
-            },
-            {
-              id: data?.message_id ?? assistantMessage.id,
-              role: 'assistant',
-              content: assistantMessage.content,
-              context_sections: contextSections,
-              source_references: assistantMessage.references ?? [],
-              safety_flags: { medical_disclaimer: true, mutable_tools: false },
-              created_at: assistantMessage.createdAt ?? new Date().toISOString(),
-            },
-          ],
-        }));
+        queryClient.setQueryData<MyFitAiHistoryResponse>(cacheKey, updateHistoryCache);
+        queryClient.setQueryData<MyFitAiHistoryResponse>(historyKey(null), updateHistoryCache);
         setSelectedConversationId(nextConversationId);
         setNewConversation(false);
       }
 
       setPendingMessage(null);
-      await queryClient.invalidateQueries({ queryKey: ['myfit-ai-history'] });
     } catch (err) {
       const message = err instanceof Error ? readableError(err.message) : readableError();
       setError(message);
