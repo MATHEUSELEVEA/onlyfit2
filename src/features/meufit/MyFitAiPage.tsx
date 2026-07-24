@@ -1,24 +1,15 @@
 import { FormEvent, KeyboardEvent, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Archive, ExternalLink, History, Loader2, Plus, Send, ShieldCheck, Sparkles } from 'lucide-react';
+import { Archive, History, Loader2, Plus, Send, ShieldCheck, Sparkles } from 'lucide-react';
 import { PageTopBar } from '@/components/layout/PageTopBar';
 import { supabase } from '@/lib/supabase';
 
 type AiRole = 'user' | 'assistant';
 
-type AiReference = {
-  id: string;
-  source_name: string;
-  title: string;
-  source_url: string;
-  domain: string;
-};
-
 type AiMessage = {
   id: string;
   role: AiRole;
   content: string;
-  references?: AiReference[];
   createdAt?: string;
 };
 
@@ -36,7 +27,6 @@ type HistoryMessageRow = {
   role: AiRole;
   content: string;
   context_sections: string[];
-  source_references: AiReference[];
   safety_flags: Record<string, unknown>;
   created_at: string;
 };
@@ -53,7 +43,6 @@ type MyFitAiChatResponse = {
   error?: string;
   conversation_id?: string;
   message_id?: string;
-  references?: AiReference[];
   context_summary?: {
     sections?: string[];
   };
@@ -77,12 +66,11 @@ function historyKey(conversationId: string | null) {
   return ['myfit-ai-history', conversationId ?? 'latest'] as const;
 }
 
-function createMessage(role: AiRole, content: string, references?: AiReference[]): AiMessage {
+function createMessage(role: AiRole, content: string): AiMessage {
   return {
     id: `${role}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     role,
     content,
-    references,
     createdAt: new Date().toISOString(),
   };
 }
@@ -102,7 +90,6 @@ function mapHistoryMessage(row: HistoryMessageRow): AiMessage {
     id: row.id,
     role: row.role,
     content: row.content,
-    references: row.source_references ?? [],
     createdAt: row.created_at,
   };
 }
@@ -182,7 +169,7 @@ export function MyFitAiPage() {
 
       const nextConversationId = data?.conversation_id ?? conversationId;
       const answer = data?.answer?.trim() || 'Não encontrei contexto suficiente para responder com segurança.';
-      const assistantMessage = createMessage('assistant', answer, data?.references ?? []);
+      const assistantMessage = createMessage('assistant', answer);
       const contextSections = data?.context_summary?.sections ?? [];
 
       if (nextConversationId) {
@@ -202,7 +189,6 @@ export function MyFitAiPage() {
             role: 'user',
             content: userMessage.content,
             context_sections: contextSections,
-            source_references: [],
             safety_flags: {},
             created_at: userMessage.createdAt ?? timestamp,
           },
@@ -211,7 +197,6 @@ export function MyFitAiPage() {
             role: 'assistant',
             content: assistantMessage.content,
             context_sections: contextSections,
-            source_references: assistantMessage.references ?? [],
             safety_flags: { medical_disclaimer: true, mutable_tools: false },
             created_at: assistantMessage.createdAt ?? timestamp,
           },
@@ -409,22 +394,6 @@ export function MyFitAiPage() {
                   }`}
                 >
                   <p className="whitespace-pre-wrap font-sans text-body leading-relaxed">{message.content}</p>
-                  {!isUser && message.references?.length ? (
-                    <div className="mt-3 flex flex-wrap gap-2 border-t border-outline-variant/25 pt-3">
-                      {message.references.slice(0, 3).map((reference) => (
-                        <a
-                          key={reference.id}
-                          href={reference.source_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex min-h-8 items-center gap-1 rounded-full bg-surface-container-high px-3 font-sans text-counter text-primary"
-                        >
-                          {reference.source_name}
-                          <ExternalLink size={12} aria-hidden />
-                        </a>
-                      ))}
-                    </div>
-                  ) : null}
                 </div>
               </article>
             );
