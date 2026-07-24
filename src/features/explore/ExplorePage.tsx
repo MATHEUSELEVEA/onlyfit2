@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import {
   Check,
@@ -49,6 +49,10 @@ const TABS: { key: ExploreTab; label: string }[] = [
   { key: 'challenges', label: 'Desafios' },
   { key: 'communities', label: 'Comunidades' },
 ];
+
+function isExploreTab(value: string | null): value is ExploreTab {
+  return value === 'content' || value === 'people' || value === 'challenges' || value === 'communities';
+}
 
 // Filtro de identidade das pessoas (ver docs/ECOSYSTEM.md): profissional é quem
 // tem a casca de profissional ligada; o resto é membro.
@@ -518,11 +522,22 @@ function ChallengeTile({ challenge }: { challenge: ExploreChallenge }) {
 export function ExplorePage() {
   const { t } = useTranslation();
   const { groups } = useAffinityGroups();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
-  const [tab, setTab] = useState<ExploreTab>('content');
+  const tabParam = searchParams.get('tab');
+  const tab: ExploreTab = isExploreTab(tabParam) ? tabParam : 'content';
   const [peopleKind, setPeopleKind] = useState<PeopleKind>('all');
   const [sport, setSport] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const selectTab = useCallback((nextTab: ExploreTab) => {
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (nextTab === 'content') next.delete('tab');
+      else next.set('tab', nextTab);
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
 
   // Busca de pessoas é server-side (cobre todos os usuários, não só a amostra
   // pré-carregada). Debounce evita uma query por tecla.
@@ -686,7 +701,7 @@ export function ExplorePage() {
                 type="button"
                 role="tab"
                 aria-selected={tab === key}
-                onClick={() => setTab(key)}
+                onClick={() => selectTab(key)}
                 className={clsx(
                   'relative min-h-[36px] whitespace-nowrap pb-2 font-sans text-label transition-colors',
                   tab === key ? 'text-on-surface' : 'text-on-surface-variant',
