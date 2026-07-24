@@ -322,7 +322,27 @@ export function TrainingPlayerPage() {
         technique={exercise.technique}
         instructions={exercise.instructions}
       />
-      <SubstituteSheet open={sheet === 'substitute'} onClose={() => setSheet(null)} />
+      <SubstituteSheet
+        open={sheet === 'substitute'}
+        currentIndex={session.activeExercise}
+        exercises={template.exercises}
+        logs={session.logs}
+        onClose={() => setSheet(null)}
+        onSelectAlternative={(index, reason) => {
+          training.updateSessionNote([
+            session.note,
+            `Substituição na sessão: ${exercise.name} -> ${template.exercises[index].name}. Motivo: ${reason}.`,
+          ].filter(Boolean).join('\n'));
+          training.setActiveExercise(index);
+          setSheet(null);
+        }}
+        onRegisterOnly={(reason) => {
+          training.updateSessionNote([
+            session.note,
+            `Solicitação de substituição: ${exercise.name}. Motivo: ${reason}. Sem alternativa prescrita compatível no treino.`,
+          ].filter(Boolean).join('\n'));
+        }}
+      />
     </div>
   );
 }
@@ -662,16 +682,55 @@ function ExerciseInfoSheet({
   );
 }
 
-function SubstituteSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+function SubstituteSheet({
+  open,
+  currentIndex,
+  exercises,
+  logs,
+  onClose,
+  onSelectAlternative,
+  onRegisterOnly,
+}: {
+  open: boolean;
+  currentIndex: number;
+  exercises: { id: string; name: string; muscle: string }[];
+  logs: Record<string, ExerciseSetLog[]>;
+  onClose: () => void;
+  onSelectAlternative: (index: number, reason: string) => void;
+  onRegisterOnly: (reason: string) => void;
+}) {
   const [selected, setSelected] = useState<string | null>(null);
+  const currentExercise = exercises[currentIndex];
+  const alternatives = useMemo(() => {
+    if (!currentExercise) return [];
+    const sameMuscle = exercises
+      .map((exercise, index) => ({ exercise, index }))
+      .filter(({ exercise, index }) => {
+        if (index === currentIndex) return false;
+        if (exercise.muscle !== currentExercise.muscle) return false;
+        const exerciseLogs = logs[exercise.id] ?? [];
+        return exerciseLogs.some((set) => !set.completed);
+      });
+    const remaining = exercises
+      .map((exercise, index) => ({ exercise, index }))
+      .filter(({ index }) => index !== currentIndex)
+      .filter(({ exercise }) => (logs[exercise.id] ?? []).some((set) => !set.completed));
+    return sameMuscle.length > 0 ? sameMuscle : remaining.slice(0, 3);
+  }, [currentExercise, currentIndex, exercises, logs]);
+
+  const chooseReason = (reason: string) => {
+    setSelected(reason);
+    if (alternatives.length === 0) onRegisterOnly(reason);
+  };
+
   return (
-    <BottomSheet open={open} onClose={onClose} title="Substituir exercício" description="Escolha o motivo para registrar a intenção de troca.">
+    <BottomSheet open={open} onClose={onClose} title="Substituir exercício" description="Use uma alternativa já prescrita ou registre o motivo para o profissional.">
       <div className="space-y-3 px-5 pb-6">
         {['Mesmo grupo muscular', 'Sem equipamento livre', 'Dor ou limitação'].map((reason) => (
           <button
             key={reason}
             type="button"
-            onClick={() => setSelected(reason)}
+            onClick={() => chooseReason(reason)}
             aria-pressed={selected === reason}
             className={clsx(
               'flex min-h-16 w-full items-center justify-between rounded-2xl border px-4 text-left font-sans text-label',
@@ -684,10 +743,27 @@ function SubstituteSheet({ open, onClose }: { open: boolean; onClose: () => void
             {selected === reason ? <Check size={18} aria-hidden /> : <ChevronRight size={18} className="text-on-surface-variant" />}
           </button>
         ))}
-        {selected ? (
-          <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4">
-            <p className="font-sans text-label text-on-surface">Solicitação registrada para esta sessão.</p>
-            <p className="mt-1 font-sans text-body-sm text-on-surface-variant">A substituição automática será liberada quando houver uma alternativa validada pelo profissional.</p>
+        {selected && alternatives.length > 0 ? (
+          <div className="space-y-2 rounded-2xl border border-primary/30 bg-primary/10 p-3">
+            <p className="px-1 font-sans text-label text-on-surface">Alternativas no treino</p>
+            {alternatives.map(({ exercise, index }) => (
+              <button
+                key={exercise.id}
+                type="button"
+                onClick={() => onSelectAlternative(index, selected)}
+                className="flex min-h-14 w-full items-center justify-between rounded-xl bg-surface-container px-3 text-left font-sans text-label text-on-surface active:bg-surface-container-high"
+              >
+                <span className="min-w-0 flex-1 truncate">{exercise.name}</span>
+                <ChevronRight size={18} className="shrink-0 text-primary" aria-hidden />
+              </button>
+            ))}
+          </div>
+        ) : selected ? (
+          <div className="rounded-2xl border border-outline-variant/35 bg-surface-container p-4">
+            <p className="font-sans text-label text-on-surface">Motivo registrado.</p>
+            <p className="mt-1 font-sans text-body-sm text-on-surface-variant">
+              Não há alternativa compatível neste treino. O registro fica na nota da sessão.
+            </p>
           </div>
         ) : null}
         <button type="button" onClick={onClose} className="min-h-12 w-full rounded-xl bg-primary font-sans text-label text-on-primary">
