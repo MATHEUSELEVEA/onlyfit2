@@ -136,3 +136,21 @@ export function useUpdateOffering(businessId: string | undefined) {
     },
   });
 }
+
+export function useUpdateOfferingSettings(businessId: string | undefined, offeringId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (settings: Record<string, unknown>) => {
+      if (!offeringId) throw new Error('offering_not_found');
+      const { error } = await supabase.rpc('update_business_offering_settings', {
+        p_offering_id: offeringId,
+        p_settings: settings,
+      });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['business-offerings', businessId] });
+      void queryClient.invalidateQueries({ queryKey: ['business-offering', businessId, offeringId] });
+    },
+  });
+}

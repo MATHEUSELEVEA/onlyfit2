@@ -30,6 +30,7 @@ function mapOfferingError(error: unknown, t: (key: TranslationKey) => string): s
   if (message.includes('price_below_minimum')) return t('profile.business.offers.error.priceBelowMinimum');
   if (message.includes('price_required')) return t('profile.business.offers.error.priceRequired');
   if (message.includes('invalid_price')) return t('profile.business.offers.error.invalidPrice');
+  if (message.includes('offering_config_required')) return 'Salve a configuração da oferta antes de ativar.';
   return t('profile.business.offers.error.generic');
 }
 

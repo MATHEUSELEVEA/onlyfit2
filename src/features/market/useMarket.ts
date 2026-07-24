@@ -23,6 +23,7 @@ export interface MarketProduct {
   thumbnailUrl: string | null;
   coverImageUrl: string | null;
   price: number;
+  businessOfferingId: string | null;
   sales: number;
   /** Grupos de afinidade inferidos do texto, para o filtro por esporte. */
   sports: string[];
@@ -60,6 +61,7 @@ interface ProductRow {
   cover_image_url: string | null;
   price_public: number | null;
   price: number | null;
+  business_offering_id?: string | null;
   sales: number | null;
   creator_id: string | null;
   tenant_id: string | null;
@@ -133,23 +135,23 @@ const OFFICIAL_MARKET_STORE_FALLBACKS: OfficialMarketStore[] = [
 ];
 
 const PRODUCT_COLUMNS_WITH_ORGANIZATIONS = `
-  id, name, description, type, market_item_type,
-  thumbnail_url, cover_image_url, price_public, price, sales,
+	  id, name, description, type, market_item_type,
+	  thumbnail_url, cover_image_url, price_public, price, business_offering_id, sales,
   creator_id, tenant_id, organization_id,
   organizations:organization_id ( id, name, slug, logo_url, cover_url ),
   profiles:tenant_id ( full_name, avatar_url, username )
 `;
 
 const PRODUCT_COLUMNS_WITH_PROFILES = `
-  id, name, description, type, market_item_type,
-  thumbnail_url, cover_image_url, price_public, price, sales,
+	  id, name, description, type, market_item_type,
+	  thumbnail_url, cover_image_url, price_public, price, business_offering_id, sales,
   creator_id, tenant_id, organization_id,
   profiles:tenant_id ( full_name, avatar_url, username )
 `;
 
 const PRODUCT_COLUMNS_PRODUCTS_ONLY = `
-  id, name, description, type, market_item_type,
-  thumbnail_url, cover_image_url, price_public, price, sales,
+	  id, name, description, type, market_item_type,
+	  thumbnail_url, cover_image_url, price_public, price, business_offering_id, sales,
   creator_id, tenant_id
 `;
 
@@ -182,9 +184,10 @@ function toMarketProduct(row: ProductRow, groups: AffinityGroup[]): MarketProduc
     type: row.type ?? 'product',
     marketItemType: row.market_item_type ?? null,
     thumbnailUrl: row.thumbnail_url ?? null,
-    coverImageUrl: row.cover_image_url ?? null,
-    price: row.price_public ?? row.price ?? 0,
-    sales: row.sales ?? 0,
+	    coverImageUrl: row.cover_image_url ?? null,
+	    price: row.price_public ?? row.price ?? 0,
+	    businessOfferingId: row.business_offering_id ?? null,
+	    sales: row.sales ?? 0,
     sports: inferProductSports(
       [name, description, row.type, row.market_item_type].filter(Boolean).join(' '),
       groups,

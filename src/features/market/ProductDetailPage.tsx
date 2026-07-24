@@ -1,10 +1,14 @@
 import { BadgeCheck, ChevronRight, ExternalLink, Loader2, Store } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { productTypeMeta } from '@/lib/products';
 import { formatPrice } from '@/lib/format';
 import { PageTopBar } from '@/components/layout/PageTopBar';
 import { PriceBadge } from '@/components/ui/PriceBadge';
 import { useTranslation } from '@/i18n/I18nProvider';
+import { useAuth } from '@/contexts/AuthContext';
+import { OfferingCheckoutError, useOfferingCheckout } from '@/features/payments/useOfferingCheckout';
 import { useMarketProducts, useOfficialMarketStores, type MarketProduct } from './useMarket';
 
 function normalizeStoreKey(value: string | null | undefined): string {
@@ -23,9 +27,14 @@ function productStoreKeys(product: MarketProduct): string[] {
 
 export function ProductDetailPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { session } = useAuth();
   const { productId = '' } = useParams<{ productId: string }>();
   const productsQuery = useMarketProducts();
   const officialStoresQuery = useOfficialMarketStores();
+  const checkout = useOfferingCheckout();
+  const [notice, setNotice] = useState<string | null>(null);
   const product = productsQuery.data?.find((item) => item.id === productId) ?? null;
   const officialStoreKeySet = new Set(
     (officialStoresQuery.data ?? []).flatMap((store) =>
@@ -66,12 +75,42 @@ export function ProductDetailPage() {
     );
   }
 
-  const meta = productTypeMeta(product.type, product.marketItemType);
+  const currentProduct = product;
+	  const meta = productTypeMeta(currentProduct.type, currentProduct.marketItemType);
   const Icon = meta.icon;
-  const image = product.coverImageUrl || product.thumbnailUrl;
-  const sellerProfileTo = product.creatorUsername
-    ? `/creator/${encodeURIComponent(product.creatorUsername)}`
-    : null;
+  const image = currentProduct.coverImageUrl || currentProduct.thumbnailUrl;
+	  const sellerProfileTo = currentProduct.creatorUsername
+	    ? `/creator/${encodeURIComponent(currentProduct.creatorUsername)}`
+	    : null;
+  const canCheckout = Boolean(currentProduct.businessOfferingId && currentProduct.price > 0);
+
+  function handleCheckout() {
+    if (!currentProduct.businessOfferingId || checkout.isPending) return;
+    setNotice(null);
+    checkout.mutate(
+      { offeringId: currentProduct.businessOfferingId, billingType: 'one_time' },
+      {
+        onSuccess: () => {
+          setNotice('Compra criada. A confirmação do pagamento aparecerá em Pagamentos e em suas compras.');
+          void queryClient.invalidateQueries({ queryKey: ['purchased-products', session?.user.id] });
+          void queryClient.invalidateQueries({ queryKey: ['payment-transactions', session?.user.id] });
+        },
+        onError: (error) => {
+          const code = error instanceof OfferingCheckoutError ? error.code : '';
+          if (code === 'card_required' || code === 'payment_customer_required') {
+            setNotice('Cadastre um cartão principal para concluir a compra.');
+            navigate('/perfil/pagamentos?adicionarCartao=1');
+            return;
+          }
+          if (code === 'offering_content_unavailable') {
+            setNotice('Esta oferta ainda precisa finalizar a entrega antes de aceitar pagamento.');
+            return;
+          }
+          setNotice('Não foi possível iniciar a compra. Tente novamente.');
+        },
+      },
+    );
+  }
 
   return (
     <div className="h-full overflow-y-auto bg-background pb-8">
@@ -139,16 +178,36 @@ export function ProductDetailPage() {
               </div>
             </div>
 
-            <button
-              type="button"
-              disabled
-              className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full bg-primary/35 px-5 font-sans text-label text-on-surface-variant"
-            >
-              {product.price > 0
-                ? t('market.productDetail.checkoutSoon').replace('{price}', formatPrice(product.price))
-                : t('market.productDetail.accessSoon')}
-              <ChevronRight size={18} aria-hidden />
-            </button>
+	            <button
+	              type="button"
+	              disabled={!canCheckout || checkout.isPending}
+	              onClick={handleCheckout}
+	              className={`flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full px-5 font-sans text-label ${
+	                canCheckout
+	                  ? 'bg-primary text-on-primary active:scale-[0.98]'
+	                  : 'bg-primary/35 text-on-surface-variant'
+	              }`}
+	            >
+	              {checkout.isPending ? (
+	                <>
+	                  <Loader2 size={18} className="animate-spin" aria-hidden />
+	                  Processando
+	                </>
+	              ) : canCheckout ? (
+	                t('market.productDetail.buy').replace('{price}', formatPrice(product.price))
+	              ) : product.price > 0 ? (
+	                t('market.productDetail.checkoutSoon').replace('{price}', formatPrice(product.price))
+	              ) : (
+	                t('market.productDetail.accessSoon')
+	              )}
+	              {!checkout.isPending && <ChevronRight size={18} aria-hidden />}
+	            </button>
+
+	            {notice && (
+	              <p className="rounded-2xl border border-outline-variant/30 bg-surface-container px-3 py-2 font-sans text-body-sm text-on-surface-variant">
+	                {notice}
+	              </p>
+	            )}
 
             {sellerProfileTo && !product.organizationId && (
               <Link
