@@ -51,6 +51,7 @@ function initialMode(): Mode {
 export function LoginPage() {
   const { signIn, signUp, resetPassword } = useAuth();
   const [mode, setMode] = useState<Mode>(initialMode);
+  const [identifier, setIdentifier] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -168,11 +169,12 @@ export function LoginPage() {
     setError(null);
     setNotice(null);
 
+    const trimmedIdentifier = identifier.trim().replace(/^@/, '').toLowerCase();
     const trimmedEmail = normalizeEmail(email);
 
     if (mode === 'signin') {
-      const { error: signInError } = await signIn(trimmedEmail, password);
-      if (signInError) setError('Email ou senha inválidos.');
+      const { error: signInError } = await signIn(trimmedIdentifier, password);
+      if (signInError) setError('Usuário, email ou senha inválidos.');
     } else if (mode === 'signup') {
       await handleSignUp(trimmedEmail);
     } else {
@@ -291,6 +293,20 @@ export function LoginPage() {
                 </Field>
               )}
 
+              {mode === 'signin' ? (
+                <Field icon={<User size={18} />} label="Usuário ou email">
+                  <input
+                    type="text"
+                    autoComplete="username"
+                    inputMode="email"
+                    required
+                    placeholder="usuario ou voce@email.com"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    className="w-full bg-transparent font-sans text-body text-on-surface placeholder:text-on-surface-variant outline-none"
+                  />
+                </Field>
+              ) : (
               <Field icon={<Mail size={18} />} label="Email">
                 <input
                   type="email"
@@ -303,6 +319,7 @@ export function LoginPage() {
                   className="w-full bg-transparent font-sans text-body text-on-surface placeholder:text-on-surface-variant outline-none"
                 />
               </Field>
+              )}
 
               {mode !== 'forgot' && (
                 <Field icon={<Lock size={18} />} label="Senha">

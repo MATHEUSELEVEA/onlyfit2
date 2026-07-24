@@ -46,7 +46,7 @@ export interface SignUpMetadata {
 interface AuthContextValue {
   session: Session | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (identifier: string, password: string) => Promise<{ error: string | null }>;
   signUp: (
     email: string,
     password: string,
@@ -84,9 +84,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.subscription.unsubscribe();
   }, []);
 
-  async function signIn(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error ? error.message : null };
+  async function signIn(identifier: string, password: string) {
+    const { data, error } = await supabase.functions.invoke('sign-in-with-identifier', {
+      body: { identifier, password },
+    });
+    const sessionData = (data as { session?: Session } | null)?.session;
+    if (error || !sessionData?.access_token || !sessionData.refresh_token) {
+      return { error: error ? error.message : 'Credenciais inválidas.' };
+    }
+    const { error: setSessionError } = await supabase.auth.setSession({
+      access_token: sessionData.access_token,
+      refresh_token: sessionData.refresh_token,
+    });
+    return { error: setSessionError ? setSessionError.message : null };
   }
 
   /**

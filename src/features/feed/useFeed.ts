@@ -222,6 +222,27 @@ export async function fetchFeedPostById(userId: string, postId: string): Promise
   return toFeedPost(row, likedPostIds, mediaByPost);
 }
 
+export async function fetchCreatorFeedPosts(userId: string, username: string): Promise<FeedPost[]> {
+  const normalized = username.trim().replace(/^@/, '').toLowerCase();
+  if (!normalized) return [];
+
+  const { data, error } = await supabase
+    .from('posts')
+    .select(POST_SELECT)
+    .eq('profiles.username', normalized)
+    .order('published_at', { ascending: false })
+    .limit(80);
+  if (error) throw error;
+
+  const rows = (data ?? []) as unknown as PostRow[];
+  const rowIds = rows.map((row) => row.id);
+  const [likedPostIds, mediaByPost] = await Promise.all([
+    fetchLikedPostIds(userId, rowIds),
+    fetchPostMedia(rowIds),
+  ]);
+  return rows.map((row) => toFeedPost(row, likedPostIds, mediaByPost));
+}
+
 // Feed paginado: o usuário rola até o fim do que segue, não só a primeira
 // página. Sem isto o feed parava nos 10 primeiros posts e creators com posts
 // mais antigos nunca apareciam.
@@ -322,5 +343,16 @@ export function useFeedPost(postId: string | null) {
     queryKey: ['feed-post', userId, postId],
     queryFn: () => fetchFeedPostById(userId!, postId!),
     enabled: Boolean(userId && postId),
+  });
+}
+
+export function useCreatorFeedPosts(username: string | null) {
+  const { session } = useAuth();
+  const userId = session?.user.id;
+
+  return useQuery({
+    queryKey: ['creator-feed-posts', userId, username],
+    queryFn: () => fetchCreatorFeedPosts(userId!, username!),
+    enabled: Boolean(userId && username),
   });
 }
