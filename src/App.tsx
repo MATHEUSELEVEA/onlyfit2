@@ -15,6 +15,7 @@ import { TrainingPlayerPage } from './pages/TrainingPlayerPage';
 import { GuidedSessionPage } from './pages/GuidedSessionPage';
 import { TrainingProvider } from './features/training/TrainingProvider';
 import { DietPage } from './pages/DietPage';
+import { MyFitAiPage } from './features/meufit/MyFitAiPage';
 import { MeuFitPage } from './features/meufit/MeuFitPage';
 import { RoutinePage } from './features/meufit/RoutinePage';
 import { CommunitiesPage } from './features/communities/CommunitiesPage';
@@ -83,6 +84,7 @@ function AuthenticatedApp() {
           <Route path="/explorar" element={<ExplorePage />} />
           <Route path="/studio" element={<StudioPage />} />
           <Route path="/meu-fit" element={<MeuFitPage />} />
+          <Route path="/meu-fit/ia" element={<MyFitAiPage />} />
           <Route path="/meu-fit/rotina" element={<RoutinePage />} />
           <Route path="/meu-fit/treino" element={<TrainingPage />} />
           <Route path="/meu-fit/treino/player" element={<TrainingPlayerPage />} />
