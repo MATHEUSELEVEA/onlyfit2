@@ -60,7 +60,8 @@ export function BottomNav({ immersive = false }: BottomNavProps) {
                 className={clsx(
                   'flex items-center justify-center transition-all',
                   featured &&
-                    'relative z-[var(--z-nav-featured)] -translate-y-2 rounded-full border border-primary/40 text-primary ring-4 ring-primary/10',
+                    'relative z-[var(--z-nav-featured)] rounded-full border border-primary/40 text-primary ring-4 ring-primary/10',
+                  featured && (immersive ? '-translate-y-0' : '-translate-y-2'),
                   featured && (immersive ? 'bg-black/40' : 'bg-surface-container-lowest'),
                 )}
               >
@@ -71,7 +72,7 @@ export function BottomNav({ immersive = false }: BottomNavProps) {
                   aria-hidden
                 />
               </span>
-              <span className={clsx('font-sans text-nav', featured && '-mt-2 font-medium text-primary')}>{label}</span>
+              <span className={clsx('font-sans text-nav', featured && 'font-medium text-primary', featured && !immersive && '-mt-2')}>{label}</span>
             </>
           )}
         </NavLink>

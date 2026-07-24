@@ -1,12 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { ArrowLeft, Bell, Check, Clock3, Droplets, Plus, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import { PageTopBar } from '@/components/layout/PageTopBar';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { useTranslation } from '@/i18n/I18nProvider';
+import { MyFitSectionNav } from './MyFitSectionNav';
 
 type RoutineKind = 'water' | 'reminder';
 type TimingMode = 'specific' | 'interval';
+const ROUTINES_STORAGE_KEY = 'onlyfit:myfit:routines:v1';
 
 interface Routine {
   id: number;
@@ -46,13 +50,71 @@ function defaultWaterAmount(goalMl: number, count: number): number {
   return Math.max(50, Math.round(goalMl / Math.max(count, 1) / 50) * 50);
 }
 
+function loadRoutines(): Routine[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(ROUTINES_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((routine): routine is Routine =>
+      routine
+      && typeof routine.id === 'number'
+      && (routine.kind === 'water' || routine.kind === 'reminder')
+      && typeof routine.title === 'string'
+      && Array.isArray(routine.times)
+      && Array.isArray(routine.checked)
+      && typeof routine.notifications === 'boolean',
+    );
+  } catch {
+    return [];
+  }
+}
+
+function saveRoutines(routines: Routine[]) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(ROUTINES_STORAGE_KEY, JSON.stringify(routines));
+}
+
+function notificationId(routineId: number, time: string): number {
+  const [hours, minutes] = time.split(':').map(Number);
+  return routineId * 10_000 + hours * 100 + minutes;
+}
+
+async function scheduleRoutineNotifications(routine: Routine): Promise<void> {
+  if (!routine.notifications || !Capacitor.isNativePlatform()) return;
+  const permission = await LocalNotifications.requestPermissions();
+  if (permission.display !== 'granted') return;
+  await LocalNotifications.cancel({
+    notifications: routine.times.map((time) => ({ id: notificationId(routine.id, time) })),
+  });
+  await LocalNotifications.schedule({
+    notifications: routine.times.map((time) => {
+      const [hour, minute] = time.split(':').map(Number);
+      const amount = routine.kind === 'water' ? routine.waterPlan?.[time] : null;
+      return {
+        id: notificationId(routine.id, time),
+        title: routine.title,
+        body: routine.kind === 'water' && amount ? `Hora de beber ${amount} ml de água.` : 'Lembrete OnlyFit.',
+        schedule: { on: { hour, minute }, repeats: true },
+        smallIcon: 'ic_stat_icon_config_sample',
+      };
+    }),
+  });
+}
+
 export function RoutinePage() {
   const { t } = useTranslation();
-  const [routines, setRoutines] = useState<Routine[]>([]);
+  const [routines, setRoutines] = useState<Routine[]>(() => loadRoutines());
   const [wizardOpen, setWizardOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
   const selected = useMemo(() => routines.find((routine) => routine.id === selectedId) ?? null, [routines, selectedId]);
+  const nextRoutineId = useMemo(() => routines.reduce((highest, routine) => Math.max(highest, routine.id), 0) + 1, [routines]);
+
+  useEffect(() => {
+    saveRoutines(routines);
+  }, [routines]);
 
   function toggleCheck(routineId: number, time: string) {
     setRoutines((current) => current.map((routine) => {
@@ -73,6 +135,7 @@ export function RoutinePage() {
       <div className="h-full overflow-y-auto bg-background pb-10">
         <PageTopBar title={t('meufit.routine.title')} backFallback="/meu-fit" />
         <div className="mx-auto w-full max-w-[720px] px-6 pt-6">
+          <MyFitSectionNav />
           {routines.length === 0 ? (
             <div className="flex min-h-[360px] flex-col items-center justify-center text-center">
               <Clock3 size={40} className="text-primary" aria-hidden />
@@ -98,7 +161,7 @@ export function RoutinePage() {
         </div>
       </div>
 
-      {wizardOpen && <RoutineWizard nextId={routines.length + 1} onClose={() => setWizardOpen(false)} onCreate={(routine) => { setRoutines((current) => [...current, routine]); setWizardOpen(false); }} />}
+      {wizardOpen && <RoutineWizard nextId={nextRoutineId} onClose={() => setWizardOpen(false)} onCreate={(routine) => { setRoutines((current) => [...current, routine]); setWizardOpen(false); void scheduleRoutineNotifications(routine); }} />}
 
       <BottomSheet open={Boolean(selected)} onClose={() => setSelectedId(null)} title={selected?.title ?? ''}>
       {selected && <RoutineDetail routine={selected} onToggle={toggleCheck} onWaterChange={updateWaterConsumed} />}
@@ -112,6 +175,7 @@ function RoutineWizard({ nextId, onClose, onCreate }: { nextId: number; onClose:
   const [step, setStep] = useState(1);
   const [kind, setKind] = useState<RoutineKind | null>(null);
   const [goalMl, setGoalMl] = useState(2000);
+  const [goalDraft, setGoalDraft] = useState('2000');
   const [name, setName] = useState('');
   const [timingMode, setTimingMode] = useState<TimingMode>('specific');
   const [times, setTimes] = useState<TimeSlot[]>([{ id: 1, value: '08:00' }]);
@@ -165,9 +229,41 @@ function RoutineWizard({ nextId, onClose, onCreate }: { nextId: number; onClose:
             <p className="font-sans text-title-lg text-on-surface">{t('meufit.routine.waterGoalQuestion')}</p>
             <p className="mt-1 font-sans text-body-sm text-on-surface-variant">{t('meufit.routine.waterGoalDescription')}</p>
             <div className="mt-12 flex items-center justify-center gap-6">
-              <GoalButton label="−" onClick={() => setGoalMl((value) => Math.max(250, value - 250))} />
-              <span className="font-sans text-display text-primary">{(goalMl / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 1 })} L</span>
-              <GoalButton label="+" onClick={() => setGoalMl((value) => value + 250)} />
+              <GoalButton label="−" onClick={() => {
+                setGoalMl((value) => {
+                  const next = Math.max(250, value - 250);
+                  setGoalDraft(String(next));
+                  return next;
+                });
+              }} />
+              <label className="min-w-0">
+                <span className="sr-only">{t('meufit.routine.waterGoal')}</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={goalDraft}
+                  onChange={(event) => {
+                    const next = event.target.value.replace(/\D/g, '');
+                    setGoalDraft(next);
+                    const parsed = Number(next);
+                    if (Number.isFinite(parsed) && parsed > 0) setGoalMl(parsed);
+                  }}
+                  onBlur={() => {
+                    const next = Math.max(250, Number(goalDraft) || goalMl);
+                    setGoalMl(next);
+                    setGoalDraft(String(next));
+                  }}
+                  className="w-36 bg-transparent text-center font-sans text-display text-primary outline-none focus:rounded-xl focus:ring-2 focus:ring-primary"
+                />
+                <span className="mt-1 block font-sans text-counter text-on-surface-variant">ml</span>
+              </label>
+              <GoalButton label="+" onClick={() => {
+                setGoalMl((value) => {
+                  const next = value + 250;
+                  setGoalDraft(String(next));
+                  return next;
+                });
+              }} />
             </div>
           </section>
         )}
@@ -210,7 +306,7 @@ function RoutineWizard({ nextId, onClose, onCreate }: { nextId: number; onClose:
                 <span className={clsx('relative h-6 w-11 rounded-full transition-colors', notifications ? 'bg-primary' : 'bg-surface-container-highest')}><span className={clsx('absolute left-1 top-1 h-4 w-4 rounded-full bg-surface-container-lowest transition-transform', notifications && 'translate-x-5')} /></span>
               </button>
             </div>
-            <p className="mt-4 font-sans text-body-sm text-on-surface-variant">{t('meufit.routine.notificationHint')}</p>
+            <p className="mt-4 font-sans text-body-sm text-on-surface-variant">{Capacitor.isNativePlatform() ? 'O app vai agendar lembretes locais neste aparelho.' : t('meufit.routine.notificationHint')}</p>
           </section>
         )}
       </main>
@@ -307,18 +403,7 @@ function WaterDistribution({ schedule, goalMl, plan, onChange }: { schedule: str
             <span className="w-12 font-sans text-label text-on-surface">{time}</span>
             <label className="min-w-0 flex-1">
               <span className="sr-only">Quantidade de água às {time}</span>
-              <div className="flex items-center rounded-lg bg-surface px-2 ring-1 ring-outline-variant/35 focus-within:ring-primary">
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min="0"
-                  step="50"
-                  value={amountFor(time)}
-                  onChange={(event) => update(time, Number(event.target.value))}
-                  className="min-h-10 w-full bg-transparent text-center font-sans text-label text-on-surface outline-none"
-                />
-                <span className="font-sans text-counter text-on-surface-variant">ml</span>
-              </div>
+              <WaterAmountInput key={`${time}:${amountFor(time)}`} value={amountFor(time)} onCommit={(amount) => update(time, amount)} />
             </label>
             <button type="button" onClick={() => update(time, amountFor(time) + 50)} aria-label={t('meufit.routine.increaseAmount')} className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary"><Plus size={18} aria-hidden /></button>
           </div>
@@ -334,6 +419,31 @@ function suggestedTime(times: string[]): string {
   return `${String((hours + 2) % 24).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
+function WaterAmountInput({ value, onCommit }: { value: number; onCommit: (amount: number) => void }) {
+  const [draft, setDraft] = useState(String(value));
+  return (
+    <div className="flex items-center rounded-lg bg-surface px-2 ring-1 ring-outline-variant/35 focus-within:ring-primary">
+      <input
+        type="text"
+        inputMode="numeric"
+        value={draft}
+        onChange={(event) => {
+          const next = event.target.value.replace(/\D/g, '');
+          setDraft(next);
+          if (next) onCommit(Number(next));
+        }}
+        onBlur={() => {
+          const next = Number(draft) || 0;
+          onCommit(next);
+          setDraft(String(Math.max(0, Math.round(next / 50) * 50)));
+        }}
+        className="min-h-10 w-full bg-transparent text-center font-sans text-label text-on-surface outline-none"
+      />
+      <span className="font-sans text-counter text-on-surface-variant">ml</span>
+    </div>
+  );
+}
+
 function RoutineDetail({ routine, onToggle, onWaterChange }: { routine: Routine; onToggle: (routineId: number, time: string) => void; onWaterChange: (routineId: number, time: string, amount: number) => void }) {
   const { t } = useTranslation();
   const consumed = Object.values(routine.waterConsumed ?? {}).reduce((sum, amount) => sum + amount, 0);
@@ -346,7 +456,7 @@ function RoutineDetail({ routine, onToggle, onWaterChange }: { routine: Routine;
         const planned = routine.waterPlan?.[time];
         const amount = routine.waterConsumed?.[time] ?? 0;
         return <li key={time} className="border-t border-outline-variant/25 px-4 py-3 first:border-t-0">
-          {routine.kind === 'water' ? <div className="flex items-center gap-3"><span className="w-11 font-sans text-body text-on-surface">{time}</span><span className="flex-1 font-sans text-body-sm text-on-surface-variant">{t('meufit.routine.planned')} {planned ?? 0} ml</span><label className="flex items-center gap-1 rounded-lg bg-surface-container px-2 py-1"><input type="number" inputMode="numeric" min="0" step="50" value={amount || ''} onChange={(event) => onWaterChange(routine.id, time, Number(event.target.value))} aria-label={`${t('meufit.routine.consumed')} ${time}`} className="w-12 bg-transparent text-right font-sans text-label text-on-surface focus:outline-none" /><span className="font-sans text-counter text-on-surface-variant">ml</span></label></div> : <div className="flex min-h-[36px] items-center gap-3"><button type="button" onClick={() => onToggle(routine.id, time)} aria-pressed={done} className={clsx('flex h-8 w-8 items-center justify-center rounded-full', done ? 'bg-primary text-on-primary' : 'border border-outline text-on-surface-variant')}>{done && <Check size={18} aria-hidden />}</button><span className="font-sans text-body text-on-surface">{time}</span></div>}
+          {routine.kind === 'water' ? <div className="flex items-center gap-3"><span className="w-11 font-sans text-body text-on-surface">{time}</span><span className="flex-1 font-sans text-body-sm text-on-surface-variant">{t('meufit.routine.planned')} {planned ?? 0} ml</span><label className="flex items-center gap-1 rounded-lg bg-surface-container px-2 py-1"><input type="text" inputMode="numeric" value={amount || ''} onChange={(event) => onWaterChange(routine.id, time, Number(event.target.value.replace(/\D/g, '')) || 0)} aria-label={`${t('meufit.routine.consumed')} ${time}`} className="w-12 bg-transparent text-right font-sans text-label text-on-surface focus:outline-none" /><span className="font-sans text-counter text-on-surface-variant">ml</span></label></div> : <div className="flex min-h-[36px] items-center gap-3"><button type="button" onClick={() => onToggle(routine.id, time)} aria-pressed={done} className={clsx('flex h-8 w-8 items-center justify-center rounded-full', done ? 'bg-primary text-on-primary' : 'border border-outline text-on-surface-variant')}>{done && <Check size={18} aria-hidden />}</button><span className="font-sans text-body text-on-surface">{time}</span></div>}
         </li>;
       })}
     </ul>

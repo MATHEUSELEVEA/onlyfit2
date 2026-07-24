@@ -16,6 +16,7 @@ import { buildHealthDays, formatSleep, type HealthDay } from '@/features/wearabl
 import { activityMetaLine, activityMetrics, activitySportDetails, paceMinPerKm, PACE_SURFACES } from '@/features/wearables/sportActivityMetrics';
 import { localDateKey, todayKey } from '@/lib/localDate';
 import { useTranslation, type TranslationKey } from '@/i18n/I18nProvider';
+import { MyFitSectionNav } from '@/features/meufit/MyFitSectionNav';
 
 type Tab = 'today' | 'history' | 'progress' | 'library';
 type AppleHealthState = ReturnType<typeof useAppleHealth>;
@@ -131,9 +132,10 @@ function TrainingContent() {
   return <div className="relative flex h-full flex-col overflow-y-auto bg-background pb-8">
     <PageTopBar title={t('meufit.training.pageTitle')} backFallback="/meu-fit" />
     <main className="mx-auto w-full max-w-[720px] px-5 pb-6 pt-5">
+      <MyFitSectionNav />
       <div className="grid grid-cols-4 border-b border-outline-variant/30" role="tablist" aria-label={t('meufit.training.tabs.aria')}>{([['today', t('meufit.training.tabs.today')], ['history', t('meufit.training.tabs.history')], ['progress', t('meufit.training.tabs.progress')], ['library', t('meufit.training.tabs.library')]] as [Tab, string][]).map(([value, label]) => <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={clsx('relative flex min-h-[44px] items-center justify-center font-sans text-label transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary', tab === value ? 'text-on-surface' : 'text-on-surface-variant hover:text-on-surface active:text-on-surface')}>{label}{tab === value ? <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-primary" aria-hidden /> : null}</button>)}</div>
       {tab === 'history' ? <AppleHealthCard appleHealth={appleHealth} compact /> : null}
-      {tab === 'today' && <Today items={todayItems} active={activeItem ?? null} />}
+      {tab === 'today' && <Today items={todayItems} active={activeItem ?? null} onOpenLibrary={() => setTab('library')} />}
       {tab === 'history' && <HistoryList imported={allImported} onOpenDay={(value) => setDetailDate(value)} onOpenActivity={setDetailActivity} onRecord={() => setRecordOpen(true)} />}
       {tab === 'progress' && <Progress appleHealth={appleHealth} healthDays={healthDays} scheduled={scheduled} selectedDate={selectedDate} onSelect={(value) => { setSelectedDate(value); setDetailDate(value); }} />}
       {tab === 'library' && <Library />}
@@ -144,7 +146,7 @@ function TrainingContent() {
   </div>;
 }
 
-function Today({ items, active }: { items: ScheduledWorkout[]; active: ScheduledWorkout | null }) {
+function Today({ items, active, onOpenLibrary }: { items: ScheduledWorkout[]; active: ScheduledWorkout | null; onOpenLibrary: () => void }) {
   const { t } = useTranslation();
   const { byWorkoutId } = useTodayWorkoutSessions();
   const { workouts: studentWorkouts } = useStudentWorkouts();
@@ -184,6 +186,9 @@ function Today({ items, active }: { items: ScheduledWorkout[]; active: Scheduled
         <div className="mt-5 rounded-2xl border border-dashed border-outline-variant/40 px-4 py-6">
           <p className="font-sans text-label text-on-surface">{t('meufit.training.today.emptyTitle')}</p>
           <p className="mt-1 font-sans text-body-sm text-on-surface-variant">{t('meufit.training.today.emptyDescription')}</p>
+          <button type="button" onClick={onOpenLibrary} className="mt-4 min-h-11 rounded-xl bg-primary px-4 font-sans text-label text-on-primary">
+            {t('meufit.training.today.openLibrary')}
+          </button>
         </div>
       )}
     </section>

@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { queryClient } from '@/lib/queryClient';
 import type { MyProfile } from '@/features/profile/useMyProfile';
 import type { FeedPost } from '@/features/feed/types';
+import { fetchFeedPostById, prependPostToFeedCaches } from '@/features/feed/useFeed';
 import {
   buildOptimisticPost,
   getCreatePostErrorMessage,
@@ -70,13 +71,15 @@ async function runJob(localId: string): Promise<void> {
   notify();
 
   try {
-    await runCreatePost(job.input, (fraction) => {
+    const postId = await runCreatePost(job.input, (fraction) => {
       const current = jobs.get(localId);
       if (!current) return;
       current.progress = fraction;
       current.snapshot = { status: 'uploading', progress: fraction };
       notify();
     });
+    const realPost = await fetchFeedPostById(job.profile.userId, postId).catch(() => null);
+    if (realPost) prependPostToFeedCaches(queryClient, realPost);
     // Sucesso: o post local sai da fila e o refetch de ['feed'] (abaixo) traz
     // o post real na posição que o servidor decidir.
     revokePreviewUrls(job.input);

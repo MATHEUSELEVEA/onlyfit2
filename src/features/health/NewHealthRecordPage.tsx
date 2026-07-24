@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Activity, AlertCircle, ArrowLeft, Bandage, Camera, FileCheck2, FileHeart, FileText, HeartPulse, Loader2, Mic, Moon, Paperclip, Pill, Plus, Square, Stethoscope, Syringe, Trash2 } from 'lucide-react';
+import { Activity, AlertCircle, Bandage, Camera, FileCheck2, FileHeart, FileText, HeartPulse, Loader2, Mic, Moon, Paperclip, Pill, Plus, Square, Stethoscope, Syringe, Trash2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { TextAreaField, TextField } from '@/components/ui/TextField';
@@ -247,8 +247,6 @@ function HealthRecordForm({ correctsId, correctedEvent }: { correctsId?: string;
         onBack={!correctsId && step > 1 ? () => setStep((current) => current - 1) : undefined}
       />
       <main className="space-y-6 px-4 pb-[calc(6rem+env(safe-area-inset-bottom))] pt-6">
-        {!correctsId ? <WizardProgress step={step} /> : null}
-        {step > 1 && !correctsId ? <button type="button" onClick={() => setStep((current) => current - 1)} className="-ml-2 flex min-h-11 items-center gap-1 px-2 font-sans text-label text-on-surface-variant"><ArrowLeft size={18} aria-hidden /> Voltar</button> : null}
         {step === 1 ? <RecordTypeStep category={category} onSelect={(value) => { setCategory(value); setError(''); setStep(2); }} /> : null}
         {step === 2 && isHabit ? (
           <section className="space-y-5">
@@ -332,10 +330,6 @@ const recordTypes = [
   { value: 'vaccine', icon: Syringe, description: 'Vacina ou dose de reforço.' },
   { value: 'other', icon: FileText, description: 'Outra informação de saúde.' },
 ] as const satisfies ReadonlyArray<{ value: HealthCategory; icon: typeof Activity; description: string }>;
-
-function WizardProgress({ step }: { step: number }) {
-  return <div><div className="flex items-center justify-between"><span className="font-sans text-body-sm text-on-surface-variant">{step} de 2</span><span className="font-sans text-body-sm text-on-surface-variant">Adicionar registro</span></div><div className="mt-2 h-1 overflow-hidden rounded-full bg-surface-container-high"><span className="block h-full rounded-full bg-primary transition-[width] motion-reduce:transition-none" style={{ width: `${step / 2 * 100}%` }} /></div></div>;
-}
 
 function RecordTypeStep({ category, onSelect }: { category: HealthCategory | null; onSelect: (value: HealthCategory) => void }) {
   return <section><h2 className="font-sans text-title-lg text-on-surface">O que você quer registrar?</h2><p className="mt-1 font-sans text-body-sm text-on-surface-variant">Toque em uma opção para seguir.</p><div className="mt-6 grid grid-cols-3 gap-2">{recordTypes.map(({ value, icon: Icon }) => { const selected = category === value; return <button key={value} type="button" aria-label={`${healthCategoryLabels[value]}. Selecionar e seguir`} onClick={() => onSelect(value)} className={clsx('flex min-h-[116px] flex-col items-center justify-center gap-3 rounded-2xl border p-2 text-center transition-colors active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary motion-reduce:transition-none', selected ? 'border-primary bg-primary/10' : 'border-outline-variant/40 bg-surface-container')}><Icon size={25} className="text-primary" aria-hidden /><span className="font-sans text-counter text-on-surface">{healthCategoryLabels[value]}</span></button>; })}</div></section>;
