@@ -33,21 +33,35 @@ export function MeuFitPage() {
 
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-background pb-10">
-      <PageTopBar title={t('meufit.title')} showBackButton={false} />
+      <PageTopBar
+        title={t('meufit.title')}
+        showBackButton={false}
+        actions={
+          <Link
+            to="/meu-fit/ia"
+            aria-label="Abrir IA OnlyFit"
+            className="group relative flex h-11 min-w-11 items-center justify-center rounded-full border border-outline-variant/35 bg-surface-container-low px-3 text-on-surface transition-[border-color,background-color,transform] active:scale-[0.97] active:border-primary/70 active:bg-primary/10"
+          >
+            <Sparkles size={17} className="text-primary" aria-hidden />
+            <span className="ml-1.5 font-sans text-label text-on-surface">IA</span>
+            <span className="pointer-events-none absolute inset-0 rounded-full ring-1 ring-primary/0 transition group-active:ring-primary/40" />
+          </Link>
+        }
+      />
       <div className="mx-auto flex w-full max-w-[720px] flex-1 flex-col justify-center px-6 py-6">
         <Link
           to="/meu-fit/ia"
-          className="mb-5 flex min-h-24 items-center gap-4 rounded-2xl border border-primary/40 bg-primary-container px-5 py-4 text-on-primary-container transition-transform active:scale-[0.98]"
+          className="mb-6 flex items-center justify-between rounded-full border border-outline-variant/30 bg-surface-container-low px-4 py-2.5 text-on-surface transition-[border-color,background-color,transform] active:scale-[0.99] active:border-primary/60 active:bg-primary/10"
         >
-          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-on-primary">
-            <Sparkles size={30} aria-hidden />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block font-sans text-title text-on-primary-container">IA OnlyFit</span>
-            <span className="mt-1 block font-sans text-body-sm text-on-primary-container/80">
-              Treino, dieta, saúde e compras em uma conversa.
+          <span className="flex min-w-0 items-center gap-2.5">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Sparkles size={14} aria-hidden />
+            </span>
+            <span className="truncate font-sans text-body-sm text-on-surface-variant">
+              IA com treino, dieta e saúde
             </span>
           </span>
+          <span className="font-sans text-counter text-primary">Abrir</span>
         </Link>
 
         <div className="grid w-full grid-cols-2 place-items-center gap-5">
