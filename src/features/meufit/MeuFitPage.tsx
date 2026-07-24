@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
-import { Clock3, Dumbbell, Salad, Stethoscope, type LucideIcon } from 'lucide-react';
+import { Clock3, Dumbbell, Salad, Sparkles, Stethoscope, type LucideIcon } from 'lucide-react';
 import { useTranslation } from '@/i18n/I18nProvider';
 import { PageTopBar } from '@/components/layout/PageTopBar';
 
@@ -34,7 +34,22 @@ export function MeuFitPage() {
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-background pb-10">
       <PageTopBar title={t('meufit.title')} showBackButton={false} />
-      <div className="mx-auto flex w-full max-w-[720px] flex-1 items-center px-6 py-6">
+      <div className="mx-auto flex w-full max-w-[720px] flex-1 flex-col justify-center px-6 py-6">
+        <Link
+          to="/meu-fit/ia"
+          className="mb-5 flex min-h-24 items-center gap-4 rounded-2xl border border-primary/40 bg-primary-container px-5 py-4 text-on-primary-container transition-transform active:scale-[0.98]"
+        >
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-primary text-on-primary">
+            <Sparkles size={30} aria-hidden />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-sans text-title text-on-primary-container">IA OnlyFit</span>
+            <span className="mt-1 block font-sans text-body-sm text-on-primary-container/80">
+              Treino, dieta, saúde e compras em uma conversa.
+            </span>
+          </span>
+        </Link>
+
         <div className="grid w-full grid-cols-2 place-items-center gap-5">
           {pillars.map(({ icon: Icon, title, to }) => (
             <Link
