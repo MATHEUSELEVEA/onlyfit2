@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useRef, useState } from 'react';
+import { FormEvent, KeyboardEvent, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Archive, ExternalLink, History, Loader2, Plus, Send, ShieldCheck, Sparkles } from 'lucide-react';
 import { PageTopBar } from '@/components/layout/PageTopBar';
@@ -282,6 +282,12 @@ export function MyFitAiPage() {
     void sendMessage();
   }
 
+  function handleInputKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== 'Enter' || event.shiftKey) return;
+    event.preventDefault();
+    void sendMessage();
+  }
+
   return (
     <div className="flex h-full flex-col bg-background">
       <PageTopBar
@@ -444,6 +450,8 @@ export function MyFitAiPage() {
             ref={inputRef}
             value={input}
             onChange={(event) => setInput(event.target.value)}
+            onKeyDown={handleInputKeyDown}
+            enterKeyHint="send"
             placeholder="Pergunte sobre treino, dieta, saúde ou rotina..."
             rows={1}
             maxLength={1800}
